@@ -12,10 +12,11 @@ const Contact = () => {
               "
             >
               <h2 className="mb-3 text-2xl font-bold text-black sm:text-3xl lg:text-2xl xl:text-3xl dark:text-white">
-                Need Help? Open a Ticket
+                به کمک نیاز دارید؟ درخواست خود را ثبت کنید
               </h2>
               <p className="text-body-color mb-12 text-base font-medium">
-                Our support team will get back to you ASAP via email.
+                تیم پشتیبانی ما در سریع‌ترین زمان ممکن از طریق ایمیل به شما پاسخ
+                خواهد داد.
               </p>
               <form>
                 <div className="-mx-4 flex flex-wrap">
@@ -25,7 +26,7 @@ const Contact = () => {
                         htmlFor="name"
                         className="text-dark mb-3 block text-sm font-medium dark:text-white"
                       >
-                        Your Name
+                        نام شما
                       </label>
                       <input
                         type="text"
@@ -40,7 +41,7 @@ const Contact = () => {
                         htmlFor="email"
                         className="text-dark mb-3 block text-sm font-medium dark:text-white"
                       >
-                        Your Email
+                        ایمیل شما
                       </label>
                       <input
                         type="email"
@@ -55,7 +56,7 @@ const Contact = () => {
                         htmlFor="message"
                         className="text-dark mb-3 block text-sm font-medium dark:text-white"
                       >
-                        Your Message
+                        پیام شما
                       </label>
                       <textarea
                         name="message"

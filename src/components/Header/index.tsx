@@ -49,7 +49,7 @@ const Header = () => {
       >
         <div className="container">
           <div className="relative -mx-4 flex items-center justify-between">
-            <div className="w-60 max-w-full px-4 xl:mr-12">
+            {/* <div className="w-60 max-w-full px-4 xl:mr-12">
               <Link
                 href="/"
                 className={`header-logo block w-full ${
@@ -71,7 +71,7 @@ const Header = () => {
                   className="hidden w-full dark:block"
                 />
               </Link>
-            </div>
+            </div> */}
             <div className="flex w-full items-center justify-center px-4">
               <div>
                 <button

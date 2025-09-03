@@ -8,7 +8,7 @@ const Brands = () => {
       <div className="container">
         <div className="-mx-4 flex flex-wrap">
           <div className="w-full px-4">
-            <div className="flex flex-wrap items-center justify-center rounded-xs bg-gray-light px-8 py-8 dark:bg-gray-dark sm:px-10 md:px-[50px] md:py-[40px] xl:p-[50px] 2xl:px-[70px] 2xl:py-[60px]">
+            <div className="bg-gray-light dark:bg-gray-dark flex flex-wrap items-center justify-center rounded-xs px-8 py-8 sm:px-10 md:px-[50px] md:py-[40px] xl:p-[50px] 2xl:px-[70px] 2xl:py-[60px]">
               {brandsData.map((brand) => (
                 <SingleBrand key={brand.id} brand={brand} />
               ))}
@@ -31,7 +31,7 @@ const SingleBrand = ({ brand }: { brand: Brand }) => {
         href={href}
         target="_blank"
         rel="nofollow noreferrer"
-        className="relative h-10 w-full opacity-70 transition hover:opacity-100 dark:opacity-60 dark:hover:opacity-100"
+        className="relative h-30 w-full opacity-70 transition hover:opacity-100 dark:opacity-60 dark:hover:opacity-100"
       >
         <Image src={imageLight} alt={name} fill className="hidden dark:block" />
         <Image src={image} alt={name} fill className="block dark:hidden" />

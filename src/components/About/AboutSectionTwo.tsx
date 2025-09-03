@@ -11,44 +11,44 @@ const AboutSectionTwo = () => {
               data-wow-delay=".15s"
             >
               <Image
-                src="/images/about/about-image-2.svg"
+                src="/images/products/shoe1.png"
                 alt="about image"
                 fill
                 className="drop-shadow-three dark:hidden dark:drop-shadow-none"
               />
               <Image
-                src="/images/about/about-image-2-dark.svg"
+                src="/images/products/shoe3.png"
                 alt="about image"
                 fill
-                className="hidden drop-shadow-three dark:block dark:drop-shadow-none"
+                className="drop-shadow-three hidden dark:block dark:drop-shadow-none"
               />
             </div>
           </div>
           <div className="w-full px-4 lg:w-1/2">
             <div className="max-w-[470px]">
               <div className="mb-9">
-                <h3 className="mb-4 text-xl font-bold text-black dark:text-white sm:text-2xl lg:text-xl xl:text-2xl">
+                <h3 className="mb-4 text-xl font-bold text-black sm:text-2xl lg:text-xl xl:text-2xl dark:text-white">
                   Bug free code
                 </h3>
-                <p className="text-base font-medium leading-relaxed text-body-color sm:text-lg sm:leading-relaxed">
+                <p className="text-body-color text-base leading-relaxed font-medium sm:text-lg sm:leading-relaxed">
                   Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed
                   do eiusmod tempor incididunt ut labore et dolore magna aliqua.
                 </p>
               </div>
               <div className="mb-9">
-                <h3 className="mb-4 text-xl font-bold text-black dark:text-white sm:text-2xl lg:text-xl xl:text-2xl">
+                <h3 className="mb-4 text-xl font-bold text-black sm:text-2xl lg:text-xl xl:text-2xl dark:text-white">
                   Premier support
                 </h3>
-                <p className="text-base font-medium leading-relaxed text-body-color sm:text-lg sm:leading-relaxed">
+                <p className="text-body-color text-base leading-relaxed font-medium sm:text-lg sm:leading-relaxed">
                   Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed
                   do eiusmod tempor incididunt.
                 </p>
               </div>
               <div className="mb-1">
-                <h3 className="mb-4 text-xl font-bold text-black dark:text-white sm:text-2xl lg:text-xl xl:text-2xl">
+                <h3 className="mb-4 text-xl font-bold text-black sm:text-2xl lg:text-xl xl:text-2xl dark:text-white">
                   Next.js
                 </h3>
-                <p className="text-base font-medium leading-relaxed text-body-color sm:text-lg sm:leading-relaxed">
+                <p className="text-body-color text-base leading-relaxed font-medium sm:text-lg sm:leading-relaxed">
                   Lorem ipsum dolor sit amet, sed do eiusmod tempor incididunt
                   consectetur adipiscing elit setim.
                 </p>

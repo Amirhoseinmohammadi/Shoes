@@ -8,7 +8,7 @@ const shoesData: Shoe[] = [
     color: "سفید/مشکی/قرمز",
     size: [40, 41, 42, 43],
     price: "۳,۲۰۰,۰۰۰ تومان",
-    image: "../../../public/images/products/shoe1.png",
+    image: "/images/products/shoe1.png",
   },
   {
     id: 2,
@@ -17,7 +17,7 @@ const shoesData: Shoe[] = [
     color: "سفید/سبز",
     size: [39, 40, 41, 42, 43, 44],
     price: "۲,۸۰۰,۰۰۰ تومان",
-    image: "../../../public/images/products/shoe2.png",
+    image: "/images/products/shoe2.png",
   },
   {
     id: 3,
@@ -26,7 +26,7 @@ const shoesData: Shoe[] = [
     color: "قرمز/مشکی",
     size: [41, 42, 43, 44, 45],
     price: "۴,۵۰۰,۰۰۰ تومان",
-    image: "../../../public/images/products/shoe3.png",
+    image: "/images/products/shoe3.png",
   },
   {
     id: 4,
@@ -35,7 +35,7 @@ const shoesData: Shoe[] = [
     color: "قهوه‌ای",
     size: [40, 41, 42, 43, 44],
     price: "۵,۲۰۰,۰۰۰ تومان",
-    image: "../../../public/images/products/shoe4.png",
+    image: "/images/products/shoe4.png",
   },
 ];
 
