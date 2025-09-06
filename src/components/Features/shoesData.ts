@@ -37,6 +37,42 @@ const shoesData: Shoe[] = [
     price: "۵,۲۰۰,۰۰۰ تومان",
     image: "/images/products/shoe4.png",
   },
+  {
+    id: 5,
+    name: "کفش بسکتبال نایکی لبرون",
+    brand: "Nike",
+    color: "قرمز/مشکی",
+    size: [41, 42, 43, 44, 45],
+    price: "۴,۵۰۰,۰۰۰ تومان",
+    image: "/images/products/shoe3.png",
+  },
+  {
+    id: 6,
+    name: "بوت چرمی تیمبرلند",
+    brand: "Timberland",
+    color: "قهوه‌ای",
+    size: [40, 41, 42, 43, 44],
+    price: "۵,۲۰۰,۰۰۰ تومان",
+    image: "/images/products/shoe4.png",
+  },
+  {
+    id: 7,
+    name: "کفش بسکتبال نایکی لبرون",
+    brand: "Nike",
+    color: "قرمز/مشکی",
+    size: [41, 42, 43, 44, 45],
+    price: "۴,۵۰۰,۰۰۰ تومان",
+    image: "/images/products/shoe3.png",
+  },
+  {
+    id: 8,
+    name: "بوت چرمی تیمبرلند",
+    brand: "Timberland",
+    color: "قهوه‌ای",
+    size: [40, 41, 42, 43, 44],
+    price: "۵,۲۰۰,۰۰۰ تومان",
+    image: "/images/products/shoe4.png",
+  },
 ];
 
 export default shoesData;

@@ -4,7 +4,10 @@ import shoesData from "./shoesData";
 
 const Shoes = () => {
   return (
-    <section id="shoes" className="py-16 md:py-20 lg:py-28">
+    <section
+      id="shoes"
+      className="bg-white py-16 md:py-20 lg:py-28 dark:bg-gray-900"
+    >
       <div className="container">
         <SectionTitle
           title="لیست کفش‌ها"

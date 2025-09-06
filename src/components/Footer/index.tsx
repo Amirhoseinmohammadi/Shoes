@@ -9,7 +9,7 @@ const Footer = () => {
         <div className="container">
           <div className="-mx-4 flex flex-wrap">
             <div className="w-full px-4 md:w-1/2 lg:w-4/12 xl:w-5/12">
-              <div className="mb-12 max-w-[360px] lg:mb-16">
+              {/* <div className="mb-12 max-w-[360px] lg:mb-16">
                 <Link href="/" className="mb-8 inline-block">
                   <Image
                     src="/images/logo/logo-2.svg"
@@ -106,12 +106,12 @@ const Footer = () => {
                     </svg>
                   </a>
                 </div>
-              </div>
+              </div> */}
             </div>
 
             <div className="w-full px-4 sm:w-1/2 md:w-1/2 lg:w-2/12 xl:w-2/12">
               <div className="mb-12 lg:mb-16">
-                <h2 className="mb-10 text-xl font-bold text-black dark:text-white">
+                <h2 className="mb-10 text-2xl font-bold text-black dark:text-white">
                   لینک‌های مفید
                 </h2>
                 <ul>
@@ -213,7 +213,7 @@ const Footer = () => {
           </div>
 
           <div className="h-px w-full bg-linear-to-r from-transparent via-[#D2D8E183] to-transparent dark:via-[#959CB183]"></div>
-          <div className="py-8">
+          {/* <div className="py-8">
             <p className="text-body-color text-center text-base dark:text-white">
               Template by{" "}
               <a
@@ -234,7 +234,7 @@ const Footer = () => {
                 Next.js Templates
               </a>
             </p>
-          </div>
+          </div> */}
         </div>
         <div className="absolute top-14 right-0 z-[-1]">
           <svg
