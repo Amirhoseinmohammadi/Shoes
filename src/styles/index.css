@@ -3,7 +3,7 @@ layer(base); */
 
 /* @import url("https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap")
 layer(base); */
-@import url("https://cdn.jsdelivr.net/gh/rastikerdar/shabnam-font@v5.0.1/dist/font-face.css");
+/* @import url("https://cdn.jsdelivr.net/gh/rastikerdar/shabnam-font@v5.0.1/dist/font-face.css"); */
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
@@ -60,6 +60,20 @@ layer(base); */
   --shadow-btn-light: 0px 1px 2px rgba(0, 0, 0, 0.1);
 
   --drop-shadow-three: 0px 5px 15px rgba(6, 8, 15, 0.05);
+}
+
+@font-face {
+  font-family: "Shabnam";
+  src: url("/fonts/Shabnam-Thin.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Shabnam";
+  src: url("/fonts/Shabnam-Thin.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
 }
 
 @utility container {
