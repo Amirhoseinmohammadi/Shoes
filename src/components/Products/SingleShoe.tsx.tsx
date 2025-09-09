@@ -10,7 +10,7 @@ const SingleShoe = ({ shoe }: { shoe: Shoe }) => {
   return (
     <div className="shadow-two w-ful">
       <div className="wow fadeInUp" data-wow-delay=".15s">
-        <a href="#" className="group relative block overflow-hidden">
+        <div className="group relative block overflow-hidden">
           <button className="absolute end-4 top-4 z-10 rounded-full bg-white p-1.5 text-gray-900 transition hover:text-gray-900/75 dark:bg-gray-700 dark:text-white/75"></button>
 
           <img
@@ -50,7 +50,7 @@ const SingleShoe = ({ shoe }: { shoe: Shoe }) => {
               </button>
             </form>
           </div>
-        </a>
+        </div>
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-// types/shoe.ts
 export interface Shoe {
   id: number;
   name: string;

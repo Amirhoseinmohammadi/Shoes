@@ -4,12 +4,17 @@ import { useCart } from "@/contexts/CartContext";
 import Image from "next/image";
 import Link from "next/link";
 import { Shoe } from "@/types/shoe";
-
+interface CartItem extends Shoe {
+  quantity: number;
+}
 const CartPage = () => {
   const { cartItems, removeItem, updateItemQuantity } = useCart();
 
-  const calculateTotal = (items: Shoe[]) => {
-    return items.reduce((total, item) => total + parseFloat(item.price), 0);
+  const calculateTotal = (items: CartItem[]) => {
+    return items.reduce(
+      (total, item) => total + parseFloat(item.price) * item.quantity,
+      0,
+    );
   };
 
   const calculateSubtotal = () => {
@@ -74,9 +79,30 @@ const CartPage = () => {
                       </div>
                     </dl>
                   </div>
+
                   <div className="flex flex-1 items-center justify-end gap-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          updateItemQuantity(item.id, item.quantity - 1)
+                        }
+                        disabled={item.quantity <= 1}
+                        className="rounded bg-white px-2 py-1 dark:bg-gray-900"
+                      >
+                        -
+                      </button>
+                      <span>{item.quantity}</span>
+                      <button
+                        onClick={() =>
+                          updateItemQuantity(item.id, item.quantity + 1)
+                        }
+                        className="rounded bg-white px-2 py-1 dark:bg-gray-900"
+                      >
+                        +
+                      </button>
+                    </div>
                     <button
-                      onClick={() => removeItem(item)}
+                      onClick={() => removeItem(item.id)}
                       className="text-gray-600 transition hover:text-red-600 dark:text-gray-400 dark:hover:text-red-500"
                     >
                       <span className="sr-only">حذف محصول</span>
@@ -104,7 +130,9 @@ const CartPage = () => {
                 <dl className="space-y-0.5 text-sm text-gray-700 dark:text-gray-200">
                   <div className="flex justify-between">
                     <dt>مبلغ کل</dt>
-                    <dd>{calculateTotal(cartItems)} تومان</dd>
+                    <dd className="font-sans">
+                      {calculateTotal(cartItems)} تومان
+                    </dd>
                   </div>
                   <div className="flex justify-between">
                     <dt>مالیات</dt>
