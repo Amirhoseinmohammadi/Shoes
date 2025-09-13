@@ -1,4 +1,5 @@
 import Link from "next/link";
+import HeroSlider from "./HeroSlider";
 
 const Hero = () => {
   return (
@@ -10,7 +11,8 @@ const Hero = () => {
         <div className="container">
           <div className="-mx-4 flex flex-wrap">
             <div className="w-full px-4">
-              <div className="mx-auto max-w-[800px] text-center">
+              <HeroSlider />
+              {/* <div className="mx-auto max-w-[800px] text-center">
                 <h1 className="mb-5 text-3xl leading-tight font-bold text-black sm:text-4xl sm:leading-tight md:text-5xl md:leading-tight dark:text-white">
                   جدیدترین کلکسیون کفش‌های ورزشی و روزمره
                 </h1>
@@ -21,22 +23,23 @@ const Hero = () => {
                 </p>
                 <div className="flex flex-col items-center justify-center space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
                   <Link
-                    href="https://nextjstemplates.com/templates/saas-starter-startup"
+                    href=""
                     className="bg-primary hover:bg-primary/80 rounded-4xl px-8 py-4 text-base font-semibold text-white duration-300 ease-in-out"
                   >
                     خرید کنید
                   </Link>
                   <Link
-                    href="https://github.com/NextJSTemplates/startup-nextjs"
+                    href=""
                     className="inline-block rounded-4xl bg-black px-8 py-4 text-base font-semibold text-white duration-300 ease-in-out hover:bg-black/90 dark:bg-white/10 dark:text-white dark:hover:bg-white/5"
                   >
                     مدل‌های جدید
                   </Link>
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
+
         <div className="absolute top-0 right-0 z-[-1] opacity-30 lg:opacity-100">
           <svg
             width="450"
@@ -175,7 +178,7 @@ const Hero = () => {
             </defs>
           </svg>
         </div>
-        <div className="absolute bottom-0 left-0 z-[-1] opacity-30 lg:opacity-100">
+        {/* <div className="absolute bottom-0 left-0 z-[-1] opacity-30 lg:opacity-100">
           <svg
             width="364"
             height="201"
@@ -277,7 +280,7 @@ const Hero = () => {
               </radialGradient>
             </defs>
           </svg>
-        </div>
+        </div> */}
       </section>
     </>
   );
