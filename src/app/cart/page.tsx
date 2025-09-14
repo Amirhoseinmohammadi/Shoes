@@ -57,7 +57,10 @@ const CartPage = () => {
           <div className="mt-8">
             <ul className="space-y-4">
               {cartItems.map((item) => (
-                <li key={item.id} className="flex items-center gap-4">
+                <li
+                  key={`${item.id}-${item.size || "nosize"}-${item.color || "nocolor"}`}
+                  className="flex items-center gap-4"
+                >
                   {item.image ? (
                     <Image
                       src={item.image}
@@ -99,7 +102,12 @@ const CartPage = () => {
                         onClick={() =>
                           updateItemQuantity(
                             item.id,
-                            Math.max(10, item.quantity - 10),
+                            Math.max(
+                              item.id,
+                              item.quantity - 10,
+                              item.size,
+                              item.color,
+                            ),
                           )
                         }
                         disabled={item.quantity <= 10}
@@ -110,7 +118,12 @@ const CartPage = () => {
                       <span>{Math.ceil(item.quantity / 10)}</span>
                       <button
                         onClick={() =>
-                          updateItemQuantity(item.id, item.quantity + 10)
+                          updateItemQuantity(
+                            item.id,
+                            item.quantity + 10,
+                            item.size,
+                            item.color,
+                          )
                         }
                         className="rounded bg-white px-2 py-1 dark:bg-gray-900"
                       >
@@ -118,7 +131,7 @@ const CartPage = () => {
                       </button>
                     </div>
                     <button
-                      onClick={() => removeItem(item.id)}
+                      onClick={() => removeItem(item.id, item.size, item.color)}
                       className="text-xs text-gray-600 transition hover:text-red-600 dark:text-gray-400 dark:hover:text-red-500"
                     >
                       حذف

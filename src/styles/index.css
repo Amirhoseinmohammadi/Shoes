@@ -140,6 +140,9 @@ layer(base); */
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     font-family: "Shabnam", sans-serif;
     font-optical-sizing: auto;

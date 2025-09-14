@@ -40,30 +40,49 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem("cart", JSON.stringify(cartItems));
   }, [cartItems]);
 
-  const addItem = (item: Shoe, quantity: number = 1, size?: string) => {
+  const addItem = (
+    item: Shoe,
+    quantity: number = 1,
+    size?: string,
+    color?: string,
+  ) => {
     setCartItems((prev) => {
-      const existing = prev.find((p) => p.id === item.id && p.size === size);
+      const existing = prev.find(
+        (p) => p.id === item.id && p.size === size && p.color === color,
+      );
+
       if (existing) {
         return prev.map((p) =>
-          p.id === item.id && p.size === size
+          p.id === item.id && p.size === size && p.color === color
             ? { ...p, quantity: p.quantity + quantity }
             : p,
         );
       }
-      return [...prev, { ...item, quantity, size }];
+
+      return [...prev, { ...item, quantity, size, color }];
     });
   };
 
-  const removeItem = (id: number, size?: string) => {
+  const removeItem = (id: string, size?: string, color?: string) => {
     setCartItems((prev) =>
-      prev.filter((p) => !(p.id === id && p.size === size)),
+      prev.filter(
+        (item) =>
+          !(item.id === id && item.size === size && item.color === color),
+      ),
     );
   };
 
-  const updateItemQuantity = (id: number, quantity: number, size?: string) => {
+  const updateItemQuantity = (
+    id: number,
+    quantity: number,
+    size?: string,
+    color?: string,
+  ) => {
     setCartItems((prev) =>
       prev.map((item) =>
-        item.id === id && item.size === size ? { ...item, quantity } : item,
+        item.id === id && item.size === size && item.color === color
+          ? { ...item, quantity }
+          : item,
       ),
     );
   };

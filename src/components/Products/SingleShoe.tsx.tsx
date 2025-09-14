@@ -32,6 +32,7 @@ const SingleShoe = ({ shoe }: { shoe: Shoe }) => {
         image: selectedImage,
       },
       cartonCount * 10,
+      selectedColor,
     );
   };
 

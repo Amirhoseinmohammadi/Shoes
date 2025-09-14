@@ -3,25 +3,9 @@
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import ScrollToTop from "@/components/ScrollToTop";
-// import { Inter } from "next/font/google";
 import "../styles/index.css";
-// import localFont from "next/font/local";
-// const shabnamFont = localFont({
-//   src: [
-//     {
-//       path: "../public/fonts/Shabnam-Light.woff2",
-//       weight: "300",
-//       style: "normal",
-//     },
-//     {
-//       path: "../public/fonts/Shabnam-Regular.woff2",
-//       weight: "400",
-//       style: "normal",
-//     },
-//   ],
-//   variable: "--font-shabnam",
-// });
-// const inter = Inter({ subsets: ["latin"] });
+import { Providers } from "./providers";
+import PageTransition from "@/components/Common/PageTransition";
 
 export default function RootLayout({
   children,
@@ -29,17 +13,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html suppressHydrationWarning lang="en">
-      {/*
-        <head /> will contain the components returned by the nearest parent
-        head.js. Find out more at https://beta.nextjs.org/docs/api-reference/file-conventions/head
-      */}
+    <html suppressHydrationWarning lang="fe">
       <head />
-
-      <body className={`bg-[#FCFCFC] dark:bg-black`}>
+      <body className="bg-[#FCFCFC] dark:bg-black">
         <Providers>
           <Header />
-          {children}
+          <PageTransition>{children}</PageTransition>
           <Footer />
           <ScrollToTop />
         </Providers>
@@ -47,5 +26,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-import { Providers } from "./providers";
