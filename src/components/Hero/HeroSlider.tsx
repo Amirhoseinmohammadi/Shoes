@@ -9,21 +9,21 @@ const slides = [
     description: "Life-changing travel experiences await.",
     buttonText: "Book Now",
     buttonUrl: "#",
-    image: "/images/products/doKhat.png",
+    image: "/images/products/doKhat/doKhat-sefid-kerem.png",
   },
   {
     title: "Natural Beauty",
     description: "Stunning views and pure nature.",
     buttonText: "View Offers",
     buttonUrl: "#",
-    image: "/images/products/shoe1.png",
+    image: "/images/products/jordan/jordan-tosi.png",
   },
   {
     title: "Urban Adventure",
     description: "Modern cities full of life and culture.",
     buttonText: "More Info",
     buttonUrl: "#",
-    image: "/images/products/shoe2.png",
+    image: "/images/products/lacoste/lacoste-sefid-abi.png",
   },
 ];
 
@@ -63,7 +63,7 @@ const HeroSlider = () => {
         {slides.map((slide, index) => (
           <div
             key={index}
-            className={`absolute inset-0 transition-opacity duration-800 ${
+            className={`className="absolute hover:bg-blue-700" bottom-10 left-10 rounded-lg bg-blue-600 px-6 py-2 text-lg font-semibold text-white ${
               currentSlide === index ? "opacity-100" : "opacity-0"
             }`}
           >
@@ -72,7 +72,7 @@ const HeroSlider = () => {
                 src={slide.image}
                 alt={slide.title}
                 fill
-                className="object-cover opacity-80"
+                className="rounded-b-lg object-cover opacity-80"
                 priority={index === 0}
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               />
