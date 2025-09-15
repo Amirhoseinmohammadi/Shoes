@@ -11,7 +11,7 @@ const Hero = () => {
         <div className="relative container">
           <div className="-mx-4 flex flex-wrap">
             <div className="w-full px-4">
-              <div className="mx-auto max-w-[800px] rounded-t-lg bg-white p-8 text-center dark:bg-gray-900 dark:text-white">
+              <div className="rounded-t-lg bg-white p-8 text-center dark:bg-gray-900 dark:text-white">
                 <h1 className="mb-5 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl">
                   جدیدترین کلکسیون کفش‌های ورزشی و روزمره
                 </h1>
@@ -20,8 +20,6 @@ const Hero = () => {
                   مدل‌های جدید و متنوع
                 </p>
               </div>
-
-              <div className="absolute inset-0 flex items-center justify-center px-4"></div>
             </div>
           </div>
         </div>

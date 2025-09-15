@@ -4,22 +4,38 @@ import { useCart } from "@/contexts/CartContext";
 import Image from "next/image";
 import Link from "next/link";
 import { Shoe } from "@/types/shoe";
+import { TrashIcon } from "@heroicons/react/24/outline";
+import { useToast } from "@/contexts/ToastContext";
 
 interface CartItem extends Shoe {
-  quantity: number; // تعداد جفت‌ها
+  quantity: number;
 }
 
 const CartPage = () => {
   const { cartItems, removeItem, updateItemQuantity } = useCart();
+  const { showToast } = useToast(); // ✅ استفاده از ToastContext
+
+  const handleRemove = (
+    id: string,
+    size?: string,
+    color?: string,
+    name?: string,
+  ) => {
+    showToast({
+      message: `آیا از حذف ${name} مطمئن هستید؟`,
+      type: "warning",
+      action: () => removeItem(id, size, color),
+      actionLabel: "حذف",
+      cancelLabel: "لغو",
+    });
+  };
 
   const calculateTotal = (items: CartItem[]) => {
-    // اگر price هر جفت باشه
     return items.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
   const calculateSubtotal = () => {
     const total = calculateTotal(cartItems);
-    // مالیات و تخفیف مثال
     return total - 2500 - 2000;
   };
 
@@ -95,19 +111,15 @@ const CartPage = () => {
                     </dl>
                   </div>
 
-                  {/* دکمه‌های افزایش/کاهش کارتن */}
                   <div className="flex flex-col items-center gap-1">
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() =>
                           updateItemQuantity(
                             item.id,
-                            Math.max(
-                              item.id,
-                              item.quantity - 10,
-                              item.size,
-                              item.color,
-                            ),
+                            Math.max(10, item.quantity - 10),
+                            item.size,
+                            item.color,
                           )
                         }
                         disabled={item.quantity <= 10}
@@ -131,10 +143,12 @@ const CartPage = () => {
                       </button>
                     </div>
                     <button
-                      onClick={() => removeItem(item.id, item.size, item.color)}
+                      onClick={() =>
+                        handleRemove(item.id, item.size, item.color, item.name)
+                      }
                       className="text-xs text-gray-600 transition hover:text-red-600 dark:text-gray-400 dark:hover:text-red-500"
                     >
-                      حذف
+                      <TrashIcon className="h-4 w-4" />
                     </button>
                   </div>
                 </li>
@@ -163,7 +177,7 @@ const CartPage = () => {
                     <dd>{calculateSubtotal()} تومان</dd>
                   </div>
                 </dl>
-                <div className="flex justify-end">
+                <div className="flex justify-center">
                   <a
                     href="#"
                     className="block rounded-lg bg-gray-700 px-5 py-3 text-sm text-gray-100 transition hover:bg-gray-600 dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-gray-300"
