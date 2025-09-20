@@ -1,10 +1,10 @@
-interface ShoeVariant {
+export interface ShoeVariant {
   color: string;
   images: string[];
   sizes: { size: number; stock: number }[];
 }
 
-interface Shoe {
+export interface Shoe {
   id: number;
   name: string;
   brand: string;
@@ -21,7 +21,7 @@ const shoesData: Shoe[] = [
     variants: [
       {
         color: "سفید",
-        images: ["/images/products/lacoste/lacoste-sefid-meshki.png"],
+        images: ["/images/products/lacoste/lacoste-sefid-meshki.webp"],
         sizes: [
           { size: 31, stock: 5 },
           { size: 32, stock: 4 },
@@ -32,7 +32,7 @@ const shoesData: Shoe[] = [
       },
       {
         color: "کرم",
-        images: ["/images/products/lacoste/lacoste-kerem.png"],
+        images: ["/images/products/lacoste/lacoste-kerem.webp"],
         sizes: [
           { size: 31, stock: 5 },
           { size: 32, stock: 4 },
@@ -43,7 +43,7 @@ const shoesData: Shoe[] = [
       },
       {
         color: "مشکی",
-        images: ["/images/products/lacoste/lacoste-meshki.png"],
+        images: ["/images/products/lacoste/lacoste-meshki.webp"],
         sizes: [
           { size: 31, stock: 2 },
           { size: 32, stock: 5 },
@@ -54,7 +54,7 @@ const shoesData: Shoe[] = [
       },
       {
         color: "آبی",
-        images: ["/images/products/lacoste/lacoste-sefid-abi.png"],
+        images: ["/images/products/lacoste/lacoste-sefid-abi.webp"],
         sizes: [
           { size: 31, stock: 3 },
           { size: 32, stock: 2 },
@@ -73,7 +73,7 @@ const shoesData: Shoe[] = [
     variants: [
       {
         color: "سفید",
-        images: ["/images/products/doKhat/doKhat-sefid-meshki.png"],
+        images: ["/images/products/doKhat/doKhat-sefid-meshki.webp"],
         sizes: [
           { size: 32, stock: 4 },
           { size: 33, stock: 3 },
@@ -84,7 +84,7 @@ const shoesData: Shoe[] = [
       },
       {
         color: "کرم",
-        images: ["/images/products/doKhat/doKhat-sefid-kerem.png"],
+        images: ["/images/products/doKhat/doKhat-sefid-kerem.webp"],
         sizes: [
           { size: 32, stock: 2 },
           { size: 33, stock: 4 },
@@ -95,7 +95,7 @@ const shoesData: Shoe[] = [
       },
       {
         color: "مشکی-کرم",
-        images: ["/images/products/doKhat/doKhat-meshki-kerem.png"],
+        images: ["/images/products/doKhat/doKhat-meshki-kerem.webp"],
         sizes: [
           { size: 32, stock: 3 },
           { size: 33, stock: 2 },
@@ -106,7 +106,7 @@ const shoesData: Shoe[] = [
       },
       {
         color: "مشکی",
-        images: ["/images/products/doKhat/doKhat-meshki-sefid.png"],
+        images: ["/images/products/doKhat/doKhat-meshki-sefid.webp"],
         sizes: [
           { size: 32, stock: 5 },
           { size: 33, stock: 4 },
@@ -125,7 +125,7 @@ const shoesData: Shoe[] = [
     variants: [
       {
         color: "کرم",
-        images: ["/images/products/jordan/jordan-kerem.png"],
+        images: ["/images/products/jordan/jordan-kerem.webp"],
         sizes: [
           { size: 31, stock: 4 },
           { size: 32, stock: 3 },
@@ -136,7 +136,7 @@ const shoesData: Shoe[] = [
       },
       {
         color: "مشکی",
-        images: ["/images/products/jordan/jordan-sefid-meshki.png"],
+        images: ["/images/products/jordan/jordan-sefid-meshki.webp"],
         sizes: [
           { size: 31, stock: 2 },
           { size: 32, stock: 5 },
@@ -147,7 +147,7 @@ const shoesData: Shoe[] = [
       },
       {
         color: "طوسی",
-        images: ["/images/products/jordan/jordan-tosi.png"],
+        images: ["/images/products/jordan/jordan-tosi.webp"],
         sizes: [
           { size: 31, stock: 2 },
           { size: 32, stock: 5 },
@@ -166,7 +166,7 @@ const shoesData: Shoe[] = [
     variants: [
       {
         color: "مشکی",
-        images: ["/images/products/bobDog/bobDog-black.png"],
+        images: ["/images/products/bobDog/bobDog-black.webp"],
         sizes: [
           { size: 32, stock: 5 },
           { size: 33, stock: 4 },
@@ -177,7 +177,7 @@ const shoesData: Shoe[] = [
       },
       {
         color: "آبی",
-        images: ["/images/products/bobDog/bobDog-blue.png"],
+        images: ["/images/products/bobDog/bobDog-blue.webp"],
         sizes: [
           { size: 32, stock: 5 },
           { size: 33, stock: 4 },
@@ -188,7 +188,7 @@ const shoesData: Shoe[] = [
       },
       {
         color: "صورتی",
-        images: ["/images/products/bobDog/bobDog-pink.png"],
+        images: ["/images/products/bobDog/bobDog-pink.webp"],
         sizes: [
           { size: 32, stock: 5 },
           { size: 33, stock: 4 },
@@ -199,7 +199,7 @@ const shoesData: Shoe[] = [
       },
       {
         color: "طوسی",
-        images: ["/images/products/bobDog/bobDog-tosi.png"],
+        images: ["/images/products/bobDog/bobDog-tosi.webp"],
         sizes: [
           { size: 32, stock: 5 },
           { size: 33, stock: 4 },
@@ -218,7 +218,7 @@ const shoesData: Shoe[] = [
     variants: [
       {
         color: "صورتی",
-        images: ["/images/products/koromy/koromy-pink.png"],
+        images: ["/images/products/koromy/koromy-pink.webp"],
         sizes: [
           { size: 32, stock: 4 },
           { size: 33, stock: 3 },
@@ -237,7 +237,7 @@ const shoesData: Shoe[] = [
     variants: [
       {
         color: "بنفش",
-        images: ["/images/products/3ghalb/3ghalb-banafsh.png"],
+        images: ["/images/products/3ghalb/3ghalb-banafsh.webp"],
         sizes: [
           { size: 32, stock: 2 },
           { size: 33, stock: 4 },
@@ -248,7 +248,7 @@ const shoesData: Shoe[] = [
       },
       {
         color: "صورتی",
-        images: ["/images/products/3ghalb/3ghalb-pink.png"],
+        images: ["/images/products/3ghalb/3ghalb-pink.webp"],
         sizes: [
           { size: 32, stock: 3 },
           { size: 33, stock: 2 },
@@ -259,7 +259,7 @@ const shoesData: Shoe[] = [
       },
       {
         color: "کرم",
-        images: ["/images/products/3ghalb/3ghalb-keremi.png"],
+        images: ["/images/products/3ghalb/3ghalb-keremi.webp"],
         sizes: [
           { size: 32, stock: 3 },
           { size: 33, stock: 2 },

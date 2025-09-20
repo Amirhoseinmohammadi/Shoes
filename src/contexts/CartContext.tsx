@@ -1,72 +1,74 @@
 "use client";
 
-import {
-  createContext,
-  useState,
-  useContext,
-  ReactNode,
-  useEffect,
-} from "react";
-import { Shoe } from "@/types/shoe";
+import { createContext, useContext, useState, ReactNode } from "react";
 
-interface CartItem extends Shoe {
+export interface CartItem {
+  id: number;
+  name: string;
+  brand: string;
+  color: string;
+  size: number; // سایز تکی
+  price: number;
+  image: string;
   quantity: number;
-  size?: string;
 }
 
 interface CartContextType {
   cartItems: CartItem[];
-  addItem: (item: Shoe, quantity?: number, size?: string) => void;
-  removeItem: (id: number, size?: string) => void;
-  updateItemQuantity: (id: number, quantity: number, size?: string) => void;
-  clearCart: () => void;
-  total: number;
+  addItem: (item: Omit<CartItem, "quantity">, quantity: number) => boolean;
+  removeItem: (id: number, color: string, size: number) => void;
+  updateItemQuantity: (
+    id: number,
+    quantity: number,
+    color: string,
+    size: number,
+  ) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (!context) throw new Error("useCart must be used within CartProvider");
+  return context;
+};
+
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  useEffect(() => {
-    const saved = localStorage.getItem("cart");
-    if (saved) {
-      setCartItems(JSON.parse(saved));
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cartItems));
-  }, [cartItems]);
-
   const addItem = (
-    item: Shoe,
-    quantity: number = 1,
-    size?: string,
-    color?: string,
-  ) => {
+    item: Omit<CartItem, "quantity">,
+    quantity: number,
+  ): boolean => {
+    let added = false;
     setCartItems((prev) => {
-      const existing = prev.find(
-        (p) => p.id === item.id && p.size === size && p.color === color,
+      const exists = prev.find(
+        (i) =>
+          i.id === item.id && i.color === item.color && i.size === item.size,
       );
 
-      if (existing) {
-        return prev.map((p) =>
-          p.id === item.id && p.size === size && p.color === color
-            ? { ...p, quantity: p.quantity + quantity }
-            : p,
+      if (exists) {
+        // اگر قبلا بود، تعدادش رو زیاد کن
+        added = true;
+        return prev.map((i) =>
+          i.id === item.id && i.color === item.color && i.size === item.size
+            ? { ...i, quantity: i.quantity + quantity }
+            : i,
         );
+      } else {
+        // اگر نبود، اضافه کن
+        added = true;
+        return [...prev, { ...item, quantity }];
       }
-
-      return [...prev, { ...item, quantity, size, color }];
     });
+    return added;
   };
 
-  const removeItem = (id: string, size?: string, color?: string) => {
+  const removeItem = (id: number, color: string, size: number) => {
     setCartItems((prev) =>
       prev.filter(
         (item) =>
-          !(item.id === id && item.size === size && item.color === color),
+          !(item.id === id && item.color === color && item.size === size),
       ),
     );
   };
@@ -74,45 +76,23 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const updateItemQuantity = (
     id: number,
     quantity: number,
-    size?: string,
-    color?: string,
+    color: string,
+    size: number,
   ) => {
     setCartItems((prev) =>
       prev.map((item) =>
-        item.id === id && item.size === size && item.color === color
+        item.id === id && item.color === color && item.size === size
           ? { ...item, quantity }
           : item,
       ),
     );
   };
 
-  const clearCart = () => setCartItems([]);
-
-  const total = cartItems.reduce(
-    (sum, item) => sum + Number(item.price) * item.quantity,
-    0,
-  );
-
   return (
     <CartContext.Provider
-      value={{
-        cartItems,
-        addItem,
-        removeItem,
-        updateItemQuantity,
-        clearCart,
-        total,
-      }}
+      value={{ cartItems, addItem, removeItem, updateItemQuantity }}
     >
       {children}
     </CartContext.Provider>
   );
-};
-
-export const useCart = () => {
-  const context = useContext(CartContext);
-  if (!context) {
-    throw new Error("useCart must be used within a CartProvider");
-  }
-  return context;
 };

@@ -15,8 +15,13 @@ export default function RootLayout({
 }) {
   return (
     <html suppressHydrationWarning lang="fa">
-      <head />
-      <body className="bg-[#FCFCFC] dark:bg-black">
+      <head>
+        <link
+          href="https://cdn.jsdelivr.net/gh/rastikerdar/shabnam-font@v5.0.1/dist/font-face.css"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="font-shabnam bg-[#FCFCFC] dark:bg-black">
         <Providers>
           <ToastProvider>
             <Header />

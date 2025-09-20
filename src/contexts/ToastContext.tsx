@@ -1,6 +1,12 @@
 "use client";
 
 import { createContext, useContext, useState, ReactNode } from "react";
+import {
+  CheckCircleIcon,
+  XCircleIcon,
+  ExclamationTriangleIcon,
+  InformationCircleIcon,
+} from "@heroicons/react/24/solid";
 
 type ToastType = "success" | "error" | "warning" | "info";
 
@@ -20,19 +26,19 @@ interface ToastContextType {
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
-  const [toast, setToast] = useState<ToastOptions | null>(null);
+  const [toasts, setToasts] = useState<ToastOptions[]>([]);
 
   const showToast = (options: ToastOptions) => {
-    setToast(options);
+    setToasts((prev) => [...prev, options]);
     if (!options.action) {
-      setTimeout(() => setToast(null), options.duration || 2000);
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t !== options));
+      }, options.duration || 3000);
     }
   };
 
-  const handleCancel = () => setToast(null);
-  const handleAction = () => {
-    toast?.action?.();
-    setToast(null);
+  const removeToast = (toast: ToastOptions) => {
+    setToasts((prev) => prev.filter((t) => t !== toast));
   };
 
   const getBgColor = (type?: ToastType) => {
@@ -50,34 +56,70 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const getIcon = (type?: ToastType) => {
+    switch (type) {
+      case "success":
+        return <CheckCircleIcon className="h-5 w-5 text-white" />;
+      case "error":
+        return <XCircleIcon className="h-5 w-5 text-white" />;
+      case "warning":
+        return <ExclamationTriangleIcon className="h-5 w-5 text-white" />;
+      case "info":
+        return <InformationCircleIcon className="h-5 w-5 text-white" />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      {toast && (
-        <div
-          className={`fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-lg px-4 py-3 shadow-lg ${getBgColor(
-            toast.type,
-          )}`}
-        >
-          <span className="flex-1 text-sm text-white">{toast.message}</span>
-          {toast.action ? (
-            <>
-              <button
-                onClick={handleCancel}
-                className="rounded bg-gray-200 px-2 py-1 text-xs dark:bg-gray-700 dark:text-white"
-              >
-                {toast.cancelLabel || "لغو"}
-              </button>
-              <button
-                onClick={handleAction}
-                className="rounded bg-red-700 px-2 py-1 text-xs text-white hover:bg-red-800"
-              >
-                {toast.actionLabel || "تایید"}
-              </button>
-            </>
-          ) : null}
-        </div>
-      )}
+      <div className="fixed top-4 right-4 z-50 flex flex-col gap-3">
+        {toasts.map((toast, idx) => (
+          <div
+            key={idx}
+            className={`flex transform items-center gap-3 rounded-lg px-4 py-3 text-white shadow-lg transition-all duration-300 ease-in-out ${getBgColor(
+              toast.type,
+            )} animate-slide-in`}
+          >
+            {getIcon(toast.type)}
+            <span className="flex-1 text-sm">{toast.message}</span>
+            {toast.action && (
+              <>
+                <button
+                  onClick={() => removeToast(toast)}
+                  className="rounded bg-gray-200 px-2 py-1 text-xs dark:bg-gray-700 dark:text-white"
+                >
+                  {toast.cancelLabel || "لغو"}
+                </button>
+                <button
+                  onClick={() => {
+                    toast.action?.();
+                    removeToast(toast);
+                  }}
+                  className="rounded bg-red-700 px-2 py-1 text-xs text-white hover:bg-red-800"
+                >
+                  {toast.actionLabel || "تایید"}
+                </button>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <style jsx>{`
+        .animate-slide-in {
+          opacity: 0;
+          transform: translateX(100%);
+          animation: slideIn 0.3s forwards;
+        }
+        @keyframes slideIn {
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+      `}</style>
     </ToastContext.Provider>
   );
 };

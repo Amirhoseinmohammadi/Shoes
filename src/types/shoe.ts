@@ -4,6 +4,6 @@ export interface Shoe {
   brand: string;
   color: string;
   size: number[];
-  price: string;
+  price: number;
   image: string;
 }
