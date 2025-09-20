@@ -62,7 +62,7 @@ const SingleShoe = ({ shoe }: { shoe: Shoe }) => {
 
       <div className="space-y-3 p-6">
         <p className="font-semibold text-gray-700 dark:text-gray-200">
-          {(shoe.price * 10).toLocaleString()} تومان / کارتن
+          {shoe.price.toLocaleString()} تومان / کارتن
         </p>
 
         <h3 className="text-lg font-bold text-gray-900 dark:text-white">

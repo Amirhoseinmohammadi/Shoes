@@ -6,17 +6,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { TrashIcon } from "@heroicons/react/24/outline";
 
-// نمایش تعداد جفت‌ها و کارتن
 const formatQuantity = (quantity: number) =>
   quantity >= 10
     ? `${Math.ceil(quantity / 10)} کارتن (${quantity} جفت)`
     : `${quantity} جفت`;
 
-// محاسبه کل مبلغ
 const calculateTotal = (items: CartItem[]) =>
-  items.reduce((total, item) => total + item.price * item.quantity, 0);
-
-// محاسبه مبلغ قابل پرداخت با مالیات و تخفیف
+  items.reduce((total, item) => total + (item.price / 10) * item.quantity, 0);
 const calculateSubtotal = (items: CartItem[], discount = 2500, tax = 2000) =>
   calculateTotal(items) - discount + tax;
 
