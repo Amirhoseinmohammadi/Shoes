@@ -23,12 +23,15 @@ const SingleShoe = ({ shoe }: { shoe: Shoe }) => {
 
   const [selectedVariant, setSelectedVariant] = useState(0);
   const [cartonCount, setCartonCount] = useState(1);
+  const [loading, setLoading] = useState(false);
 
   const selectedColor = shoe.variants[selectedVariant].color;
   const selectedImage = shoe.variants[selectedVariant].images[0];
 
-  const handleAddToCart = () => {
-    const added = addItem(
+  const handleAddToCart = async () => {
+    setLoading(true);
+
+    const success = await addItem(
       {
         ...shoe,
         color: selectedColor,
@@ -37,7 +40,9 @@ const SingleShoe = ({ shoe }: { shoe: Shoe }) => {
       cartonCount * 10,
     );
 
-    if (added) {
+    setLoading(false);
+
+    if (success) {
       showToast({ message: "محصول به سبد خرید اضافه شد!", type: "success" });
     } else {
       showToast({
@@ -114,9 +119,10 @@ const SingleShoe = ({ shoe }: { shoe: Shoe }) => {
         <button
           type="button"
           onClick={handleAddToCart}
-          className="mt-4 w-full rounded-xl bg-black px-4 py-2 text-sm font-semibold text-white shadow-md transition-transform duration-150 ease-in-out hover:scale-105 hover:shadow-xl active:scale-95"
+          disabled={loading}
+          className="mt-4 w-full rounded-xl bg-black px-4 py-2 text-sm font-semibold text-white shadow-md transition-transform duration-150 ease-in-out hover:scale-105 hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          افزودن به سبد خرید
+          {loading ? "در حال افزودن..." : "افزودن به سبد خرید"}
         </button>
       </div>
     </div>

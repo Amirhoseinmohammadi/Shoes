@@ -2,37 +2,19 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import Link from "next/link";
 
 interface Slide {
-  title: string;
-  description: string;
-  buttonText: string;
-  buttonUrl: string;
   image: string;
 }
 
 const slides: Slide[] = [
   {
-    title: "جدیدترین کلکسیون کفش‌های ورزشی و روزمره",
-    description:
-      "فروش فقط به صورت کارتن (۱۰ جفتی) بهترین قیمت عمده برای مدل‌های جدید و متنوع",
-    buttonText: "مشاهده محصولات",
-    buttonUrl: "#",
     image: "/images/products/doKhat/doKhat-sefid-kerem.webp",
   },
   {
-    title: "کفش‌های مد روز",
-    description: "کیفیت و استایل برتر برای همه سنین",
-    buttonText: "مشاهده جزئیات",
-    buttonUrl: "#",
     image: "/images/products/jordan/jordan-tosi.webp",
   },
   {
-    title: "کفش‌های ورزشی حرفه‌ای",
-    description: "راحتی و دوام برای ورزش و فعالیت روزمره",
-    buttonText: "خرید آنلاین",
-    buttonUrl: "#",
     image: "/images/products/lacoste/lacoste-sefid-abi.webp",
   },
 ];
@@ -68,26 +50,12 @@ const HeroSlider = () => {
             >
               <Image
                 src={slide.image}
-                alt={slide.title}
+                alt={"shoe"}
                 fill
                 className="object-cover"
                 priority={index === 0}
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               />
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 px-4 text-center md:px-8">
-                {/* <h2 className="mb-4 text-3xl font-bold text-white sm:text-4xl md:text-5xl">
-                  {slide.title}
-                </h2> */}
-                <p className="mb-6 text-base text-white sm:text-lg md:text-xl">
-                  {slide.description}
-                </p>
-                {/* <Link
-                  href={slide.buttonUrl}
-                  className="inline-block rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
-                >
-                  {slide.buttonText}
-                </Link> */}
-              </div>
             </div>
           ),
       )}

@@ -19,16 +19,33 @@ const calculateSubtotal = (items: CartItem[], discount = 2500, tax = 2000) =>
 const CartPage = () => {
   const { cartItems, removeItem, updateItemQuantity } = useCart();
   const { showToast } = useToast();
-  console.log("Cart Items:", cartItems);
 
   const handleRemove = (item: CartItem) => {
     showToast({
       message: `آیا از حذف ${item.name} مطمئن هستید؟`,
       type: "warning",
-      action: () => removeItem(item.id, item.color, item.size), // ✅ ترتیب درست
+      action: async () => {
+        await removeItem(item.id, item.color, item.size);
+        showToast({ message: "محصول حذف شد", type: "success" });
+      },
       actionLabel: "حذف",
       cancelLabel: "لغو",
     });
+  };
+
+  const handleUpdateQuantity = async (item: CartItem, newQuantity: number) => {
+    if (newQuantity < 10) return;
+    const success = await updateItemQuantity(
+      item.id,
+      newQuantity,
+      item.color,
+      item.size,
+    );
+    if (success !== false) {
+      showToast({ message: "تعداد محصول بروزرسانی شد", type: "success" });
+    } else {
+      showToast({ message: "خطا در بروزرسانی تعداد", type: "error" });
+    }
   };
 
   if (cartItems.length === 0) {
@@ -105,14 +122,7 @@ const CartPage = () => {
 
               <div className="mt-2 flex items-center gap-2 sm:mt-0">
                 <button
-                  onClick={() =>
-                    updateItemQuantity(
-                      item.id,
-                      Math.max(10, item.quantity - 10),
-                      item.color, // ✅ اول رنگ
-                      item.size, // ✅ بعد سایز
-                    )
-                  }
+                  onClick={() => handleUpdateQuantity(item, item.quantity - 10)}
                   disabled={item.quantity <= 10}
                   className="rounded bg-gray-100 px-2 py-1 dark:bg-gray-800"
                 >
@@ -120,14 +130,7 @@ const CartPage = () => {
                 </button>
                 <span>{Math.ceil(item.quantity / 10)}</span>
                 <button
-                  onClick={() =>
-                    updateItemQuantity(
-                      item.id,
-                      item.quantity + 10,
-                      item.color, // ✅ اول رنگ
-                      item.size, // ✅ بعد سایز
-                    )
-                  }
+                  onClick={() => handleUpdateQuantity(item, item.quantity + 10)}
                   className="rounded bg-gray-100 px-2 py-1 dark:bg-gray-800"
                 >
                   +
