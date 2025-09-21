@@ -1,8 +1,38 @@
+"use client";
+
 import SectionTitle from "../Common/SectionTitle";
-import SingleShoe from "./SingleShoe.tsx";
-import shoesData from "./shoesData";
+import SingleShoe from "./SingleShoe";
+import { useEffect, useState } from "react";
+import { Shoe } from "@/types/shoe";
 
 const Shoes = () => {
+  const [shoes, setShoes] = useState<Shoe[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchShoes = async () => {
+      try {
+        const res = await fetch("/api/shoes");
+        const data = await res.json();
+        console.log("Data received from API:", data);
+
+        // FIX: Check if 'data' itself is an array
+        if (Array.isArray(data)) {
+          setShoes(data);
+        } else {
+          console.error("The fetched data is not an array:", data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch shoes:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchShoes();
+  }, []);
+  if (loading) return <p className="py-20 text-center">در حال بارگذاری...</p>;
+
   return (
     <section
       id="shoes"
@@ -16,7 +46,7 @@ const Shoes = () => {
         />
 
         <div className="grid grid-cols-1 gap-x-8 gap-y-14 md:grid-cols-2 lg:grid-cols-3">
-          {shoesData.map((shoe) => (
+          {shoes.map((shoe) => (
             <SingleShoe key={shoe.id} shoe={shoe} />
           ))}
         </div>

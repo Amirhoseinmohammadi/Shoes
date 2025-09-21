@@ -1,6 +1,6 @@
 "use client";
 
-import { useCart, CartItem } from "@/contexts/CartContext";
+import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/contexts/ToastContext";
 import Image from "next/image";
 import Link from "next/link";
@@ -11,41 +11,65 @@ const formatQuantity = (quantity: number) =>
     ? `${Math.ceil(quantity / 10)} کارتن (${quantity} جفت)`
     : `${quantity} جفت`;
 
-const calculateTotal = (items: CartItem[]) =>
+const calculateTotal = (items: any[]) =>
   items.reduce((total, item) => total + (item.price / 10) * item.quantity, 0);
-const calculateSubtotal = (items: CartItem[], discount = 2500, tax = 2000) =>
+const calculateSubtotal = (items: any[], discount = 2500, tax = 2000) =>
   calculateTotal(items) - discount + tax;
 
 const CartPage = () => {
-  const { cartItems, removeItem, updateItemQuantity } = useCart();
+  const { cartItems, removeItem, updateItemQuantity, loading } = useCart();
   const { showToast } = useToast();
 
-  const handleRemove = (item: CartItem) => {
+  const handleRemove = async (item: any) => {
+    if (loading) return; // جلوگیری از درخواست‌های متوالی
+
     showToast({
       message: `آیا از حذف ${item.name} مطمئن هستید؟`,
       type: "warning",
       action: async () => {
-        await removeItem(item.id, item.color, item.size);
-        showToast({ message: "محصول حذف شد", type: "success" });
+        const success = await removeItem(item.id);
+        if (success) {
+          showToast({ message: "محصول حذف شد", type: "success" });
+        } else {
+          showToast({ message: "خطا در حذف محصول", type: "error" });
+        }
       },
       actionLabel: "حذف",
       cancelLabel: "لغو",
     });
   };
 
-  const handleUpdateQuantity = async (item: CartItem, newQuantity: number) => {
-    if (newQuantity < 10) return;
-    const success = await updateItemQuantity(
-      item.id,
-      newQuantity,
-      item.color,
-      item.size,
-    );
-    if (success !== false) {
+  const handleUpdateQuantity = async (item: any, newQuantity: number) => {
+    if (loading) return; // جلوگیری از درخواست‌های متوالی
+
+    if (newQuantity <= 0) {
+      return handleRemove(item);
+    }
+
+    const success = await updateItemQuantity(item.id, newQuantity);
+    if (success) {
       showToast({ message: "تعداد محصول بروزرسانی شد", type: "success" });
     } else {
       showToast({ message: "خطا در بروزرسانی تعداد", type: "error" });
     }
+  };
+
+  const getItemDisplayInfo = (item: any) => {
+    const baseInfo = `برند: ${item.brand}`;
+    const priceInfo = `قیمت: ${item.price.toLocaleString()} تومان`;
+    const quantityInfo = `تعداد: ${formatQuantity(item.quantity)}`;
+
+    let variants = [];
+    if (item.color) variants.push(`رنگ: ${item.color}`);
+    if (item.size) variants.push(`سایز: ${item.size}`);
+
+    return {
+      baseInfo,
+      priceInfo,
+      quantityInfo,
+      variants,
+      hasVariants: variants.length > 0,
+    };
   };
 
   if (cartItems.length === 0) {
@@ -72,80 +96,94 @@ const CartPage = () => {
       <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
         <header className="mb-8 text-center">
           <h1 className="text-2xl font-bold dark:text-white">سبد خرید شما</h1>
+          {loading && (
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              در حال بروزرسانی...
+            </p>
+          )}
         </header>
 
         <ul className="space-y-4">
-          {cartItems.map((item) => (
-            <li
-              key={`${item.id}-${item.size || "nosize"}-${item.color || "nocolor"}`}
-              className="flex flex-col items-center gap-4 rounded-lg border p-4 sm:flex-row dark:border-gray-700"
-            >
-              {item.image ? (
-                <Image
-                  src={item.image}
-                  alt={item.name}
-                  width={64}
-                  height={64}
-                  className="rounded object-cover"
-                />
-              ) : (
-                <div className="h-16 w-16 rounded bg-gray-200 dark:bg-gray-700" />
-              )}
+          {cartItems.map((item) => {
+            const displayInfo = getItemDisplayInfo(item);
 
-              <div className="flex-1 text-center sm:text-left">
-                <h3 className="font-semibold dark:text-white">{item.name}</h3>
-                <dl className="mt-1 space-y-0.5 text-sm text-gray-600 dark:text-gray-400">
-                  {item.brand && (
-                    <div>
-                      <dt className="inline">برند: </dt>
-                      <dd className="inline">{item.brand}</dd>
+            return (
+              <li
+                key={item.id}
+                className="flex flex-col items-center gap-4 rounded-lg border p-4 sm:flex-row dark:border-gray-700"
+              >
+                {item.image ? (
+                  <Image
+                    src={item.image}
+                    alt={item.name}
+                    width={64}
+                    height={64}
+                    className="rounded object-cover"
+                  />
+                ) : (
+                  <div className="h-16 w-16 rounded bg-gray-200 dark:bg-gray-700" />
+                )}
+
+                <div className="flex-1 text-center sm:text-left">
+                  <h3 className="font-semibold dark:text-white">{item.name}</h3>
+
+                  {/* اطلاعات اصلی */}
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <p>{displayInfo.baseInfo}</p>
+                    <p>{displayInfo.priceInfo}</p>
+                    <p>{displayInfo.quantityInfo}</p>
+                  </div>
+
+                  {/* نمایش ویژگی‌ها (رنگ و سایز) */}
+                  {displayInfo.hasVariants && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {displayInfo.variants.map((variant, index) => (
+                        <span
+                          key={index}
+                          className="rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                        >
+                          {variant}
+                        </span>
+                      ))}
                     </div>
                   )}
-                  {item.color && (
-                    <div>
-                      <dt className="inline">رنگ: </dt>
-                      <dd className="inline">{item.color}</dd>
-                    </div>
-                  )}
-                  <div>
-                    <dt className="inline">قیمت: </dt>
-                    <dd className="inline">
-                      {item.price.toLocaleString()} تومان
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="inline">تعداد: </dt>
-                    <dd className="inline">{formatQuantity(item.quantity)}</dd>
-                  </div>
-                </dl>
-              </div>
+                </div>
 
-              <div className="mt-2 flex items-center gap-2 sm:mt-0">
-                <button
-                  onClick={() => handleUpdateQuantity(item, item.quantity - 10)}
-                  disabled={item.quantity <= 10}
-                  className="rounded bg-gray-100 px-2 py-1 dark:bg-gray-800"
-                >
-                  -
-                </button>
-                <span>{Math.ceil(item.quantity / 10)}</span>
-                <button
-                  onClick={() => handleUpdateQuantity(item, item.quantity + 10)}
-                  className="rounded bg-gray-100 px-2 py-1 dark:bg-gray-800"
-                >
-                  +
-                </button>
+                <div className="mt-2 flex items-center gap-2 sm:mt-0">
+                  <button
+                    onClick={() =>
+                      handleUpdateQuantity(item, item.quantity - 10)
+                    }
+                    disabled={item.quantity <= 10 || loading}
+                    className="rounded bg-gray-100 px-2 py-1 disabled:opacity-50 dark:bg-gray-800"
+                  >
+                    -
+                  </button>
+                  <span className="min-w-[2rem] text-center">
+                    {Math.ceil(item.quantity / 10)}
+                  </span>
+                  <button
+                    onClick={() =>
+                      handleUpdateQuantity(item, item.quantity + 10)
+                    }
+                    disabled={loading}
+                    className="rounded bg-gray-100 px-2 py-1 disabled:opacity-50 dark:bg-gray-800"
+                  >
+                    +
+                  </button>
 
-                <button
-                  onClick={() => handleRemove(item)}
-                  className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-500"
-                  title="حذف"
-                >
-                  <TrashIcon className="h-5 w-5" />
-                </button>
-              </div>
-            </li>
-          ))}
+                  <button
+                    onClick={() => handleRemove(item)}
+                    disabled={loading}
+                    className="text-red-600 hover:text-red-800 disabled:opacity-50 dark:text-red-400 dark:hover:text-red-500"
+                    title="حذف"
+                  >
+                    <TrashIcon className="h-5 w-5" />
+                  </button>
+                </div>
+              </li>
+            );
+          })}
         </ul>
 
         <div className="mx-auto mt-8 max-w-lg border-t border-gray-200 pt-6 dark:border-gray-700">
