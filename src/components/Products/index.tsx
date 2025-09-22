@@ -16,7 +16,6 @@ const Shoes = () => {
         const data = await res.json();
         console.log("Data received from API:", data);
 
-        // FIX: Check if 'data' itself is an array
         if (Array.isArray(data)) {
           setShoes(data);
         } else {

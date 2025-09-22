@@ -93,8 +93,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     loadCartFromAPI();
   }, []);
 
-  // -- CART ACTIONS --
-
   const addItem = async ({
     shoe,
     quantity,
@@ -116,7 +114,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       });
       if (!res.ok) throw new Error("خطا در افزودن به سبد");
 
-      // ✅ FIX: Use the API response as the source of truth
       const addedOrUpdatedItem = await res.json();
 
       setCartItems((prev) => {
@@ -125,7 +122,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         );
 
         if (existingIndex >= 0) {
-          // If item's quantity was updated by the server, update it in state
           const updated = [...prev];
           updated[existingIndex] = {
             ...updated[existingIndex],
@@ -133,7 +129,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           };
           return updated;
         } else {
-          // If it's a new item, add it to the state using server data
           return [
             ...prev,
             {

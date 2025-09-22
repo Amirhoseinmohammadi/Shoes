@@ -50,9 +50,11 @@ const SingleShoe = ({ shoe }: { shoe: Shoe }) => {
   const handleAddToCart = async () => {
     setLoading(true);
     try {
-      // The 'addItem' function is now called without 'size'
       const success = await addItem({
-        shoe: shoe,
+        shoe: {
+          ...shoe,
+          image: selectedImageUrl,
+        },
         quantity: cartonCount * 10,
         color: selectedColor,
       });

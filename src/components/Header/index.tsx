@@ -40,7 +40,7 @@ const Header = () => {
                       : "hover:text-primary text-gray-700 dark:text-gray-300"
                   }`}
                 >
-                  {item.label}
+                  {item.title}
                 </Link>
               ),
           )}
