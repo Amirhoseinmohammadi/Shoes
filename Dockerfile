@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma
 
-# وابستگی‌ها را نصب کن (فقط generate)
+# وابستگی‌ها را نصب کن
 RUN npm install
 
 # بقیه فایل‌های پروژه را کپی کن
@@ -29,10 +29,8 @@ COPY --from=builder /app ./
 COPY --from=builder /app/entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
 
-# پورت را از متغیر محیطی بخوان (Railway این را به صورت خودکار تنظیم می‌کند)
-# اگر متغیری وجود نداشت، از پورت 3000 استفاده کن
-ENV PORT 3000
-EXPOSE 3000
+# دستور پیش‌فرض برای اجرا (این دستور توسط entrypoint.sh اجرا خواهد شد)
+CMD ["npm", "start"]
 
 # اسکریپت entrypoint را به عنوان دستور شروع اجرا کن
 ENTRYPOINT ["/app/entrypoint.sh"]
