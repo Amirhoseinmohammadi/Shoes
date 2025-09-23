@@ -1,30 +1,38 @@
-# مرحله build
-FROM node:18-alpine AS builder
+# Dockerfile بهینه شده برای Railway
 
+# --- مرحله Build ---
+FROM node:18-alpine AS builder
 WORKDIR /app
 
-# متغیر محیطی رو برای build بده
-ARG DATABASE_URL
-ENV DATABASE_URL=$DATABASE_URL
-
+# فقط فایل‌های لازم برای نصب وابستگی‌ها را کپی کن
 COPY package*.json ./
 COPY prisma ./prisma
 
+# وابستگی‌ها را نصب کن (فقط generate)
 RUN npm install
 
+# بقیه فایل‌های پروژه را کپی کن
 COPY . .
 
+# برنامه را build کن
 RUN npm run build
 
-# مرحله runtime
-FROM node:18-alpine AS runner
 
+# --- مرحله Runtime ---
+FROM node:18-alpine AS runner
 WORKDIR /app
 
+# فایل‌های build شده را از مرحله قبل کپی کن
 COPY --from=builder /app ./
 
-ENV DATABASE_URL=$DATABASE_URL
+# اسکریپت entrypoint را کپی و قابل اجرا کن
+COPY --from=builder /app/entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
 
+# پورت را از متغیر محیطی بخوان (Railway این را به صورت خودکار تنظیم می‌کند)
+# اگر متغیری وجود نداشت، از پورت 3000 استفاده کن
+ENV PORT 3000
 EXPOSE 3000
 
-CMD ["npm", "start"]
+# اسکریپت entrypoint را به عنوان دستور شروع اجرا کن
+ENTRYPOINT ["/app/entrypoint.sh"]
