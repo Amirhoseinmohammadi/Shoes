@@ -32,13 +32,5 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/public ./public
 
-
-# اسکریپت entrypoint را کپی و قابل اجرا کن
-COPY --from=builder /app/entrypoint.sh ./entrypoint.sh
-RUN chmod +x ./entrypoint.sh
-
-# دستور پیش‌فرض برای اجرا (این دستور توسط entrypoint.sh اجرا خواهد شد)
+# دستور شروع
 CMD ["npm", "start"]
-
-# اسکریپت entrypoint را به عنوان دستور شروع اجرا کن
-ENTRYPOINT ["/app/entrypoint.sh"]
