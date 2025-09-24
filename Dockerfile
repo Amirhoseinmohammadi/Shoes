@@ -1,14 +1,16 @@
-# ================= Builder =================
 FROM node:18-alpine AS builder
 WORKDIR /app
 
+# 1. کپی package.json و prisma قبل از npm install
 COPY package*.json ./
+COPY prisma ./prisma
+
+# 2. نصب وابستگی‌ها و generate prisma
 RUN npm install
-
-COPY prisma ./prisma/
-COPY . .
-
 RUN npx prisma generate
+
+# 3. کپی باقی سورس و build next.js
+COPY . .
 RUN npm run build
 
 # ================= Runner =================
