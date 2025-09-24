@@ -4,7 +4,8 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
+  // مسیر پایگاه داده را به یک پوشه جداگانه منتقل می‌کنیم
+  url      = "file:../database/production.db"
 }
 
 model User {
@@ -20,6 +21,7 @@ model Product {
   price       Float
   description String?
   image       String?
+  
   cartItems   CartItem[]
   variants    Variant[]
 }
