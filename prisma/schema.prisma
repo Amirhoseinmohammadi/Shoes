@@ -4,8 +4,8 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  // مسیر پایگاه داده را به یک پوشه جداگانه منتقل می‌کنیم
-  url      = "file:../database/production.db"
+  // از متغیر محیطی برای آدرس پایگاه داده استفاده می‌کنیم
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -49,7 +49,7 @@ model Size {
   variantId Int
   variant   Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
-  cartItems CartItem[] // اضافه شد
+  cartItems CartItem[]
 }
 
 model CartItem {
@@ -68,3 +68,4 @@ model CartItem {
 
   @@map("cart_items")
 }
+
