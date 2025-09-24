@@ -26,7 +26,6 @@ const Header = () => {
       }`}
     >
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
-        {/* Menu */}
         <nav className="hidden space-x-6 md:flex">
           {menuData.map(
             (item, idx) =>
@@ -75,7 +74,6 @@ const Header = () => {
           </Link>
         </div>
 
-        {/* Logo */}
         <Link href="/" className="text-lg font-bold text-black dark:text-white">
           Iran<span className="text-primary">Steps</span>
         </Link>

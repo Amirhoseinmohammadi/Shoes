@@ -60,7 +60,6 @@ const HeroSlider = () => {
           ),
       )}
 
-      {/* Navigation */}
       <button
         onClick={prevSlide}
         className="absolute top-1/2 left-4 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 md:h-12 md:w-12"
@@ -102,7 +101,6 @@ const HeroSlider = () => {
         </svg>
       </button>
 
-      {/* Indicators */}
       <div className="absolute bottom-8 left-1/2 z-10 flex -translate-x-1/2 space-x-2">
         {slides.map((_, index) => (
           <button

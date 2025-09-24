@@ -4,12 +4,11 @@ import { prisma } from "../../../../prisma/client";
 export async function GET(req: NextRequest) {
   try {
     const shoes = await prisma.product.findMany({
-      // Add this 'include' block to fetch related data
       include: {
         variants: {
           include: {
-            images: true, // This tells Prisma to include the images for each variant
-            sizes: true, // It's also a good idea to include the sizes
+            images: true,
+            sizes: true,
           },
         },
       },

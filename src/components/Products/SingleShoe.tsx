@@ -5,7 +5,6 @@ import { useState } from "react";
 import { useToast } from "@/contexts/ToastContext";
 import Image from "next/image";
 
-// The interface no longer needs 'size'
 interface ShoeVariant {
   color: string;
   images: { url: string }[];

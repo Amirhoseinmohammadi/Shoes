@@ -8,19 +8,15 @@ import {
   useEffect,
 } from "react";
 
-// -- INTERFACES --
-
-// رابط آیتم سبد خرید کامل‌تر شده است
 export interface CartItem {
-  id: number; // همیشه شناسه یکتای آیتم سبد خرید (cartItemId) است
-  productId: number; // شناسه محصول برای شناسایی unqiue
+  id: number;
+  productId: number;
   name: string;
   brand: string;
   price: number;
   image: string;
   quantity: number;
-  color?: string; // پشتیبانی از رنگ
-  // size?: string; // پشتیبانی از سایز
+  color?: string;
 }
 
 export interface Shoe {
@@ -31,7 +27,6 @@ export interface Shoe {
   image: string;
 }
 
-// رابط برای پارامترهای تابع addItem برای خوانایی بهتر
 interface AddItemParams {
   shoe: Shoe;
   quantity: number;
@@ -62,8 +57,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // -- DATA FETCHING --
-
   useEffect(() => {
     const loadCartFromAPI = async () => {
       setLoading(true);
@@ -71,7 +64,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         const res = await fetch("/api/cart?userId=1");
         if (res.ok) {
           const apiData = await res.json();
-          // ✅ FIX: Map all required fields from the API response
           const formattedItems: CartItem[] = apiData.map((item: any) => ({
             id: item.id,
             productId: item.productId,
@@ -175,10 +167,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     cartItemId: number,
     quantity: number,
   ): Promise<boolean> => {
-    // ✅ FIX: Removed the faulty "quantity < 10" check
     if (!cartItemId) return false;
 
-    // If quantity is 0 or less, treat it as a remove action
     if (quantity <= 0) {
       return removeItem(cartItemId);
     }

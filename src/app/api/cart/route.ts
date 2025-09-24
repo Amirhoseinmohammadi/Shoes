@@ -1,12 +1,9 @@
-// app/api/cart/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 const DEFAULT_USER_ID = 1;
 
-// -------------------- GET --------------------
-// دریافت آیتم‌های سبد خرید یک کاربر
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -27,12 +24,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// -------------------- POST --------------------
-// افزودن آیتم به سبد خرید یا افزایش تعداد اگر موجود باشد
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    // ✅ FIX: "size" را از اینجا حذف کنید
     const { productId, quantity, color } = body;
     const userId = body.userId || 1;
 
@@ -44,7 +38,6 @@ export async function POST(req: NextRequest) {
     }
 
     const existing = await prisma.cartItem.findFirst({
-      // ✅ FIX: جستجو فقط بر اساس رنگ
       where: { userId, productId, color },
     });
 
@@ -58,7 +51,6 @@ export async function POST(req: NextRequest) {
     }
 
     const newItem = await prisma.cartItem.create({
-      // ✅ FIX: "size" را از دیتا حذف کنید
       data: { userId, productId, quantity, color },
       include: { product: true },
     });
@@ -73,14 +65,11 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// -------------------- PATCH --------------------
-// بروزرسانی تعداد آیتم سبد خرید
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
     const { cartItemId, quantity } = body;
 
-    // بررسی صحیح پارامترها
     if (!cartItemId || quantity === undefined || quantity === null) {
       return NextResponse.json(
         { error: "cartItemId and quantity are required" },
@@ -88,7 +77,6 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    // تبدیل به عدد و بررسی اعتبار
     const itemId = Number(cartItemId);
     const itemQuantity = Number(quantity);
 
@@ -106,7 +94,6 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    // بررسی وجود آیتم قبل از بروزرسانی
     const existingItem = await prisma.cartItem.findUnique({
       where: { id: itemId },
     });
@@ -134,8 +121,6 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// -------------------- DELETE --------------------
-// حذف یک آیتم از سبد خرید
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -157,7 +142,6 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // بررسی وجود آیتم قبل از حذف
     const existingItem = await prisma.cartItem.findUnique({
       where: { id: cartItemId },
     });

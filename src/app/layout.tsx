@@ -3,7 +3,7 @@
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import ScrollToTop from "@/components/ScrollToTop";
-import "../styles/index.css";
+import "@/styles/index.css";
 import { Providers } from "./providers";
 import PageTransition from "@/components/Common/PageTransition";
 import { ToastProvider } from "@/contexts/ToastContext";
