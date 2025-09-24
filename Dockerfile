@@ -26,4 +26,4 @@ COPY --from=builder /app/prisma ./prisma
 RUN mkdir -p /app/database
 COPY --from=builder /app/prisma/dev.db /app/database/production.db
 
-CMD ["sh", "-c", "npx prisma migrate deploy --schema=./prisma/schema.prisma && npx next start -p ${PORT-3000} -H 0.0.0.0"]
+CMD ["sh", "-c", "npx prisma migrate deploy --schema=./prisma/schema.prisma && npx next start -p $PORT -H 0.0.0.0"]
