@@ -4,8 +4,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  // از متغیر محیطی برای آدرس پایگاه داده استفاده می‌کنیم
-  url      = env("DATABASE_URL")
+ url = env("DATABASE_URL")
 }
 
 model User {
