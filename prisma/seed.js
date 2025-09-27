@@ -4,13 +4,14 @@ const shoesData = require("../src/components/Products/shoesData");
 const prisma = new PrismaClient();
 
 async function main() {
+  // ایجاد کاربر پیش‌فرض بدون مشخص کردن id
   await prisma.user.create({
     data: {
-      id: 1,
       username: "defaultuser",
     },
   });
 
+  // اضافه کردن محصولات و جزئیات آن‌ها
   for (const product of shoesData) {
     await prisma.product.create({
       data: {
@@ -38,7 +39,10 @@ async function main() {
 }
 
 main()
-  .catch(console.error)
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
   .finally(async () => {
     await prisma.$disconnect();
   });
