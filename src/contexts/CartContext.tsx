@@ -45,6 +45,18 @@ interface CartContextType {
   loading: boolean;
 }
 
+interface CartContextType {
+  cartItems: CartItem[];
+  addItem: (params: AddItemParams) => Promise<boolean>;
+  removeItem: (cartItemId: number) => Promise<boolean>;
+  updateItemQuantity: (
+    cartItemId: number,
+    quantity: number,
+  ) => Promise<boolean>;
+  checkout: (customer: { name: string; phone: string }) => Promise<boolean>;
+  loading: boolean;
+}
+
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const useCart = () => {
@@ -64,16 +76,27 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         const res = await fetch("/api/cart?userId=1");
         if (res.ok) {
           const apiData = await res.json();
-          const formattedItems: CartItem[] = apiData.map((item: any) => ({
-            id: item.id,
-            productId: item.productId,
-            name: item.product.name,
-            brand: item.product.brand,
-            price: item.product.price,
-            image: item.product.image,
-            quantity: item.quantity,
-            color: item.color,
-          }));
+
+          const formattedItems: CartItem[] = apiData.map((item: any) => {
+            const variant = item.product.variants.find(
+              (v: any) => v.color === item.color,
+            );
+
+            const image =
+              variant?.images?.length > 0 ? variant.images[0].url : null;
+
+            return {
+              id: item.id,
+              productId: item.productId,
+              name: item.product.name,
+              brand: item.product.brand,
+              price: item.product.price,
+              image,
+              quantity: item.quantity,
+              color: item.color,
+            };
+          });
+
           setCartItems(formattedItems);
         }
       } catch (err) {
@@ -101,6 +124,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           productId: shoe.id,
           quantity,
           color,
+          image: shoe.image,
           size,
         }),
       });
@@ -118,6 +142,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           updated[existingIndex] = {
             ...updated[existingIndex],
             quantity: addedOrUpdatedItem.quantity,
+            image:
+              addedOrUpdatedItem.product?.image || addedOrUpdatedItem.image,
           };
           return updated;
         } else {
@@ -129,7 +155,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
               name: addedOrUpdatedItem.product.name,
               brand: addedOrUpdatedItem.product.brand,
               price: addedOrUpdatedItem.product.price,
-              image: addedOrUpdatedItem.product.image,
+              image:
+                addedOrUpdatedItem.product.image || addedOrUpdatedItem.image,
               quantity: addedOrUpdatedItem.quantity,
               color: addedOrUpdatedItem.color,
               size: addedOrUpdatedItem.size,
@@ -196,9 +223,45 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const checkout = async (customer: { name: string; phone: string }) => {
+    if (cartItems.length === 0) return false;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: 1,
+          items: cartItems,
+          ...customer,
+        }),
+      });
+      if (!res.ok) throw new Error("خطا در ثبت سفارش");
+      await fetch("/api/cart/clear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: 1 }),
+      });
+      setCartItems([]);
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <CartContext.Provider
-      value={{ cartItems, addItem, removeItem, updateItemQuantity, loading }}
+      value={{
+        cartItems,
+        addItem,
+        removeItem,
+        updateItemQuantity,
+        checkout,
+        loading,
+      }}
     >
       {children}
     </CartContext.Provider>

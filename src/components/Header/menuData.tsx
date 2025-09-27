@@ -7,5 +7,11 @@ const menuData: Menu[] = [
     path: "/",
     newTab: false,
   },
+  // {
+  //   id: 1,
+  //   title: "سفارش های من",
+  //   path: "/order",
+  //   newTab: false,
+  // },
 ];
 export default menuData;

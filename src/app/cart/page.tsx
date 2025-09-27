@@ -1,10 +1,11 @@
 "use client";
-
+import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/contexts/ToastContext";
 import Image from "next/image";
 import Link from "next/link";
 import { TrashIcon } from "@heroicons/react/24/outline";
+import CheckoutModal from "@/components/CheckoutModal";
 
 const formatQuantity = (quantity: number) =>
   quantity >= 10
@@ -17,11 +18,13 @@ const calculateSubtotal = (items: any[], discount = 2500, tax = 2000) =>
   calculateTotal(items) - discount + tax;
 
 const CartPage = () => {
-  const { cartItems, removeItem, updateItemQuantity, loading } = useCart();
+  const { cartItems, removeItem, updateItemQuantity, checkout, loading } =
+    useCart();
   const { showToast } = useToast();
+  const [modalOpen, setModalOpen] = useState(false);
 
   const handleRemove = async (item: any) => {
-    if (loading) return; // جلوگیری از درخواست‌های متوالی
+    if (loading) return;
 
     showToast({
       message: `آیا از حذف ${item.name} مطمئن هستید؟`,
@@ -40,20 +43,27 @@ const CartPage = () => {
   };
 
   const handleUpdateQuantity = async (item: any, newQuantity: number) => {
-    if (loading) return; // جلوگیری از درخواست‌های متوالی
+    if (loading) return;
 
     if (newQuantity <= 0) {
       return handleRemove(item);
     }
 
-    const success = await updateItemQuantity(item.id, newQuantity);
-    if (success) {
-      showToast({ message: "تعداد محصول بروزرسانی شد", type: "success" });
-    } else {
-      showToast({ message: "خطا در بروزرسانی تعداد", type: "error" });
-    }
+    await updateItemQuantity(item.id, newQuantity);
   };
 
+  const handleConfirmOrder = async (customer: {
+    name: string;
+    phone: string;
+  }) => {
+    const success = await checkout(customer);
+    if (success) {
+      showToast({ message: "سفارش با موفقیت ثبت شد", type: "success" });
+      setModalOpen(false);
+    } else {
+      showToast({ message: "خطا در ثبت سفارش", type: "error" });
+    }
+  };
   const getItemDisplayInfo = (item: any) => {
     const baseInfo = `برند: ${item.brand}`;
     const priceInfo = `قیمت: ${item.price.toLocaleString()} تومان`;
@@ -74,7 +84,7 @@ const CartPage = () => {
 
   if (cartItems.length === 0) {
     return (
-      <div className="mx-auto max-w-screen-xl px-4 py-12 text-center">
+      <div className="mx-auto mt-5 max-w-screen-xl px-4 py-12 text-center">
         <h1 className="text-2xl font-bold dark:text-white">
           سبد خرید شما خالی است
         </h1>
@@ -94,7 +104,7 @@ const CartPage = () => {
   return (
     <section className="bg-white py-8 dark:bg-gray-900">
       <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
-        <header className="mb-8 text-center">
+        <header className="mt-5 mb-8 text-center">
           <h1 className="text-2xl font-bold dark:text-white">سبد خرید شما</h1>
           {loading && (
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
@@ -127,14 +137,12 @@ const CartPage = () => {
                 <div className="flex-1 text-center sm:text-left">
                   <h3 className="font-semibold dark:text-white">{item.name}</h3>
 
-                  {/* اطلاعات اصلی */}
                   <div className="text-sm text-gray-600 dark:text-gray-400">
                     <p>{displayInfo.baseInfo}</p>
                     <p>{displayInfo.priceInfo}</p>
                     <p>{displayInfo.quantityInfo}</p>
                   </div>
 
-                  {/* نمایش ویژگی‌ها (رنگ و سایز) */}
                   {displayInfo.hasVariants && (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {displayInfo.variants.map((variant, index) => (
@@ -207,12 +215,19 @@ const CartPage = () => {
           </div>
 
           <div className="mt-4 text-center">
-            <Link
-              href="/checkout"
-              className="inline-block w-full rounded-lg bg-gray-700 px-5 py-3 text-white hover:bg-gray-600 dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-gray-300"
+            <button
+              disabled={loading || cartItems.length === 0}
+              onClick={() => setModalOpen(true)}
+              className="mt-4 w-full rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-500"
             >
-              ادامه و پرداخت
-            </Link>
+              ثبت سفارش
+            </button>
+
+            <CheckoutModal
+              isOpen={modalOpen}
+              onClose={() => setModalOpen(false)}
+              onConfirm={handleConfirmOrder}
+            />
           </div>
         </div>
       </div>

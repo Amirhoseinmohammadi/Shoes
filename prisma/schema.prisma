@@ -4,25 +4,27 @@ generator client {
 
 datasource db {
   provider = "sqlite"
- url = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 model User {
   id        Int        @id @default(autoincrement())
   username  String     @unique
   cartItems CartItem[]
+  orders    Order[] // ← اضافه شد
 }
 
 model Product {
-  id          Int        @id @default(autoincrement())
+  id          Int     @id @default(autoincrement())
   name        String
   brand       String
   price       Float
   description String?
   image       String?
-  
-  cartItems   CartItem[]
-  variants    Variant[]
+
+  cartItems  CartItem[]
+  variants   Variant[]
+  orderItems OrderItem[] // ← اضافه شد
 }
 
 model Variant {
@@ -68,3 +70,26 @@ model CartItem {
   @@map("cart_items")
 }
 
+model Order {
+  id        Int         @id @default(autoincrement())
+  userId    Int
+  status    String      @default("PENDING") // PENDING | CONFIRMED | SHIPPED ...
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  items     OrderItem[]
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  productId Int
+  quantity  Int
+  price     Float
+  color     String?
+  size      String?
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+}
