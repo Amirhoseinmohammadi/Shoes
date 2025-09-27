@@ -74,25 +74,6 @@ const Header = () => {
           </Link>
         </div>
 
-        {/* <nav className="space-x-6 md:flex">
-          {menuData.map(
-            (item, idx) =>
-              item.path && (
-                <Link
-                  key={idx}
-                  href={item.path}
-                  className={`font-medium ${
-                    pathname === item.path
-                      ? "text-primary dark:text-white"
-                      : "hover:text-primary text-gray-700 dark:text-gray-300"
-                  }`}
-                >
-                  {item.title}
-                </Link>
-              ),
-          )}
-        </nav> */}
-
         <Link href="/" className="text-lg font-bold text-black dark:text-white">
           Iran<span className="text-primary">Steps</span>
         </Link>

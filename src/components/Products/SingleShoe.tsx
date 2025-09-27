@@ -49,8 +49,6 @@ const SingleShoe = ({ shoe }: { shoe: Shoe }) => {
   const handleAddToCart = async () => {
     setLoading(true);
     try {
-      console.log(selectedImageUrl);
-
       const success = await addItem({
         shoe: {
           ...shoe,

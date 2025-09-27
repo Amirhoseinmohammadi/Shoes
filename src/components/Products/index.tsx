@@ -14,7 +14,6 @@ const Shoes = () => {
       try {
         const res = await fetch("/api/shoes");
         const data = await res.json();
-        console.log("Data received from API:", data);
 
         if (Array.isArray(data)) {
           setShoes(data);
