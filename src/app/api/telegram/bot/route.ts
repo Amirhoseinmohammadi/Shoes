@@ -1,5 +1,5 @@
+// src/app/api/telegram/bot/route.ts
 import { Telegraf } from "telegraf";
-import type { NextApiRequest, NextApiResponse } from "next";
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
 
@@ -18,14 +18,14 @@ bot.start((ctx) => {
   });
 });
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-) {
+// فقط متد POST چون وبهوک تلگرام POST می‌فرسته
+export async function POST(req: Request) {
   try {
-    await bot.handleUpdate(req.body);
+    const body = await req.json();
+    await bot.handleUpdate(body);
+    return new Response("OK", { status: 200 });
   } catch (err) {
     console.error("Bot handler error:", err);
+    return new Response("Error", { status: 500 });
   }
-  res.status(200).end();
 }
