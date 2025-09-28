@@ -18,14 +18,12 @@ bot.start((ctx) => {
   });
 });
 
-// فقط متد POST چون وبهوک تلگرام POST می‌فرسته
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    await bot.handleUpdate(body);
-    return new Response("OK", { status: 200 });
+    const json = await req.json();
+    await bot.handleUpdate(json);
   } catch (err) {
     console.error("Bot handler error:", err);
-    return new Response("Error", { status: 500 });
   }
+  return new Response(null, { status: 200 });
 }
