@@ -1,5 +1,6 @@
+// src/app/api/telegram/bot/route.ts
 import { Telegraf } from "telegraf";
-import type { NextApiRequest, NextApiResponse } from "next";
+import { NextRequest, NextResponse } from "next/server";
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
 
@@ -18,13 +19,22 @@ bot.start((ctx) => {
   });
 });
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-) {
+export async function POST(request: NextRequest) {
   try {
-    await bot.handleUpdate(req.body, res);
+    const update = await request.json();
+
+    const fakeRes = {
+      status: (code: number) => ({ end: () => {} }),
+      json: () => {},
+      end: () => {},
+      setHeader: () => {},
+    };
+
+    await bot.handleUpdate(update, fakeRes as any);
+
+    return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Bot handler error:", err);
+    return NextResponse.json({ error: "Handler failed" }, { status: 500 });
   }
 }
