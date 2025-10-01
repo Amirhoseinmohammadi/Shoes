@@ -1,4 +1,3 @@
-// src/app/api/telegram/bot/route.ts – نسخه رفع‌شده با log بیشتر و چک env
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 
@@ -12,7 +11,6 @@ export async function POST(request: NextRequest) {
       console.error("TELEGRAM_BOT_TOKEN not found in env");
       return NextResponse.json({ error: "Bot token missing" }, { status: 500 });
     }
-    console.log("Token length:", botToken.length); // دیباگ: طول token (باید ~45 باشه)
 
     if (
       "message" in update &&
@@ -24,20 +22,10 @@ export async function POST(request: NextRequest) {
 
       const messageBody = {
         chat_id: chatId,
-        text: "👋 سلام! به فروشگاه کفش خوش اومدی!",
-        reply_markup: {
-          inline_keyboard: [
-            [
-              {
-                text: "🛍 ورود به فروشگاه",
-                web_app: { url: "https://shoes-production.up.railway.app" },
-              },
-            ],
-          ],
-        },
+        text: "👋 سلام! به فروشگاه کفش خوش اومدی! (تست بدون دکمه – بعداً اضافه می‌شه)",
       };
 
-      console.log("Send body:", JSON.stringify(messageBody, null, 2)); // دیباگ body
+      console.log("Send body:", JSON.stringify(messageBody, null, 2));
 
       const response = await axios.post(
         `https://api.telegram.org/bot${botToken}/sendMessage`,
@@ -67,7 +55,7 @@ export async function POST(request: NextRequest) {
     console.error(
       "Full error:",
       (err as any).response?.data || (err as Error).message,
-    ); // دیباگ کامل error
+    );
     return NextResponse.json(
       { error: (err as Error).message },
       { status: 500 },
