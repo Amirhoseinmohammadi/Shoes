@@ -9,59 +9,58 @@ export async function POST(request: NextRequest) {
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     if (!botToken) {
       console.error("❌ TELEGRAM_BOT_TOKEN not found in env");
-      return NextResponse.json({ error: "Bot token missing" }, { status: 500 });
+      return NextResponse.json({ ok: false, error: "Bot token missing" });
     }
 
-    const chatId = update.message?.chat?.id;
-    const text = update.message?.text;
+    // فوراً پاسخ بده به تلگرام تا وبهوک خطای 500 نده
+    const response = NextResponse.json({ ok: true });
 
-    if (!chatId) {
-      console.warn("⚠️ Update has no chatId:", update);
-      return NextResponse.json({ ok: true }); // نمی‌ریزیم روی 500
-    }
+    // پردازش async بعد از پاسخ
+    (async () => {
+      const chatId = update.message?.chat?.id;
+      const text = update.message?.text;
 
-    if (text === "/start") {
-      console.log("✅ /start received from user:", update.message?.from?.id);
+      if (!chatId) {
+        console.warn("⚠️ Update has no chatId:", update);
+        return;
+      }
 
-      const messageBody = {
-        chat_id: chatId,
-        text: "👋 سلام! به فروشگاه کفش خوش اومدی! (تست بدون دکمه – بعداً اضافه می‌شه)",
-      };
+      try {
+        if (text === "/start") {
+          console.log(
+            "✅ /start received from user:",
+            update.message?.from?.id,
+          );
 
-      const response = await axios.post(
-        `https://api.telegram.org/bot${botToken}/sendMessage`,
-        messageBody,
-      );
+          await axios.post(
+            `https://api.telegram.org/bot${botToken}/sendMessage`,
+            {
+              chat_id: chatId,
+              text: "👋 سلام! به فروشگاه کفش خوش اومدی! (تست بدون دکمه – بعداً اضافه می‌شه)",
+            },
+          );
+        } else {
+          await axios.post(
+            `https://api.telegram.org/bot${botToken}/sendMessage`,
+            {
+              chat_id: chatId,
+              text: "برای شروع، /start بزن!",
+            },
+          );
+        }
+      } catch (err: any) {
+        console.error(
+          "❌ Telegram sendMessage error:",
+          err.response?.data || err.message,
+        );
+      }
+    })();
 
-      console.log("📤 SendMessage response:", response.data);
-    } else {
-      const fallbackBody = {
-        chat_id: chatId,
-        text: "برای شروع، /start بزن!",
-      };
-
-      const fallbackResponse = await axios.post(
-        `https://api.telegram.org/bot${botToken}/sendMessage`,
-        fallbackBody,
-      );
-
-      console.log("📤 Fallback response:", fallbackResponse.data);
-    }
-
-    return NextResponse.json({ ok: true });
+    return response;
   } catch (err: any) {
-    if (err.response?.status === 401) {
-      console.error("❌ Invalid Bot Token! Check TELEGRAM_BOT_TOKEN");
-      return NextResponse.json({ error: "Invalid Bot Token" }, { status: 401 });
-    }
-
-    console.error("❌ Bot handler error:", err.message);
-    console.error("📄 Full error response:", err.response?.data || err.stack);
-
-    return NextResponse.json(
-      { error: "Internal bot error", details: err.message },
-      { status: 500 },
-    );
+    console.error("❌ Bot handler fatal error:", err.stack || err.message);
+    // حتی در صورت خطای غیرمنتظره، 200 بده تا تلگرام دوباره وبهوک را قطع نکند
+    return NextResponse.json({ ok: true });
   }
 }
 
