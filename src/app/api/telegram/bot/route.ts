@@ -21,13 +21,17 @@ bot.start((ctx) => {
 });
 
 bot.on("message", (ctx) => {
-  console.log("Message received:", (ctx.message as any)?.text);
-  ctx.reply("برای شروع، /start بزن!");
+  if ("text" in ctx.message) {
+    console.log("Message received:", ctx.message.text);
+    ctx.reply("برای شروع، /start بزن!");
+  } else {
+    ctx.reply("پیام غیرمتنی دریافت شد. /start بزن.");
+  }
 });
 
 bot.catch((err, ctx) => {
   console.error("Bot error:", err);
-  if (ctx) ctx.reply("خطایی رخ داد. دوباره امتحان کن.");
+  if (ctx) ctx.reply("خطایی رخ داد.");
 });
 
 export async function POST(request: NextRequest) {
@@ -51,7 +55,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error("Bot handler error:", err);
     return NextResponse.json(
-      { error: "Handler failed", details: err.message },
+      { error: (err as Error).message },
       { status: 500 },
     );
   }
