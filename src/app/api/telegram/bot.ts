@@ -23,9 +23,8 @@ export default async function handler(
   res: NextApiResponse,
 ) {
   try {
-    await bot.handleUpdate(req.body);
+    await bot.handleUpdate(req.body, res);
   } catch (err) {
     console.error("Bot handler error:", err);
   }
-  res.status(200).end();
 }
