@@ -1,55 +1,47 @@
-// src/app/api/telegram/bot/route.ts
-import { Telegraf } from "telegraf";
 import { NextRequest, NextResponse } from "next/server";
-
-const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
-
-bot.start((ctx) => {
-  console.log("Start command received from user:", ctx.from?.id);
-  ctx.reply("👋 سلام! به فروشگاه کفش خوش اومدی!", {
-    reply_markup: {
-      inline_keyboard: [
-        [
-          {
-            text: "🛍 ورود به فروشگاه",
-            web_app: { url: "https://shoes-production.up.railway.app" },
-          },
-        ],
-      ],
-    },
-  });
-});
-
-bot.on("message", (ctx) => {
-  if ("text" in ctx.message) {
-    console.log("Message received:", ctx.message.text);
-    ctx.reply("برای شروع، /start بزن!");
-  } else {
-    ctx.reply("پیام غیرمتنی دریافت شد. /start بزن.");
-  }
-});
-
-bot.catch((err, ctx) => {
-  console.error("Bot error:", err);
-  if (ctx) ctx.reply("خطایی رخ داد.");
-});
+import axios from "axios";
 
 export async function POST(request: NextRequest) {
   try {
     const update = await request.json();
     console.log("Incoming update:", JSON.stringify(update, null, 2));
 
-    const fakeRes = {
-      statusCode: 200,
-      status: (code: number) => ({ end: () => {}, json: () => {} }),
-      json: (body: any) => {},
-      end: () => {},
-      setHeader: (key: string, value: string) => {},
-      writeHead: () => {},
-      write: () => {},
-    };
+    if (
+      "message" in update &&
+      update.message &&
+      update.message.text === "/start"
+    ) {
+      const chatId = update.message.chat.id;
+      console.log("Start received from user:", update.message.from?.id);
 
-    await bot.handleUpdate(update, fakeRes as any);
+      const response = await axios.post(
+        `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+        {
+          chat_id: chatId,
+          text: "👋 سلام! به فروشگاه کفش خوش اومدی!",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "🛍 ورود به فروشگاه",
+                  web_app: { url: "https://shoes-production.up.railway.app" },
+                },
+              ],
+            ],
+          },
+        },
+      );
+
+      console.log("SendMessage response:", response.data);
+    } else if ("message" in update && update.message) {
+      await axios.post(
+        `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+        {
+          chat_id: update.message.chat.id,
+          text: "برای شروع، /start بزن!",
+        },
+      );
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {
