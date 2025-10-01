@@ -29,6 +29,7 @@
     ".next/types/**/*.ts",
     "**/*.ts",
     "**/*.tsx",
+    "**/*.d.ts",
     "prisma/seed.js",
     "src/components/Products/shoesData.js"
   ],
