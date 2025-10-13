@@ -1,32 +1,17 @@
 "use client";
 import { useParams } from "next/navigation";
-
 import { useCart } from "@/contexts/CartContext";
 import { useState } from "react";
 import { useToast } from "@/contexts/ToastContext";
 import Image from "next/image";
 import { ShoppingCartIcon, EyeIcon } from "@heroicons/react/24/solid";
 import Link from "next/link";
+import { Shoe } from "@/types/shoe";
 
-interface ShoeVariant {
-  id: number;
-  color: string;
-  images: { id: number; url: string; variantId: number }[];
-  sizes: { id: number; size: string; stock: number; variantId: number }[];
-}
-
-interface Shoe {
-  id: number;
-  name: string;
-  brand: string;
-  price: number;
-  description?: string | null;
-  image?: string | null;
-  variants: ShoeVariant[];
-}
 interface SingleShoeProps {
   shoe: Shoe;
 }
+
 const colorMap: Record<string, string> = {
   سفید: "#FFFFFF",
   مشکی: "#000000",
@@ -38,24 +23,24 @@ const colorMap: Record<string, string> = {
   "مشکی-کرم": "#333300",
 };
 
-const SingleShoe = ({ shoe }: { shoe: Shoe }) => {
+const SingleShoe = ({ shoe }: SingleShoeProps) => {
   const { addItem } = useCart();
   const { showToast } = useToast();
+  const { id } = useParams();
 
   const [selectedVariant, setSelectedVariant] = useState(0);
   const [cartonCount, setCartonCount] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  const SingleShoe = ({ shoe }: SingleShoeProps) => {
-    if (!shoe?.variants?.length) return <div>اطلاعات محصول ناقص است.</div>;
-  };
+  if (!shoe?.variants?.length) {
+    return <div>اطلاعات محصول ناقص است.</div>;
+  }
 
   const variantObj = shoe.variants[selectedVariant];
   const selectedColor = variantObj.color;
 
   const images = variantObj.images?.map((img) => img.url) || [];
   const selectedImageUrl = images[0] || "/images/default-shoe.png";
-  const { id } = useParams();
   const isCurrentPage = id === shoe.id.toString();
 
   const handleAddToCart = async () => {

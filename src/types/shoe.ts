@@ -1,19 +1,22 @@
-export interface Size {
-  id: number;
-  size: string;
-  stock: number;
-}
-
+// src/types/shoe.ts
 export interface VariantImage {
   id: number;
   url: string;
+  variantId: number;
+}
+
+export interface VariantSize {
+  id: number;
+  size: string;
+  stock: number;
+  variantId: number;
 }
 
 export interface ShoeVariant {
   id: number;
   color: string;
   images: VariantImage[];
-  sizes: Size[];
+  sizes: VariantSize[];
 }
 
 export interface Shoe {
@@ -21,6 +24,7 @@ export interface Shoe {
   name: string;
   brand: string;
   price: number;
-  description: string | null;
+  description?: string | null;
+  image?: string | null;
   variants: ShoeVariant[];
 }
