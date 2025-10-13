@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma.ts";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const product = await prisma.product.findUnique({
-      where: { id: Number(params.id) },
+      where: { id: Number(id) },
       include: { variants: { include: { images: true, sizes: true } } },
     });
 
@@ -27,14 +28,15 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const body = await req.json();
     const { name, brand, price, image } = body;
 
     const updated = await prisma.product.update({
-      where: { id: Number(params.id) },
+      where: { id: Number(id) },
       data: { name, brand, price, image },
     });
 
@@ -50,11 +52,12 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     await prisma.product.delete({
-      where: { id: Number(params.id) },
+      where: { id: Number(id) },
     });
 
     return NextResponse.json({ message: "Product deleted successfully" });
