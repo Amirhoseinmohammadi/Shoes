@@ -9,9 +9,10 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  experimental: {
-    optimizeCss: true,
-  },
+  // این خط رو حذف کن یا کامنت کن
+  // experimental: {
+  //   optimizeCss: true,
+  // },
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",
   },
