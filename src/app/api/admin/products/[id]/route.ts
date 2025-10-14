@@ -3,15 +3,14 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+export async function GET(req: Request, context: { params: { id: string } }) {
   try {
-    console.log("دریافت محصول با ID:", params.id);
+    const id = context.params.id;
+
+    console.log("دریافت محصول با ID:", id);
 
     const product = await prisma.product.findUnique({
-      where: { id: Number(params.id) },
+      where: { id: Number(id) },
       include: {
         variants: {
           include: {
@@ -35,20 +34,18 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+export async function PUT(req: Request, context: { params: { id: string } }) {
   try {
+    const id = context.params.id;
     const data = await req.json();
 
     const updatedProduct = await prisma.$transaction(async (tx) => {
       await tx.variant.deleteMany({
-        where: { productId: Number(params.id) },
+        where: { productId: Number(id) },
       });
 
       const product = await tx.product.update({
-        where: { id: Number(params.id) },
+        where: { id: Number(id) },
         data: {
           name: data.name,
           brand: data.brand,
@@ -90,11 +87,13 @@ export async function PUT(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } },
+  context: { params: { id: string } },
 ) {
   try {
+    const id = context.params.id;
+
     await prisma.product.delete({
-      where: { id: Number(params.id) },
+      where: { id: Number(id) },
     });
     return NextResponse.json({ success: true });
   } catch (error) {
