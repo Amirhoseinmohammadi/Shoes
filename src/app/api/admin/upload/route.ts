@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,23 +19,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const timestamp = Date.now();
-    const fileExtension = file.name.split(".").pop();
-    const filename = `product-${timestamp}.${fileExtension}`;
-
     const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
 
-    const uploadDir = path.join(process.cwd(), "public", "images", "products");
-    const filepath = path.join(uploadDir, filename);
-
-    await mkdir(uploadDir, { recursive: true });
-
-    await writeFile(filepath, buffer);
+    const base64 = Buffer.from(bytes).toString("base64");
+    const dataUrl = `data:${file.type};base64,${base64}`;
 
     return NextResponse.json({
       success: true,
-      imageUrl: `/images/products/${filename}`,
+      imageUrl: dataUrl,
     });
   } catch (error) {
     console.error("خطا در آپلود:", error);
