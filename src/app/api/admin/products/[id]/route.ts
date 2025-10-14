@@ -3,9 +3,12 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function GET(req: Request, context: { params: { id: string } }) {
+export async function GET(
+  req: Request,
+  { params }: { params: { id: string } },
+) {
   try {
-    const id = context.params.id;
+    const id = params.id;
 
     console.log("دریافت محصول با ID:", id);
 
@@ -34,9 +37,12 @@ export async function GET(req: Request, context: { params: { id: string } }) {
   }
 }
 
-export async function PUT(req: Request, context: { params: { id: string } }) {
+export async function PUT(
+  req: Request,
+  { params }: { params: { id: string } },
+) {
   try {
-    const id = context.params.id;
+    const id = params.id;
     const data = await req.json();
 
     const updatedProduct = await prisma.$transaction(async (tx) => {
@@ -87,10 +93,10 @@ export async function PUT(req: Request, context: { params: { id: string } }) {
 
 export async function DELETE(
   req: Request,
-  context: { params: { id: string } },
+  { params }: { params: { id: string } },
 ) {
   try {
-    const id = context.params.id;
+    const id = params.id;
 
     await prisma.product.delete({
       where: { id: Number(id) },
