@@ -6,11 +6,22 @@ const prisma = new PrismaClient();
 export async function GET() {
   try {
     const products = await prisma.product.findMany({
-      include: { variants: true },
+      include: {
+        variants: {
+          include: {
+            images: true,
+            sizes: true,
+          },
+        },
+      },
+      orderBy: {
+        id: "desc",
+      },
     });
+
     return NextResponse.json(products);
   } catch (error) {
-    console.error("Error fetching products:", error);
+    console.error("خطا در دریافت محصولات:", error);
     return NextResponse.json(
       { error: "خطا در دریافت محصولات" },
       { status: 500 },
@@ -21,26 +32,41 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const data = await req.json();
-    if (!data.name || !data.price) {
-      return NextResponse.json(
-        { error: "نام و قیمت الزامی است" },
-        { status: 400 },
-      );
-    }
 
-    const newProduct = await prisma.product.create({
+    const product = await prisma.product.create({
       data: {
         name: data.name,
-        brand: data.brand || "",
+        brand: data.brand,
         description: data.description || "",
         price: Number(data.price),
-        image: data.image || null,
+        image: data.image || "",
+        variants: {
+          create: data.variants.map((variant: any) => ({
+            color: variant.color,
+            images: {
+              create: variant.images.map((image: any) => ({
+                url: image.url,
+              })),
+            },
+            sizes: {
+              create: [{ size: "38", stock: 1 }],
+            },
+          })),
+        },
+      },
+      include: {
+        variants: {
+          include: {
+            images: true,
+            sizes: true,
+          },
+        },
       },
     });
 
-    return NextResponse.json(newProduct, { status: 201 });
+    return NextResponse.json(product);
   } catch (error) {
-    console.error("Error creating product:", error);
-    return NextResponse.json({ error: "خطا در افزودن محصول" }, { status: 500 });
+    console.error("خطا در ایجاد محصول:", error);
+    return NextResponse.json({ error: "خطا در ایجاد محصول" }, { status: 500 });
   }
 }
