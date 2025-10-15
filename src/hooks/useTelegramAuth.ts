@@ -18,35 +18,47 @@ export function useTelegramAuth() {
 
   const ADMIN_USER_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID
     ? parseInt(process.env.NEXT_PUBLIC_ADMIN_USER_ID)
-    : 1;
+    : 697803275;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    console.log("🔍 شروع بررسی احراز هویت...");
+    console.log("🆔 ADMIN_USER_ID مورد انتظار:", ADMIN_USER_ID);
+
     const tg = (window as any).Telegram?.WebApp;
 
     if (tg) {
+      console.log("✅ Telegram Web App پیدا شد");
       tg.ready();
       const userData = tg.initDataUnsafe?.user;
 
+      console.log("👤 داده‌های کاربر:", userData);
+
       if (userData) {
         setUser(userData);
-        console.log("👤 کاربر تلگرام:", userData);
-        console.log("🆔 ADMIN_USER_ID:", ADMIN_USER_ID);
 
-        if (
-          window.location.pathname.startsWith("/admin") &&
-          userData.id !== ADMIN_USER_ID
-        ) {
-          console.log("🚫 دسترسی غیرمجاز - کاربر ID:", userData.id);
+        console.log("🆔 کاربر:", userData.id, "ادمین:", ADMIN_USER_ID);
+
+        if (window.location.pathname.startsWith("/admin")) {
+          if (userData.id === ADMIN_USER_ID) {
+            console.log("✅ دسترسی مجاز - کاربر ادمین");
+          } else {
+            console.log("🚫 دسترسی غیرمجاز - کاربر ID:", userData.id);
+            router.push("/access-denied");
+          }
+        }
+      } else {
+        console.log("❌ داده کاربر یافت نشد");
+        if (window.location.pathname.startsWith("/admin")) {
           router.push("/access-denied");
         }
       }
 
       setIsLoading(false);
     } else {
+      console.log("❌ محیط تلگرام یافت نشد");
       if (window.location.pathname.startsWith("/admin")) {
-        console.log("🌐 دسترسی غیرمجاز - محیط غیرتلگرام");
         router.push("/access-denied");
       }
       setIsLoading(false);

@@ -9,6 +9,10 @@ export default function AdminProductsPage() {
   const [loading, setLoading] = useState(true);
   const { user, isLoading: authLoading } = useTelegramAuth();
 
+  const ADMIN_USER_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID
+    ? parseInt(process.env.NEXT_PUBLIC_ADMIN_USER_ID)
+    : 697803275;
+
   useEffect(() => {
     async function fetchProducts() {
       try {
@@ -23,10 +27,10 @@ export default function AdminProductsPage() {
       }
     }
 
-    if (user && user.id === 1) {
+    if (user && user.id === ADMIN_USER_ID) {
       fetchProducts();
     }
-  }, [user]);
+  }, [user, ADMIN_USER_ID]);
 
   if (authLoading) {
     return (
@@ -36,12 +40,15 @@ export default function AdminProductsPage() {
     );
   }
 
-  if (!user || user.id !== 1) {
+  if (!user || user.id !== ADMIN_USER_ID) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center text-red-500">
           <h1 className="mb-4 text-2xl font-bold">دسترسی غیرمجاز</h1>
           <p>شما دسترسی لازم برای مشاهده این صفحه را ندارید.</p>
+          <p className="mt-2 text-sm">
+            User ID: {user?.id} | Required: {ADMIN_USER_ID}
+          </p>
         </div>
       </div>
     );
