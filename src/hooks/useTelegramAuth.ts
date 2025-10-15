@@ -16,6 +16,10 @@ export function useTelegramAuth() {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
+  const ADMIN_USER_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID
+    ? parseInt(process.env.NEXT_PUBLIC_ADMIN_USER_ID)
+    : 1;
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -27,11 +31,14 @@ export function useTelegramAuth() {
 
       if (userData) {
         setUser(userData);
+        console.log("👤 کاربر تلگرام:", userData);
+        console.log("🆔 ADMIN_USER_ID:", ADMIN_USER_ID);
 
         if (
           window.location.pathname.startsWith("/admin") &&
-          userData.id !== 1
+          userData.id !== ADMIN_USER_ID
         ) {
+          console.log("🚫 دسترسی غیرمجاز - کاربر ID:", userData.id);
           router.push("/access-denied");
         }
       }
@@ -39,11 +46,12 @@ export function useTelegramAuth() {
       setIsLoading(false);
     } else {
       if (window.location.pathname.startsWith("/admin")) {
+        console.log("🌐 دسترسی غیرمجاز - محیط غیرتلگرام");
         router.push("/access-denied");
       }
       setIsLoading(false);
     }
-  }, [router]);
+  }, [router, ADMIN_USER_ID]);
 
   return { user, isLoading };
 }

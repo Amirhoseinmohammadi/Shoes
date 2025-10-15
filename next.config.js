@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "standalone",
   images: {
     unoptimized: true,
   },
@@ -8,13 +9,6 @@ const nextConfig = {
   },
   eslint: {
     ignoreDuringBuilds: true,
-  },
-  // این خط رو حذف کن یا کامنت کن
-  // experimental: {
-  //   optimizeCss: true,
-  // },
-  compiler: {
-    removeConsole: process.env.NODE_ENV === "production",
   },
 };
 
