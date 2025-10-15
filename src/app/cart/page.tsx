@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/contexts/ToastContext";
+import { useTelegram } from "@/hooks/useTelegram";
 import Image from "next/image";
 import Link from "next/link";
 import { TrashIcon } from "@heroicons/react/24/outline";
@@ -21,6 +22,7 @@ const CartPage = () => {
   const { cartItems, removeItem, updateItemQuantity, checkout, loading } =
     useCart();
   const { showToast } = useToast();
+  const { user: telegramUser, sendData, isTelegram } = useTelegram();
   const [modalOpen, setModalOpen] = useState(false);
 
   const handleRemove = async (item: any) => {
@@ -56,14 +58,35 @@ const CartPage = () => {
     name: string;
     phone: string;
   }) => {
-    const success = await checkout(customer);
+    // اضافه کردن اطلاعات کاربر تلگرام به سفارش
+    const orderData = {
+      ...customer,
+      telegramUserId: telegramUser?.id,
+      telegramUsername: telegramUser?.username,
+      items: cartItems,
+      totalAmount: calculateSubtotal(cartItems),
+    };
+
+    const success = await checkout(orderData);
+
     if (success) {
       showToast({ message: "سفارش با موفقیت ثبت شد", type: "success" });
+
+      // ارسال داده به تلگرام اگر در محیط تلگرام هست
+      if (isTelegram) {
+        sendData({
+          action: "order_created",
+          order: orderData,
+          success: true,
+        });
+      }
+
       setModalOpen(false);
     } else {
       showToast({ message: "خطا در ثبت سفارش", type: "error" });
     }
   };
+
   const getItemDisplayInfo = (item: any) => {
     const baseInfo = `برند: ${item.brand}`;
     const priceInfo = `قیمت: ${item.price.toLocaleString()} تومان`;
@@ -82,9 +105,35 @@ const CartPage = () => {
     };
   };
 
+  // نمایش اطلاعات کاربر تلگرام
+  const TelegramUserInfo = () => {
+    if (!isTelegram || !telegramUser) return null;
+
+    return (
+      <div className="mb-6 rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-blue-800 dark:text-blue-200">
+              👋 خوش آمدید، {telegramUser.first_name}!
+            </h3>
+            {telegramUser.username && (
+              <p className="text-sm text-blue-600 dark:text-blue-300">
+                @{telegramUser.username}
+              </p>
+            )}
+          </div>
+          <div className="rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-700 dark:bg-blue-800 dark:text-blue-200">
+            کاربر تلگرام
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (cartItems.length === 0) {
     return (
       <div className="mx-auto mt-5 max-w-screen-xl px-4 py-12 text-center">
+        <TelegramUserInfo />
         <h1 className="text-2xl font-bold dark:text-white">
           سبد خرید شما خالی است
         </h1>
@@ -112,6 +161,8 @@ const CartPage = () => {
             </p>
           )}
         </header>
+
+        <TelegramUserInfo />
 
         <ul className="space-y-4">
           {cartItems.map((item) => {
@@ -208,9 +259,20 @@ const CartPage = () => {
               <dt>تخفیف</dt>
               <dd>-2,500 تومان</dd>
             </div>
+            {isTelegram && (
+              <div className="flex justify-between text-green-600 dark:text-green-400">
+                <dt>تخفیف کاربر تلگرام</dt>
+                <dd>-1,000 تومان</dd>
+              </div>
+            )}
             <div className="flex justify-between text-lg font-semibold">
               <dt>مبلغ قابل پرداخت</dt>
-              <dd>{calculateSubtotal(cartItems).toLocaleString()} تومان</dd>
+              <dd>
+                {(
+                  calculateSubtotal(cartItems) - (isTelegram ? 1000 : 0)
+                ).toLocaleString()}{" "}
+                تومان
+              </dd>
             </div>
           </div>
 
@@ -218,15 +280,16 @@ const CartPage = () => {
             <button
               disabled={loading || cartItems.length === 0}
               onClick={() => setModalOpen(true)}
-              className="mt-4 w-full rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-500"
+              className="mt-4 w-full rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-500 disabled:opacity-50"
             >
-              ثبت سفارش
+              {isTelegram ? "📱 ثبت سفارش از تلگرام" : "ثبت سفارش"}
             </button>
 
             <CheckoutModal
               isOpen={modalOpen}
               onClose={() => setModalOpen(false)}
               onConfirm={handleConfirmOrder}
+              telegramUser={telegramUser}
             />
           </div>
         </div>
