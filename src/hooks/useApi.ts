@@ -63,5 +63,5 @@ export const useApi = {
     ),
 };
 
-// 🔄 Export useSWR و mutate
-export { useSWR, mutate } from "swr";
+export { default as useSWR } from "swr";
+export { mutate } from "swr";

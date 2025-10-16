@@ -6,7 +6,7 @@ import { useApi } from "@/hooks/useApi";
 import { Shoe } from "@/types/shoe";
 
 interface ShoesProps {
-  telegramUser?: any; // ✅ اضافه کردن این خط
+  telegramUser?: any; 
 }
 
 const Shoes = ({ telegramUser }: ShoesProps) => {

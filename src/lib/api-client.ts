@@ -1,18 +1,26 @@
-const API_BASE = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const API_BASE = process.env.NEXT_PUBLIC_APP_URL || "";
 
 class ApiClient {
   private async request(endpoint: string, options: RequestInit = {}) {
-    const url = `${API_BASE}${endpoint}`;
+    const base =
+      API_BASE ||
+      (typeof window !== "undefined"
+        ? window.location.origin
+        : "http://localhost:3000");
+    const url = `${base}${endpoint}`;
 
     const config: RequestInit = {
       headers: {
         "Content-Type": "application/json",
         ...options.headers,
       },
+      credentials: "include",
       ...options,
     };
 
     try {
+      console.log("🔄 Fetching from:", url);
+
       const response = await fetch(url, config);
 
       if (!response.ok) {
@@ -21,12 +29,11 @@ class ApiClient {
 
       return await response.json();
     } catch (error) {
-      console.error("API Request failed:", error);
+      console.error("❌ API Request failed for:", url, error);
       throw error;
     }
   }
 
-  // 🔐 Authentication
   auth = {
     login: (email: string, password: string) =>
       this.request("/api/auth/login", {
@@ -45,7 +52,6 @@ class ApiClient {
     getSession: () => this.request("/api/auth/session"),
   };
 
-  // 👤 Users
   users = {
     getAll: () => this.request("/api/users"),
 
@@ -61,7 +67,6 @@ class ApiClient {
       this.request(`/api/users/${id}`, { method: "DELETE" }),
   };
 
-  // 👟 Products
   products = {
     getAll: (category?: string) => {
       const url = category
@@ -90,7 +95,6 @@ class ApiClient {
     search: (query: string) => this.request(`/api/products/search?q=${query}`),
   };
 
-  // 🛒 Orders
   orders = {
     getAll: (userId?: number) => {
       const url = userId ? `/api/orders?userId=${userId}` : "/api/orders";
@@ -115,14 +119,12 @@ class ApiClient {
       this.request(`/api/orders/${id}`, { method: "DELETE" }),
   };
 
-  // 📦 Categories
   categories = {
     getAll: () => this.request("/api/categories"),
 
     getById: (id: number) => this.request(`/api/categories/${id}`),
   };
 
-  // 💬 Comments
   comments = {
     getByProduct: (productId: number) =>
       this.request(`/api/comments?productId=${productId}`),

@@ -10,6 +10,7 @@ import { Shoe } from "@/types/shoe";
 
 interface SingleShoeProps {
   shoe: Shoe;
+  telegramUser?: any; // ✅ اضافه کردن این خط
 }
 
 const colorMap: Record<string, string> = {
@@ -23,14 +24,19 @@ const colorMap: Record<string, string> = {
   "مشکی-کرم": "#333300",
 };
 
-const SingleShoe = ({ shoe }: SingleShoeProps) => {
+const SingleShoe = ({ shoe, telegramUser }: SingleShoeProps) => {
+  // ✅ اضافه کردن prop
   const { addItem } = useCart();
   const { showToast } = useToast();
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id;
 
   const [selectedVariant, setSelectedVariant] = useState(0);
   const [cartonCount, setCartonCount] = useState(1);
   const [loading, setLoading] = useState(false);
+
+  // ✅ استفاده از telegramUser اگر نیاز داری
+  console.log("Telegram User in SingleShoe:", telegramUser);
 
   if (!shoe?.variants?.length) {
     return <div>اطلاعات محصول ناقص است.</div>;
@@ -41,7 +47,7 @@ const SingleShoe = ({ shoe }: SingleShoeProps) => {
 
   const images = variantObj.images?.map((img) => img.url) || [];
   const selectedImageUrl = images[0] || "/images/default-shoe.png";
-  const isCurrentPage = id === shoe.id.toString();
+  const isCurrentPage = id?.toString() === shoe.id.toString(); // ✅ بهبود منطق
 
   const handleAddToCart = async () => {
     setLoading(true);
@@ -50,11 +56,13 @@ const SingleShoe = ({ shoe }: SingleShoeProps) => {
         shoe: { ...shoe, image: selectedImageUrl },
         quantity: cartonCount * 10,
         color: selectedColor,
+        telegramUserId: telegramUser?.id, // ✅ اضافه کردن اطلاعات تلگرام
       });
 
       showToast({
         message: success
-          ? `${shoe.name} (${selectedColor}) به سبد خرید اضافه شد!`
+          ? `${shoe.name} (${selectedColor}) به سبد خرید اضافه شد!` +
+            (telegramUser ? ` - کاربر: ${telegramUser.first_name}` : "")
           : "خطا در افزودن به سبد خرید. لطفاً دوباره تلاش کنید.",
         type: success ? "success" : "error",
       });
@@ -71,6 +79,13 @@ const SingleShoe = ({ shoe }: SingleShoeProps) => {
 
   return (
     <div className="w-full overflow-hidden rounded-xl bg-white shadow-lg transition-transform duration-150 ease-in-out hover:-translate-y-1 hover:shadow-2xl dark:bg-gray-800">
+      {/* ✅ نمایش وضعیت تلگرام */}
+      {telegramUser && (
+        <div className="absolute top-2 left-2 z-10 rounded-full bg-green-500 px-2 py-1 text-xs text-white">
+          📱
+        </div>
+      )}
+
       <div className="relative h-64 overflow-hidden sm:h-72">
         <Image
           src={selectedImageUrl}
@@ -82,9 +97,16 @@ const SingleShoe = ({ shoe }: SingleShoeProps) => {
       </div>
 
       <div className="space-y-3 p-6">
-        <p className="font-semibold text-gray-700 dark:text-gray-200">
-          {shoe.price.toLocaleString()} تومان / کارتن
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="font-semibold text-gray-700 dark:text-gray-200">
+            {shoe.price.toLocaleString()} تومان / کارتن
+          </p>
+          {telegramUser && (
+            <span className="rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-700 dark:bg-blue-900 dark:text-blue-200">
+              تخفیف تلگرام
+            </span>
+          )}
+        </div>
 
         <h3 className="text-lg font-bold text-gray-900 dark:text-white">
           {shoe.name}
@@ -152,7 +174,7 @@ const SingleShoe = ({ shoe }: SingleShoeProps) => {
             ) : (
               <>
                 <ShoppingCartIcon className="h-5 w-5" />
-                افزودن به سبد خرید
+                {telegramUser ? "📱 افزودن" : "افزودن به سبد خرید"}
               </>
             )}
           </button>
@@ -167,6 +189,15 @@ const SingleShoe = ({ shoe }: SingleShoeProps) => {
             </Link>
           )}
         </div>
+
+        {telegramUser && (
+          <div className="mt-3 rounded-lg bg-green-50 p-2 text-center dark:bg-green-900/20">
+            <p className="text-xs text-green-700 dark:text-green-300">
+              کاربر تلگرام: {telegramUser.first_name}
+              {telegramUser.username && ` (@${telegramUser.username})`}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
