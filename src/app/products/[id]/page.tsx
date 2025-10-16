@@ -1,48 +1,33 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useApi } from "@/hooks/useApi";
 import SingleShoe from "@/components/Products/SingleShoe";
+import { Product } from "@/types/api";
 
 export default function ProductPage() {
   const { id } = useParams();
-  const [product, setProduct] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const productId = id ? parseInt(id as string) : undefined;
 
-  useEffect(() => {
-    if (!id) return;
+  const { data: product, error, isLoading } = useApi.useProduct(productId!);
 
-    async function fetchProduct() {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(`/api/products/${id}`);
-        if (!res.ok) throw new Error("Product not found");
-        const data = await res.json();
-        setProduct(data);
-      } catch (err: any) {
-        console.error("Error fetching product:", err);
-        setError(err.message || "خطا در دریافت محصول");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchProduct();
-  }, [id]);
-
-  if (loading)
+  if (isLoading)
     return (
-      <div className="flex h-64 items-center justify-center text-gray-500">
-        در حال بارگذاری محصول...
+      <div className="mx-auto max-w-3xl p-6">
+        <div className="mt-10">
+          <div className="animate-pulse">
+            <div className="h-96 rounded bg-gray-200"></div>
+            <div className="mt-4 h-6 w-3/4 rounded bg-gray-200"></div>
+            <div className="mt-2 h-4 w-1/2 rounded bg-gray-200"></div>
+          </div>
+        </div>
       </div>
     );
 
   if (error)
     return (
       <div className="flex h-64 items-center justify-center text-red-500">
-        {error}
+        {error.message || "خطا در دریافت محصول"}
       </div>
     );
 

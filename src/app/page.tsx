@@ -1,52 +1,59 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import ScrollUp from "@/components/Common/ScrollUp";
 import Products from "@/components/Products";
 import Hero from "@/components/Hero";
-
-interface TelegramUser {
-  id: number;
-  first_name: string;
-  last_name?: string;
-  username?: string;
-  language_code?: string;
-  is_premium?: boolean;
-}
+import { useTelegram } from "@/hooks/useTelegram";
 
 export default function Home() {
-  const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null);
-  const [isWebAppReady, setIsWebAppReady] = useState(false);
+  const { user: telegramUser, loading, isTelegram } = useTelegram();
 
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.Telegram?.WebApp) {
-      const tg = window.Telegram.WebApp;
-      tg.ready();
-      tg.expand();
+  const getWelcomeMessage = () => {
+    if (!telegramUser) return null;
 
-      const user = tg.initDataUnsafe?.user;
-      setTelegramUser(user || null);
-      setIsWebAppReady(true);
-
-      console.log("WebApp init in Home:", user);
-    }
-  }, []);
+    return (
+      <div className="bg-gradient-to-r from-green-100 to-blue-100 py-3 text-center">
+        <div className="container mx-auto px-4">
+          <p className="font-medium text-green-800">
+            🎉 خوش اومدی، <strong>{telegramUser.first_name}</strong>!
+            {telegramUser.username && ` (@${telegramUser.username})`}
+          </p>
+          <p className="mt-1 text-sm text-green-600">
+            تخفیف ویژه کاربران تلگرام فعال شد! 🏷️
+          </p>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
       <ScrollUp />
       <Hero />
-      {isWebAppReady && telegramUser && (
-        <div className="bg-green-100 py-2 text-center text-green-800">
-          خوش اومدی، {telegramUser.first_name}! 👋
-        </div>
+
+      {isTelegram && (
+        <>
+          {loading && (
+            <div className="bg-blue-100 py-3 text-center text-blue-800">
+              <div className="container mx-auto px-4">
+                🔄 در حال اتصال به تلگرام...
+              </div>
+            </div>
+          )}
+
+          {!loading && getWelcomeMessage()}
+
+          {!loading && !telegramUser && (
+            <div className="bg-yellow-100 py-3 text-center text-yellow-800">
+              <div className="container mx-auto px-4">
+                ⚠️ کاربر تلگرام شناسایی نشد
+              </div>
+            </div>
+          )}
+        </>
       )}
-      {!isWebAppReady && (
-        <div className="bg-blue-100 py-2 text-center text-blue-800">
-          در حال اتصال به تلگرام...
-        </div>
-      )}
-      <Products />
+
+      <Products telegramUser={telegramUser} />
     </>
   );
 }
