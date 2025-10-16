@@ -17,6 +17,7 @@ export function useTelegram() {
   const [user, setUser] = useState<TelegramUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isTelegramEnv, setIsTelegramEnv] = useState(false); // ✅ اضافه کردن state
   const router = useRouter();
   const pathname = usePathname();
 
@@ -29,12 +30,16 @@ export function useTelegram() {
   }, [pathname]);
 
   const initializeTelegram = async () => {
+    // ✅ بررسی وجود window
     if (typeof window === "undefined") {
       setLoading(false);
       return;
     }
 
     const tg = (window as any).Telegram?.WebApp;
+
+    // ✅ ست کردن وضعیت تلگرام
+    setIsTelegramEnv(!!tg);
 
     if (!tg) {
       console.log("❌ محیط تلگرام یافت نشد");
@@ -101,6 +106,7 @@ export function useTelegram() {
 
   // متدهای utility برای تلگرام
   const sendData = (data: any) => {
+    if (typeof window === "undefined") return; // ✅ اضافه کردن چک
     const tg = (window as any).Telegram?.WebApp;
     if (tg) {
       tg.sendData(JSON.stringify(data));
@@ -108,6 +114,7 @@ export function useTelegram() {
   };
 
   const closeApp = () => {
+    if (typeof window === "undefined") return; // ✅ اضافه کردن چک
     const tg = (window as any).Telegram?.WebApp;
     if (tg) {
       tg.close();
@@ -115,6 +122,7 @@ export function useTelegram() {
   };
 
   const showAlert = (message: string) => {
+    if (typeof window === "undefined") return; // ✅ اضافه کردن چک
     const tg = (window as any).Telegram?.WebApp;
     if (tg) {
       tg.showAlert(message);
@@ -128,7 +136,7 @@ export function useTelegram() {
     error,
 
     // وضعیت‌ها
-    isTelegram: !!(window as any).Telegram?.WebApp,
+    isTelegram: isTelegramEnv, // ✅ استفاده از state
     isAdmin,
 
     // متدها
