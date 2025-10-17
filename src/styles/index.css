@@ -146,6 +146,15 @@
     direction: rtl;
   }
 }
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (max-width: 768px) {
+  .bottom-nav-height {
+    height: 80px;
+  }
+}
 
 @layer components {
   input[type="checkbox"]:checked ~ label span svg {

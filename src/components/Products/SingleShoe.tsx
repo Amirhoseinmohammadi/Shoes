@@ -78,7 +78,7 @@ const SingleShoe = ({ shoe, telegramUser }: SingleShoeProps) => {
   };
 
   return (
-    <div className="w-full overflow-hidden rounded-xl bg-white shadow-lg transition-transform duration-150 ease-in-out hover:-translate-y-1 hover:shadow-2xl dark:bg-gray-800">
+    <div className="w-full overflow-hidden rounded-xl bg-gradient-to-br from-gray-50 to-blue-50 shadow-lg transition-transform duration-150 ease-in-out hover:-translate-y-1 hover:shadow-2xl dark:from-gray-900 dark:to-blue-900">
       {/* ✅ نمایش وضعیت تلگرام */}
       {telegramUser && (
         <div className="absolute top-2 left-2 z-10 rounded-full bg-green-500 px-2 py-1 text-xs text-white">
@@ -174,7 +174,7 @@ const SingleShoe = ({ shoe, telegramUser }: SingleShoeProps) => {
             ) : (
               <>
                 <ShoppingCartIcon className="h-5 w-5" />
-                {telegramUser ? "📱 افزودن" : "افزودن به سبد خرید"}
+                {/* {telegramUser ? "📱 افزودن" : "افزودن به سبد خرید"} */}
               </>
             )}
           </button>
@@ -185,19 +185,10 @@ const SingleShoe = ({ shoe, telegramUser }: SingleShoeProps) => {
               className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:scale-105 hover:shadow-md dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             >
               <EyeIcon className="h-5 w-5" />
-              مشاهده محصول
+              {/* مشاهده محصول */}
             </Link>
           )}
         </div>
-
-        {telegramUser && (
-          <div className="mt-3 rounded-lg bg-green-50 p-2 text-center dark:bg-green-900/20">
-            <p className="text-xs text-green-700 dark:text-green-300">
-              کاربر تلگرام: {telegramUser.first_name}
-              {telegramUser.username && ` (@${telegramUser.username})`}
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

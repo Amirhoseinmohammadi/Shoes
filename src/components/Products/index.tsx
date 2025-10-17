@@ -6,7 +6,7 @@ import { useApi } from "@/hooks/useApi";
 import { Shoe } from "@/types/shoe";
 
 interface ShoesProps {
-  telegramUser?: any; 
+  telegramUser?: any;
 }
 
 const Shoes = ({ telegramUser }: ShoesProps) => {
@@ -18,7 +18,7 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
 
   if (isLoading)
     return (
-      <section className="bg-white py-16 md:py-20 lg:py-28 dark:bg-gray-900">
+      <section className="bg-white py-16 md:py-20 lg:py-28 dark:bg-gray-400">
         <div className="container">
           <SectionTitle
             title="لیست کفش‌ها"
@@ -71,10 +71,7 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
     );
 
   return (
-    <section
-      id="shoes"
-      className="bg-white py-16 md:py-20 lg:py-28 dark:bg-gray-900"
-    >
+    <section id="shoes" className="py-16 md:py-20 lg:py-28">
       <div className="container">
         <SectionTitle
           title="لیست کفش‌ها"

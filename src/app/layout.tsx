@@ -1,6 +1,5 @@
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
-import ScrollToTop from "@/components/ScrollToTop";
 import "@/styles/index.css";
 import { Providers } from "./providers";
 import PageTransition from "@/components/Common/PageTransition";
@@ -34,7 +33,6 @@ export default function RootLayout({
             <Header />
             <PageTransition>{children}</PageTransition>
             <Footer />
-            <ScrollToTop />
           </ToastProvider>
         </Providers>
       </body>
