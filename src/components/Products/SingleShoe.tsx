@@ -4,72 +4,63 @@ import { useCart } from "@/contexts/CartContext";
 import { useState } from "react";
 import { useToast } from "@/contexts/ToastContext";
 import Image from "next/image";
-import { ShoppingCartIcon, EyeIcon } from "@heroicons/react/24/solid";
 import Link from "next/link";
 import { Shoe } from "@/types/shoe";
 
 interface SingleShoeProps {
   shoe: Shoe;
-  telegramUser?: any; // ✅ اضافه کردن این خط
+  telegramUser?: any;
 }
 
-const colorMap: Record<string, string> = {
-  سفید: "#FFFFFF",
-  مشکی: "#000000",
-  کرم: "#F5F5DC",
-  آبی: "#007BFF",
-  صورتی: "#FFC0CB",
-  طوسی: "#808080",
-  بنفش: "#800080",
-  "مشکی-کرم": "#333300",
-};
-
 const SingleShoe = ({ shoe, telegramUser }: SingleShoeProps) => {
-  // ✅ اضافه کردن prop
   const { addItem } = useCart();
   const { showToast } = useToast();
   const params = useParams();
   const id = params?.id;
 
   const [selectedVariant, setSelectedVariant] = useState(0);
-  const [cartonCount, setCartonCount] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [showQuickView, setShowQuickView] = useState(false);
 
-  // ✅ استفاده از telegramUser اگر نیاز داری
-  console.log("Telegram User in SingleShoe:", telegramUser);
+  const variants = shoe?.variants || [];
+  const hasVariants = variants.length > 0;
 
-  if (!shoe?.variants?.length) {
-    return <div>اطلاعات محصول ناقص است.</div>;
-  }
+  const variantObj = hasVariants ? variants[selectedVariant] : null;
+  const selectedColor = variantObj?.color || shoe?.color || "نامشخص";
 
-  const variantObj = shoe.variants[selectedVariant];
-  const selectedColor = variantObj.color;
-
-  const images = variantObj.images?.map((img) => img.url) || [];
+  const images =
+    variantObj?.images?.map((img) => img.url) ||
+    shoe?.images?.map((img) => img.url) ||
+    [];
   const selectedImageUrl = images[0] || "/images/default-shoe.png";
-  const isCurrentPage = id?.toString() === shoe.id.toString(); // ✅ بهبود منطق
+
+  const isCurrentPage = id?.toString() === shoe?.id?.toString();
 
   const handleAddToCart = async () => {
+    if (!shoe) return;
+
     setLoading(true);
     try {
       const success = await addItem({
-        shoe: { ...shoe, image: selectedImageUrl },
-        quantity: cartonCount * 10,
+        shoe: {
+          ...shoe,
+          image: selectedImageUrl,
+          name: shoe.name || "محصول بدون نام",
+          price: shoe.price || 0,
+        },
+        quantity: 10,
         color: selectedColor,
-        telegramUserId: telegramUser?.id, // ✅ اضافه کردن اطلاعات تلگرام
       });
 
       showToast({
         message: success
-          ? `${shoe.name} (${selectedColor}) به سبد خرید اضافه شد!` +
-            (telegramUser ? ` - کاربر: ${telegramUser.first_name}` : "")
-          : "خطا در افزودن به سبد خرید. لطفاً دوباره تلاش کنید.",
+          ? `${shoe.name || "محصول"} به سبد خرید اضافه شد!`
+          : "خطا در افزودن به سبد خرید",
         type: success ? "success" : "error",
       });
     } catch (err) {
-      console.error(err);
       showToast({
-        message: "خطا در افزودن به سبد خرید. لطفاً دوباره تلاش کنید.",
+        message: "خطا در افزودن به سبد خرید",
         type: "error",
       });
     } finally {
@@ -77,104 +68,152 @@ const SingleShoe = ({ shoe, telegramUser }: SingleShoeProps) => {
     }
   };
 
-  return (
-    <div className="w-full overflow-hidden rounded-xl bg-gradient-to-br from-gray-50 to-blue-50 shadow-lg transition-transform duration-150 ease-in-out hover:-translate-y-1 hover:shadow-2xl dark:from-gray-900 dark:to-blue-900">
-      {/* ✅ نمایش وضعیت تلگرام */}
-      {telegramUser && (
-        <div className="absolute top-2 left-2 z-10 rounded-full bg-green-500 px-2 py-1 text-xs text-white">
-          📱
+  if (!shoe || !shoe.id) {
+    return (
+      <div className="group overflow-hidden rounded-2xl bg-white shadow-sm transition-all hover:shadow-lg">
+        <div className="flex aspect-square items-center justify-center bg-gray-100">
+          <span className="text-sm text-gray-500">تصویر موجود نیست</span>
         </div>
-      )}
+        <div className="p-4">
+          <div className="text-xs text-red-500">محصول یافت نشد</div>
+        </div>
+      </div>
+    );
+  }
 
-      <div className="relative h-64 overflow-hidden sm:h-72">
+  return (
+    <div className="group relative overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+      {/* Product Image Container */}
+      <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50">
         <Image
           src={selectedImageUrl}
-          alt={shoe.name}
+          alt={shoe.name || "محصول"}
           fill
-          className="object-cover transition-transform duration-200 ease-in-out hover:scale-105"
-          priority={selectedVariant === 0}
+          className="object-cover transition-transform duration-500 group-hover:scale-110"
+          sizes="(max-width: 768px) 50vw, 25vw"
         />
+
+        {/* Overlay on Hover */}
+        <div className="absolute inset-0 bg-black/0 transition-all duration-300 group-hover:bg-black/10"></div>
+
+        {/* Badge */}
+        {shoe.discount && (
+          <div className="absolute top-3 right-3 z-10 rounded-full bg-red-500 px-3 py-1 text-xs font-bold text-white">
+            {shoe.discount}% تخفیف
+          </div>
+        )}
+
+        {/* Quick View Button - Appears on Hover */}
+        {!isCurrentPage && (
+          <Link
+            href={`/products/${shoe.id}`}
+            className="absolute inset-0 flex items-center justify-center bg-black/0 transition-all duration-300 group-hover:bg-black/40"
+          >
+            <div className="scale-0 transition-transform duration-300 group-hover:scale-100">
+              <div className="rounded-full bg-cyan-500 p-3 text-white shadow-lg hover:bg-cyan-600">
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </Link>
+        )}
       </div>
 
-      <div className="space-y-3 p-6">
-        <div className="flex items-center justify-between">
-          <p className="font-semibold text-gray-700 dark:text-gray-200">
-            {shoe.price.toLocaleString()} تومان / کارتن
-          </p>
-          {telegramUser && (
-            <span className="rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-700 dark:bg-blue-900 dark:text-blue-200">
-              تخفیف تلگرام
+      {/* Product Info */}
+      <div className="p-4 transition-all duration-300">
+        {/* Product Name */}
+        <h3 className="mb-2 line-clamp-2 text-sm font-bold text-gray-900 transition-colors group-hover:text-cyan-600">
+          {shoe.name || "محصول بدون نام"}
+        </h3>
+
+        {/* Color Selection */}
+        {hasVariants && variants.length > 1 && (
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-xs text-gray-500">رنگ:</span>
+            <div className="flex gap-1.5">
+              {variants.map((v, idx) => (
+                <button
+                  key={v.id || idx}
+                  onClick={() => setSelectedVariant(idx)}
+                  className={`h-5 w-5 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
+                    selectedVariant === idx
+                      ? "border-cyan-500 ring-2 ring-cyan-300"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                  style={{
+                    backgroundColor:
+                      v.color === "سفید"
+                        ? "#FFFFFF"
+                        : v.color === "مشکی"
+                          ? "#000000"
+                          : v.color === "کرم"
+                            ? "#F5F5DC"
+                            : v.color === "آبی"
+                              ? "#007BFF"
+                              : v.color === "قرمز"
+                                ? "#EF4444"
+                                : "#ccc",
+                  }}
+                  title={v.color}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Price */}
+        <div className="mb-4 flex items-baseline gap-2">
+          <span className="text-lg font-bold text-gray-900">
+            {(shoe.price || 0).toLocaleString()} تومان
+          </span>
+          {shoe.originalPrice && (
+            <span className="text-sm text-gray-400 line-through">
+              {shoe.originalPrice.toLocaleString()}
             </span>
           )}
         </div>
 
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-          {shoe.name}
-        </h3>
-        <p className="text-gray-600 dark:text-gray-300">{shoe.brand}</p>
-        {shoe.description && (
-          <p className="text-gray-500 dark:text-gray-400">{shoe.description}</p>
-        )}
-
-        <div className="mt-2 flex items-center gap-2">
-          <span className="text-sm text-gray-600 dark:text-gray-400">
-            رنگ انتخابی:
-          </span>
-          {shoe.variants.map((v, idx) => (
-            <button
-              key={v.id}
-              onClick={() => setSelectedVariant(idx)}
-              className={`h-8 w-8 rounded-full border-2 transition-transform duration-150 ease-in-out hover:scale-110 active:scale-95 ${
-                selectedVariant === idx
-                  ? "scale-110 border-blue-500 shadow-md"
-                  : "border-gray-300"
-              }`}
-              style={{ backgroundColor: colorMap[v.color] || "#ccc" }}
-              title={v.color}
-            />
-          ))}
-        </div>
-
-        <div className="mt-3 flex items-center gap-3">
-          <label className="text-sm font-medium">تعداد کارتن:</label>
-          <div className="flex items-center overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600">
-            <button
-              onClick={() => setCartonCount((prev) => Math.max(1, prev - 1))}
-              className="bg-gray-200 px-3 py-1 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
-              disabled={cartonCount <= 1}
-            >
-              −
-            </button>
-            <input
-              type="text"
-              value={cartonCount}
-              readOnly
-              className="w-12 bg-white text-center dark:bg-gray-800 dark:text-white"
-            />
-            <button
-              onClick={() => setCartonCount((prev) => prev + 1)}
-              className="bg-gray-200 px-3 py-1 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
-            >
-              +
-            </button>
-          </div>
-          <span className="text-xs text-gray-500">
-            ({cartonCount * 10} جفت)
-          </span>
-        </div>
-
-        <div className="mt-4 flex gap-3">
+        {/* Action Buttons */}
+        <div className="flex gap-2">
           <button
             onClick={handleAddToCart}
             disabled={loading}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-black px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:scale-105 hover:shadow-xl disabled:opacity-60"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-500 py-2.5 font-semibold text-white transition-all duration-300 hover:scale-105 hover:bg-cyan-600 hover:shadow-lg disabled:opacity-50 disabled:hover:scale-100"
           >
             {loading ? (
-              <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
             ) : (
               <>
-                <ShoppingCartIcon className="h-5 w-5" />
-                {/* {telegramUser ? "📱 افزودن" : "افزودن به سبد خرید"} */}
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
               </>
             )}
           </button>
@@ -182,14 +221,28 @@ const SingleShoe = ({ shoe, telegramUser }: SingleShoeProps) => {
           {!isCurrentPage && (
             <Link
               href={`/products/${shoe.id}`}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:scale-105 hover:shadow-md dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="flex items-center justify-center rounded-xl border-2 border-gray-200 bg-white px-3 py-2.5 transition-all duration-300 hover:border-cyan-500 hover:bg-gray-50 hover:text-cyan-600"
             >
-              <EyeIcon className="h-5 w-5" />
-              {/* مشاهده محصول */}
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
             </Link>
           )}
         </div>
       </div>
+
+      {/* Animated Border on Hover */}
+      <div className="pointer-events-none absolute inset-0 rounded-2xl border-2 border-cyan-500 opacity-0 transition-opacity duration-300 group-hover:opacity-10"></div>
     </div>
   );
 };
