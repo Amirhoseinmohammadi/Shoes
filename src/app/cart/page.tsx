@@ -85,7 +85,7 @@ const CartPage = () => {
 
   if (cartItems.length === 0) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 pb-32">
+      <div className="safe-area-bottom flex min-h-screen items-center justify-center bg-gray-50">
         <div className="px-4 text-center">
           <svg
             className="mx-auto mb-4 h-16 w-16 text-gray-300"
@@ -134,9 +134,9 @@ const CartPage = () => {
   const finalAmount = calculateSubtotal(cartItems) - (isTelegram ? 1000 : 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-40">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="sticky top-0 z-40 flex items-center gap-3 bg-cyan-500 px-4 py-3 text-white shadow-lg">
+      <div className="safe-area-top sticky top-0 z-40 flex items-center gap-3 bg-cyan-500 px-4 py-3 text-white shadow-lg">
         <h1 className="flex-1 text-xl font-bold">سبد خرید</h1>
         <span className="rounded-full bg-white/20 px-3 py-1 text-sm">
           {cartItems.length} محصول
@@ -161,14 +161,14 @@ const CartPage = () => {
         </Link>
       </div>
 
-      {/* Main Content */}
-      <div className="mx-auto max-w-2xl px-4 py-4">
+      {/* Main Content - با بخش پرداخت در انتها */}
+      <div className="mx-auto max-w-2xl px-4 py-4 pb-8">
         {/* Cart Items */}
-        <div className="space-y-3">
+        <div className="mb-8 space-y-3">
           {cartItems.map((item) => (
             <div
               key={item.id}
-              className="rounded-2xl p-4 shadow-sm transition hover:shadow-md"
+              className="rounded-2xl bg-white p-4 shadow-sm transition hover:shadow-md"
             >
               {/* Item Header */}
               <div className="mb-4 flex gap-4">
@@ -237,17 +237,17 @@ const CartPage = () => {
 
               {/* Quantity & Delete */}
               <div className="flex items-center justify-between border-t border-gray-100 pt-3">
-                <div className="flex items-center gap-2 rounded-lg p-1">
+                <div className="flex items-center gap-2 rounded-lg bg-gray-100 p-1">
                   <button
                     onClick={() =>
                       handleUpdateQuantity(item, item.quantity - 10)
                     }
                     disabled={item.quantity <= 10 || loading}
-                    className="flex h-8 w-8 items-center justify-center rounded transition hover:bg-white disabled:opacity-50"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-700 transition hover:bg-gray-200 disabled:opacity-50"
                   >
                     −
                   </button>
-                  <span className="w-8 text-center text-sm font-bold">
+                  <span className="w-8 text-center text-sm font-bold text-gray-900">
                     {Math.ceil(item.quantity / 10)}
                   </span>
                   <button
@@ -255,7 +255,7 @@ const CartPage = () => {
                       handleUpdateQuantity(item, item.quantity + 10)
                     }
                     disabled={loading}
-                    className="flex h-8 w-8 items-center justify-center rounded transition hover:bg-white disabled:opacity-50"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-700 transition hover:bg-gray-200 disabled:opacity-50"
                   >
                     +
                   </button>
@@ -282,13 +282,11 @@ const CartPage = () => {
             </div>
           ))}
         </div>
-      </div>
 
-      {/* Fixed Bottom Section */}
-      <div className="fixed right-0 bottom-0 left-0 border-t border-gray-200 shadow-2xl">
-        <div className="mx-auto max-w-2xl px-4 py-4">
+        {/* Bottom Section - جزئی از صفحه */}
+        <div className="rounded-2xl border-t border-gray-200 bg-white p-6 shadow-sm">
           {/* Price Breakdown */}
-          <div className="mb-4 space-y-2 text-sm">
+          <div className="mb-6 space-y-3 text-sm">
             <div className="flex justify-between text-gray-600">
               <span>مبلغ کل</span>
               <span>{total.toLocaleString()} تومان</span>
@@ -308,14 +306,14 @@ const CartPage = () => {
               </div>
             )}
 
-            <div className="flex justify-between border-t pt-2 text-lg font-bold text-gray-900">
+            <div className="flex justify-between border-t border-gray-200 pt-3 text-lg font-bold text-gray-900">
               <span>قابل پرداخت</span>
               <span>{finalAmount.toLocaleString()} تومان</span>
             </div>
           </div>
 
           {/* Buttons */}
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <Link
               href="/products"
               className="flex-1 rounded-full border-2 border-cyan-500 py-3 text-center font-bold text-cyan-500 transition hover:bg-cyan-50"
@@ -325,22 +323,21 @@ const CartPage = () => {
             <button
               disabled={loading || cartItems.length === 0}
               onClick={() => setModalOpen(true)}
-              className="flex-1 rounded-full bg-cyan-500 py-3 font-bold transition hover:bg-cyan-600 disabled:opacity-50"
+              className="flex-1 rounded-full bg-cyan-500 py-3 font-bold text-white transition hover:bg-cyan-600 disabled:opacity-50"
             >
               {isTelegram ? "تایید سفارش" : "پرداخت"}
             </button>
           </div>
         </div>
-
-        <div className="mb-30">
-          <CheckoutModal
-            isOpen={modalOpen}
-            onClose={() => setModalOpen(false)}
-            onConfirm={handleConfirmOrder}
-            telegramUser={telegramUser}
-          />
-        </div>
       </div>
+
+      {/* Modal */}
+      <CheckoutModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onConfirm={handleConfirmOrder}
+        telegramUser={telegramUser}
+      />
     </div>
   );
 };

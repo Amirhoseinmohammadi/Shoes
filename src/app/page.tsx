@@ -44,29 +44,18 @@ export default function Home() {
   };
 
   const ProductsSection = () => (
-    <div className="bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-900">
+    <div className="">
       <Products telegramUser={telegramUser} />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-900">
+    <div className="min-h-screen">
       <Hero />
 
       <TelegramStatus />
 
       <ProductsSection />
-
-      {telegramUser && (
-        <div className="fixed bottom-24 left-4 z-40">
-          <div className="animate-bounce rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 p-3 text-white shadow-2xl">
-            <div className="text-center">
-              <div className="text-lg">🏷️</div>
-              <div className="mt-1 text-xs font-bold">تخفیف ویژه</div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

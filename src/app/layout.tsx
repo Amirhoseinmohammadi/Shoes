@@ -27,7 +27,7 @@ export default function RootLayout({
           <script src="https://telegram.org/js/telegram-web-app.js" async />
         )}
       </head>
-      <body className="font-shabnam bg-[#FCFCFC] dark:bg-black">
+      <body className="font-shabnam">
         <Providers>
           <ToastProvider>
             <Header />

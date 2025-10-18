@@ -124,7 +124,7 @@ export default function NewProductPage() {
   }
 
   return (
-    <div className="dark:bg-gray-dark mx-auto max-w-4xl p-6">
+    <div className="mx-auto max-w-4xl p-6">
       <div className="rounded-2xl p-8 shadow-lg">
         <h1 className="mb-8 text-center text-3xl font-bold">
           ➕ افزودن محصول جدید

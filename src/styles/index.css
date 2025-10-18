@@ -4,7 +4,6 @@
 
 @theme {
   /* Breakpoints */
-  --breakpoint-*: initial;
   --breakpoint-xs: 450px;
   --breakpoint-sm: 575px;
   --breakpoint-md: 768px;
@@ -13,19 +12,14 @@
   --breakpoint-2xl: 1400px;
 
   /* Colors */
-  --color-current: currentColor;
-  --color-transparent: transparent;
   --color-white: #ffffff;
   --color-black: #121723;
   --color-dark: #1d2430;
-
   --color-primary: #ff6b6b;
   --color-yellow: #ffd93d;
   --color-bg-color-dark: #fffbea;
-
   --color-body-color: #555555;
   --color-body-color-dark: #777777;
-
   --color-stroke-stroke: #e3e8ef;
   --color-stroke-dark: #353943;
 
@@ -42,29 +36,13 @@
   --color-gray-900: #111827;
   --color-gray-950: #030712;
 
-  --color-gray-dark: #1e232e;
-  --color-gray-light: #f0f2f9;
-
   /* Shadows */
   --shadow-sign-up: 0px 5px 10px rgba(4, 10, 34, 0.2);
   --shadow-one: 0px 2px 3px rgba(7, 7, 77, 0.05);
   --shadow-two: 0px 5px 10px rgba(6, 8, 15, 0.1);
   --shadow-three: 0px 5px 15px rgba(6, 8, 15, 0.05);
-
   --shadow-sticky: inset 0 -1px 0 0 rgba(0, 0, 0, 0.1);
   --shadow-sticky-dark: inset 0 -1px 0 0 rgba(255, 255, 255, 0.1);
-
-  --shadow-feature-2: 0px 10px 40px rgba(48, 86, 211, 0.12);
-
-  --shadow-submit: 0px 5px 20px rgba(4, 10, 34, 0.1);
-  --shadow-submit-dark: 0px 5px 20px rgba(4, 10, 34, 0.1);
-
-  --shadow-btn: 0px 1px 2px rgba(4, 10, 34, 0.15);
-  --shadow-btn-hover: 0px 1px 2px rgba(0, 0, 0, 0.15);
-  --shadow-btn-light: 0px 1px 2px rgba(0, 0, 0, 0.1);
-
-  /* Drop Shadows */
-  --drop-shadow-three: 0px 5px 15px rgba(6, 8, 15, 0.05);
 }
 
 @keyframes slide-down {
@@ -82,48 +60,17 @@
   animation: slide-down 0.3s ease-out forwards;
 }
 
-@utility container {
-  margin-inline: auto;
-  padding-inline: 1rem;
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 20px);
 }
 
-@utility sticky {
-  & .header-logo {
-    @apply py-5 lg:py-2;
-  }
-
-  & .menu-scroll.active {
-    @apply opacity-70;
-  }
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 80px);
 }
 
-@utility header-logo {
-  .sticky & {
-    @apply py-5 lg:py-2;
-  }
-}
-
-@utility menu-scroll {
-  .sticky &.active {
-    @apply opacity-70;
-  }
-}
-
-@utility active {
-  .sticky &.menu-scroll {
-    @apply opacity-70;
-  }
-}
-
-@utility dot {
-  input#togglePlan:checked ~ & {
-    @apply translate-x-full;
-  }
-}
-
-@utility box {
-  input#checkboxLabel:checked ~ & span {
-    @apply opacity-100;
+@supports (padding: max(0px)) {
+  .safe-area-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom, 80px), 80px);
   }
 }
 
@@ -133,7 +80,7 @@
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-gray-200, currentcolor);
+    border-color: var(--color-gray-200, currentColor);
   }
 
   html {
@@ -144,20 +91,18 @@
     font-family: "Shabnam", sans-serif;
     font-optical-sizing: auto;
     direction: rtl;
-  }
-}
-.safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-@media (max-width: 768px) {
-  .bottom-nav-height {
-    height: 80px;
+    padding-top: env(safe-area-inset-top, 3px);
   }
 }
 
 @layer components {
   input[type="checkbox"]:checked ~ label span svg {
     @apply inline-flex;
+  }
+}
+
+@media (max-width: 768px) {
+  .bottom-nav-height {
+    height: 80px;
   }
 }

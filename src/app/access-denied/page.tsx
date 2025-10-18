@@ -1,6 +1,6 @@
 export default function AccessDenied() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#FCFCFC] dark:bg-black">
+    <div className="flex min-h-screen items-center justify-center">
       <div className="rounded-lg p-8 text-center shadow-md">
         <h1 className="mb-4 text-2xl font-bold text-red-600">دسترسی غیرمجاز</h1>
         <p className="text-gray-600">
