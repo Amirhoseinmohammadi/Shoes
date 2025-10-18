@@ -105,7 +105,6 @@ export default function BottomNavigation() {
     { id: 4, href: "/admin", icon: SettingsIcon, label: "مدیریت", badge: 0 },
   ];
 
-  // تشخیص مسیر فعلی
   const getActiveItem = () => {
     const currentItem = navItems.find((item) => {
       if (item.href === "/admin") {

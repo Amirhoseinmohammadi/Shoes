@@ -2,7 +2,7 @@
 import { useTelegram } from "@/hooks/useTelegram";
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import ThemeToggler from "@/components/Header/ThemeToggler";
 
 interface MenuItem {
   id: string;
@@ -15,7 +15,6 @@ interface MenuItem {
 
 const ProfilePage = () => {
   const { user: telegramUser, loading } = useTelegram();
-  const [isEditing, setIsEditing] = useState(false);
 
   if (loading) {
     return (
@@ -205,24 +204,9 @@ const ProfilePage = () => {
             </svg>
           </Link>
           <h1 className="text-xl font-bold text-gray-900">پروفایل</h1>
-          <button
-            onClick={() => setIsEditing(!isEditing)}
-            className="rounded-full p-2 transition hover:bg-gray-200"
-          >
-            <svg
-              className="h-6 w-6 text-gray-700"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            <ThemeToggler />
+          </div>
         </div>
 
         {/* Profile Card */}

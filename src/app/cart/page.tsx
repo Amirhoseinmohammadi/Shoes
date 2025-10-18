@@ -168,7 +168,7 @@ const CartPage = () => {
           {cartItems.map((item) => (
             <div
               key={item.id}
-              className="rounded-2xl bg-white p-4 shadow-sm transition hover:shadow-md"
+              className="rounded-2xl p-4 shadow-sm transition hover:shadow-md"
             >
               {/* Item Header */}
               <div className="mb-4 flex gap-4">
@@ -237,7 +237,7 @@ const CartPage = () => {
 
               {/* Quantity & Delete */}
               <div className="flex items-center justify-between border-t border-gray-100 pt-3">
-                <div className="flex items-center gap-2 rounded-lg bg-gray-100 p-1">
+                <div className="flex items-center gap-2 rounded-lg p-1">
                   <button
                     onClick={() =>
                       handleUpdateQuantity(item, item.quantity - 10)
@@ -285,7 +285,7 @@ const CartPage = () => {
       </div>
 
       {/* Fixed Bottom Section */}
-      <div className="fixed right-0 bottom-0 left-0 border-t border-gray-200 bg-white shadow-2xl">
+      <div className="fixed right-0 bottom-0 left-0 border-t border-gray-200 shadow-2xl">
         <div className="mx-auto max-w-2xl px-4 py-4">
           {/* Price Breakdown */}
           <div className="mb-4 space-y-2 text-sm">
@@ -325,19 +325,21 @@ const CartPage = () => {
             <button
               disabled={loading || cartItems.length === 0}
               onClick={() => setModalOpen(true)}
-              className="flex-1 rounded-full bg-cyan-500 py-3 font-bold text-white transition hover:bg-cyan-600 disabled:opacity-50"
+              className="flex-1 rounded-full bg-cyan-500 py-3 font-bold transition hover:bg-cyan-600 disabled:opacity-50"
             >
               {isTelegram ? "تایید سفارش" : "پرداخت"}
             </button>
           </div>
         </div>
 
-        <CheckoutModal
-          isOpen={modalOpen}
-          onClose={() => setModalOpen(false)}
-          onConfirm={handleConfirmOrder}
-          telegramUser={telegramUser}
-        />
+        <div className="mb-30">
+          <CheckoutModal
+            isOpen={modalOpen}
+            onClose={() => setModalOpen(false)}
+            onConfirm={handleConfirmOrder}
+            telegramUser={telegramUser}
+          />
+        </div>
       </div>
     </div>
   );
