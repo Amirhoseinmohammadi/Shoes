@@ -9,26 +9,40 @@ interface VariantForm {
   previewUrls: string[];
 }
 
+interface ProductForm {
+  name: string;
+  brand: string;
+  description: string;
+  price: string;
+  category: string;
+  stock: string;
+}
+
 export default function NewProductPage() {
   const router = useRouter();
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<ProductForm>({
     name: "",
     brand: "",
     description: "",
     price: "",
+    category: "",
+    stock: "",
   });
   const [variants, setVariants] = useState<VariantForm[]>([
     { color: "", images: [], previewUrls: [] },
   ]);
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState<number | null>(null); // برای مشخص کردن واریانت در حال آپلود
+  const [error, setError] = useState<string | null>(null);
 
   const addVariant = () => {
     setVariants([...variants, { color: "", images: [], previewUrls: [] }]);
   };
 
   const removeVariant = (index: number) => {
-    setVariants(variants.filter((_, i) => i !== index));
+    if (variants.length > 1) {
+      setVariants(variants.filter((_, i) => i !== index));
+    }
   };
 
   const updateVariant = (
@@ -48,37 +62,62 @@ export default function NewProductPage() {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
-    setUploading(true);
+    setUploading(variantIndex);
+    setError(null);
 
     const uploadedUrls: string[] = [];
 
-    for (const file of files) {
-      const formData = new FormData();
-      formData.append("image", file);
+    try {
+      for (const file of files) {
+        // اعتبارسنجی نوع فایل
+        if (!file.type.startsWith("image/")) {
+          setError("لطفاً فقط فایل‌های تصویری آپلود کنید");
+          continue;
+        }
 
-      try {
+        // اعتبارسنجی سایز فایل (مثلاً 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          setError("حجم فایل نباید بیشتر از ۵ مگابایت باشد");
+          continue;
+        }
+
+        const formData = new FormData();
+        formData.append("image", file);
+
         const res = await fetch("/api/admin/upload", {
           method: "POST",
           body: formData,
         });
 
+        if (!res.ok) {
+          throw new Error(`خطا در آپلود: ${res.status}`);
+        }
+
         const result = await res.json();
 
         if (result.success) {
           uploadedUrls.push(result.imageUrl);
+        } else {
+          setError(result.message || "خطا در آپلود عکس");
         }
-      } catch (err) {
-        console.error("خطا در آپلود عکس:", err);
       }
-    }
 
-    const updated = [...variants];
-    updated[variantIndex].previewUrls = [
-      ...updated[variantIndex].previewUrls,
-      ...uploadedUrls,
-    ];
-    setVariants(updated);
-    setUploading(false);
+      if (uploadedUrls.length > 0) {
+        const updated = [...variants];
+        updated[variantIndex].previewUrls = [
+          ...updated[variantIndex].previewUrls,
+          ...uploadedUrls,
+        ];
+        setVariants(updated);
+      }
+    } catch (err) {
+      console.error("خطا در آپلود عکس:", err);
+      setError("خطا در آپلود عکس‌ها. لطفاً دوباره تلاش کنید.");
+    } finally {
+      setUploading(null);
+      // پاک کردن input file
+      e.target.value = "";
+    }
   };
 
   const removeImage = (variantIndex: number, imageIndex: number) => {
@@ -89,14 +128,51 @@ export default function NewProductPage() {
     setVariants(updated);
   };
 
+  const validateForm = (): boolean => {
+    if (
+      !form.name.trim() ||
+      !form.brand.trim() ||
+      !form.price ||
+      !form.category
+    ) {
+      setError("لطفاً فیلدهای ضروری را پر کنید");
+      return false;
+    }
+
+    if (Number(form.price) <= 0) {
+      setError("قیمت باید بیشتر از صفر باشد");
+      return false;
+    }
+
+    if (variants.some((variant) => !variant.color.trim())) {
+      setError("لطفاً نام رنگ را برای همه واریانت‌ها وارد کنید");
+      return false;
+    }
+
+    if (variants.some((variant) => variant.previewUrls.length === 0)) {
+      setError("لطفاً حداقل یک عکس برای هر واریانت آپلود کنید");
+      return false;
+    }
+
+    setError(null);
+    return true;
+  };
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
+    setError(null);
 
     try {
       const productData = {
         ...form,
         price: Number(form.price),
+        stock: Number(form.stock) || 0,
         variants: variants.map((variant) => ({
           color: variant.color,
           images: variant.previewUrls.map((url) => ({ url })),
@@ -109,233 +185,327 @@ export default function NewProductPage() {
         body: JSON.stringify(productData),
       });
 
-      if (!res.ok) throw new Error("Failed to create product");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "خطا در ایجاد محصول");
+      }
 
       const result = await res.json();
       console.log("محصول ایجاد شد:", result);
 
       router.push("/admin/products");
-    } catch (err) {
-      console.error(err);
-      alert("خطا در افزودن محصول");
+      router.refresh(); // برای به‌روزرسانی کش
+    } catch (err: any) {
+      console.error("خطا:", err);
+      setError(err.message || "خطا در افزودن محصول");
     } finally {
       setLoading(false);
     }
   }
 
+  const categories = [
+    "کفش ورزشی",
+    "کفش روزمره",
+    "کفش رسمی",
+    "کفش کودک",
+    "کفش زنانه",
+    "کفش مردانه",
+  ];
+
   return (
-    <div className="mx-auto max-w-4xl p-6">
-      <div className="rounded-2xl p-8 shadow-lg">
-        <h1 className="mb-8 text-center text-3xl font-bold">
-          ➕ افزودن محصول جدید
-        </h1>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 pt-20">
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-6">
+          <Link
+            href="/admin/products"
+            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800"
+          >
+            ← بازگشت به مدیریت محصولات
+          </Link>
+        </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-8">
-          <div className="rounded-xl p-6">
-            <h2 className="mb-4 text-xl font-semibold text-gray-700">
-              📋 اطلاعات اصلی محصول
-            </h2>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-600">
-                  نام محصول
-                </label>
-                <input
-                  className="w-full rounded-lg border border-gray-300 p-3 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                  placeholder="مثال: کفش ورزشی مردانه"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  required
-                />
-              </div>
+        <div className="rounded-2xl bg-white p-8 shadow-lg">
+          <h1 className="mb-8 text-center text-3xl font-bold text-gray-800">
+            ➕ افزودن محصول جدید
+          </h1>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-600">
-                  برند
-                </label>
-                <input
-                  className="w-full rounded-lg border border-gray-300 p-3 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                  placeholder="مثال: نایک"
-                  value={form.brand}
-                  onChange={(e) => setForm({ ...form, brand: e.target.value })}
-                  required
-                />
-              </div>
+          {error && (
+            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+              {error}
             </div>
+          )}
 
-            <div className="mt-4">
-              <label className="mb-2 block text-sm font-medium text-gray-600">
-                توضیحات
-              </label>
-              <textarea
-                className="w-full rounded-lg border border-gray-300 p-3 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                placeholder="توضیحات کامل محصول..."
-                rows={3}
-                value={form.description}
-                onChange={(e) =>
-                  setForm({ ...form, description: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="mt-4">
-              <label className="mb-2 block text-sm font-medium text-gray-600">
-                قیمت (تومان)
-              </label>
-              <input
-                className="w-full rounded-lg border border-gray-300 p-3 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                placeholder="مثال: 2500000"
-                type="number"
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: e.target.value })}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="rounded-xl p-6">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-700">
-                🎨 رنگ‌بندی و عکس‌ها
+          <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+            {/* اطلاعات اصلی محصول */}
+            <div className="rounded-xl border border-gray-200 p-6">
+              <h2 className="mb-6 border-b pb-2 text-xl font-semibold text-gray-700">
+                📋 اطلاعات اصلی محصول
               </h2>
-              <button
-                type="button"
-                onClick={addVariant}
-                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
-              >
-                <span>+</span>
-                افزودن رنگ
-              </button>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-600">
+                    نام محصول *
+                  </label>
+                  <input
+                    className="w-full rounded-lg border border-gray-300 p-3 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    placeholder="مثال: کفش ورزشی مردانه"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-600">
+                    برند *
+                  </label>
+                  <input
+                    className="w-full rounded-lg border border-gray-300 p-3 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    placeholder="مثال: نایک"
+                    value={form.brand}
+                    onChange={(e) =>
+                      setForm({ ...form, brand: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-600">
+                    دسته‌بندی *
+                  </label>
+                  <select
+                    className="w-full rounded-lg border border-gray-300 p-3 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    value={form.category}
+                    onChange={(e) =>
+                      setForm({ ...form, category: e.target.value })
+                    }
+                    required
+                  >
+                    <option value="">انتخاب دسته‌بندی</option>
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-600">
+                    موجودی انبار
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full rounded-lg border border-gray-300 p-3 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    placeholder="تعداد موجودی"
+                    value={form.stock}
+                    onChange={(e) =>
+                      setForm({ ...form, stock: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-sm font-medium text-gray-600">
+                    توضیحات
+                  </label>
+                  <textarea
+                    className="w-full rounded-lg border border-gray-300 p-3 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    placeholder="توضیحات کامل محصول..."
+                    rows={4}
+                    value={form.description}
+                    onChange={(e) =>
+                      setForm({ ...form, description: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-600">
+                    قیمت (تومان) *
+                  </label>
+                  <input
+                    className="w-full rounded-lg border border-gray-300 p-3 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    placeholder="مثال: 2500000"
+                    type="number"
+                    min="0"
+                    step="1000"
+                    value={form.price}
+                    onChange={(e) =>
+                      setForm({ ...form, price: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-6">
-              {variants.map((variant, variantIndex) => (
-                <div
-                  key={variantIndex}
-                  className="rounded-xl border-2 border-dashed border-gray-300 p-6 transition-colors hover:border-gray-400"
+            {/* واریانت‌ها */}
+            <div className="rounded-xl border border-gray-200 p-6">
+              <div className="mb-6 flex items-center justify-between border-b pb-2">
+                <h2 className="text-xl font-semibold text-gray-700">
+                  🎨 رنگ‌بندی و عکس‌ها
+                </h2>
+                <button
+                  type="button"
+                  onClick={addVariant}
+                  className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-white transition-colors hover:bg-green-700"
                 >
-                  <div className="mb-4 flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-gray-700">
-                      رنگ {variantIndex + 1}
-                    </h3>
-                    {variants.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeVariant(variantIndex)}
-                        className="flex items-center gap-1 text-red-500 transition-colors hover:text-red-700"
-                      >
-                        <span>🗑️</span>
-                        حذف
-                      </button>
-                    )}
-                  </div>
+                  <span>+</span>
+                  افزودن رنگ
+                </button>
+              </div>
 
-                  <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-gray-600">
-                        نام رنگ
-                      </label>
-                      <input
-                        className="w-full rounded-lg border border-gray-300 p-3 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                        placeholder="مثلاً: سفید، مشکی، آبی"
-                        value={variant.color}
-                        onChange={(e) =>
-                          updateVariant(variantIndex, "color", e.target.value)
-                        }
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-gray-600">
-                        عکس‌های این رنگ
-                      </label>
-                      <label className="flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 transition-colors hover:bg-gray-100">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <svg
-                            className="mb-4 h-8 w-8 text-gray-500"
-                            aria-hidden="true"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 20 16"
-                          >
-                            <path
-                              stroke="currentColor"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
-                            />
-                          </svg>
-                          <p className="mb-2 text-sm text-gray-500">
-                            <span className="font-semibold">
-                              برای آپلود کلیک کنید
-                            </span>
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            PNG, JPG, JPEG
-                          </p>
-                        </div>
-                        <input
-                          type="file"
-                          multiple
-                          accept="image/*"
-                          onChange={(e) =>
-                            handleVariantImageUpload(variantIndex, e)
-                          }
-                          disabled={uploading}
-                          className="hidden"
-                        />
-                      </label>
-                      {uploading && (
-                        <div className="mt-2 text-center text-sm text-blue-600">
-                          📤 در حال آپلود...
-                        </div>
+              <div className="space-y-6">
+                {variants.map((variant, variantIndex) => (
+                  <div
+                    key={variantIndex}
+                    className="rounded-xl border-2 border-dashed border-gray-300 p-6 transition-colors hover:border-gray-400"
+                  >
+                    <div className="mb-6 flex items-center justify-between">
+                      <h3 className="text-lg font-medium text-gray-700">
+                        رنگ {variantIndex + 1}
+                      </h3>
+                      {variants.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeVariant(variantIndex)}
+                          className="flex items-center gap-2 rounded-lg bg-red-100 px-3 py-1 text-red-600 transition-colors hover:bg-red-200"
+                        >
+                          <span>🗑️</span>
+                          حذف
+                        </button>
                       )}
                     </div>
-                  </div>
 
-                  {/* پیشنمایش عکس‌ها */}
-                  {variant.previewUrls.length > 0 && (
-                    <div className="mb-6">
-                      <label className="mb-3 block text-sm font-medium text-gray-600">
-                        عکس‌های آپلود شده:
-                      </label>
-                      <div className="flex flex-wrap gap-3">
-                        {variant.previewUrls.map((url, imgIndex) => (
-                          <div key={imgIndex} className="group relative">
-                            <img
-                              src={url}
-                              alt={`عکس ${imgIndex + 1}`}
-                              className="h-24 w-24 rounded-lg border-2 border-gray-200 object-cover transition-colors group-hover:border-gray-400"
-                            />
-                            <button
-                              type="button"
-                              onClick={() =>
-                                removeImage(variantIndex, imgIndex)
-                              }
-                              className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-sm text-white opacity-0 transition-opacity group-hover:opacity-100"
-                            >
-                              ×
-                            </button>
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-gray-600">
+                          نام رنگ *
+                        </label>
+                        <input
+                          className="w-full rounded-lg border border-gray-300 p-3 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                          placeholder="مثلاً: سفید، مشکی، آبی"
+                          value={variant.color}
+                          onChange={(e) =>
+                            updateVariant(variantIndex, "color", e.target.value)
+                          }
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-gray-600">
+                          عکس‌های این رنگ *
+                        </label>
+                        <label
+                          className={`flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
+                            uploading === variantIndex
+                              ? "border-blue-400 bg-blue-50"
+                              : "border-gray-300 bg-gray-50 hover:bg-gray-100"
+                          }`}
+                        >
+                          <div className="flex flex-col items-center justify-center">
+                            {uploading === variantIndex ? (
+                              <>
+                                <div className="mb-2 h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
+                                <p className="text-sm text-blue-600">
+                                  در حال آپلود...
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <svg
+                                  className="mb-3 h-8 w-8 text-gray-500"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                                  />
+                                </svg>
+                                <p className="mb-1 text-sm text-gray-500">
+                                  <span className="font-semibold">
+                                    برای آپلود کلیک کنید
+                                  </span>
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  PNG, JPG, JPEG (حداکثر ۵MB)
+                                </p>
+                              </>
+                            )}
                           </div>
-                        ))}
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={(e) =>
+                              handleVariantImageUpload(variantIndex, e)
+                            }
+                            disabled={uploading !== null}
+                            className="hidden"
+                          />
+                        </label>
                       </div>
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
 
-          <button
-            type="submit"
-            disabled={loading || uploading}
-            className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:from-blue-700 hover:to-blue-800 disabled:opacity-50"
-          >
-            {loading ? "⏳ در حال افزودن محصول..." : "✅ افزودن محصول"}
-          </button>
-        </form>
+                    {/* پیشنمایش عکس‌ها */}
+                    {variant.previewUrls.length > 0 && (
+                      <div className="mt-6">
+                        <label className="mb-3 block text-sm font-medium text-gray-600">
+                          عکس‌های آپلود شده ({variant.previewUrls.length})
+                        </label>
+                        <div className="flex flex-wrap gap-3">
+                          {variant.previewUrls.map((url, imgIndex) => (
+                            <div key={imgIndex} className="group relative">
+                              <img
+                                src={url}
+                                alt={`عکس ${imgIndex + 1}`}
+                                className="h-24 w-24 rounded-lg border-2 border-gray-200 object-cover transition-colors group-hover:border-gray-400"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  removeImage(variantIndex, imgIndex)
+                                }
+                                className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-sm text-white opacity-0 transition-all group-hover:opacity-100"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || uploading !== null}
+              className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:from-blue-700 hover:to-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  در حال افزودن محصول...
+                </span>
+              ) : (
+                "✅ افزودن محصول"
+              )}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

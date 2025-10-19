@@ -55,19 +55,24 @@ const CartPage = () => {
   const handleConfirmOrder = async (customer: {
     name: string;
     phone: string;
+    orderId?: number;
+    trackingCode?: string;
   }) => {
     const orderData = {
       ...customer,
       telegramUserId: telegramUser?.id,
       telegramUsername: telegramUser?.username,
       items: cartItems,
-      totalAmount: calculateSubtotal(cartItems),
+      totalAmount: finalAmount,
     };
 
     const success = await checkout(orderData);
 
     if (success) {
-      showToast({ message: "سفارش با موفقیت ثبت شد", type: "success" });
+      showToast({
+        message: `سفارش با موفقیت ثبت شد! کد پیگیری: ${customer.trackingCode || "در حال پردازش"}`,
+        type: "success",
+      });
 
       if (isTelegram) {
         sendData({
@@ -82,6 +87,12 @@ const CartPage = () => {
       showToast({ message: "خطا در ثبت سفارش", type: "error" });
     }
   };
+
+  const total = calculateTotal(cartItems);
+  const discount = 2500;
+  const tax = 2000;
+  const telegramDiscount = isTelegram ? 1000 : 0;
+  const finalAmount = total - discount - telegramDiscount + tax;
 
   if (cartItems.length === 0) {
     return (
@@ -130,12 +141,8 @@ const CartPage = () => {
     );
   }
 
-  const total = calculateTotal(cartItems);
-  const finalAmount = calculateSubtotal(cartItems) - (isTelegram ? 1000 : 0);
-
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <div className="safe-area-top sticky top-0 z-40 flex items-center gap-3 bg-cyan-500 px-4 py-3 text-white shadow-lg">
         <h1 className="flex-1 text-xl font-bold">سبد خرید</h1>
         <span className="rounded-full bg-white/20 px-3 py-1 text-sm">
@@ -161,18 +168,14 @@ const CartPage = () => {
         </Link>
       </div>
 
-      {/* Main Content - با بخش پرداخت در انتها */}
       <div className="mx-auto max-w-2xl px-4 py-4 pb-8">
-        {/* Cart Items */}
         <div className="mb-8 space-y-3">
           {cartItems.map((item) => (
             <div
               key={item.id}
               className="rounded-2xl bg-white p-4 shadow-sm transition hover:shadow-md"
             >
-              {/* Item Header */}
               <div className="mb-4 flex gap-4">
-                {/* Image */}
                 <div className="flex-shrink-0">
                   {item.image ? (
                     <Image
@@ -183,11 +186,24 @@ const CartPage = () => {
                       className="rounded-xl object-cover"
                     />
                   ) : (
-                    <div className="h-20 w-20 rounded-xl bg-gray-200" />
+                    <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-gray-200">
+                      <svg
+                        className="h-8 w-8 text-gray-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </div>
                   )}
                 </div>
 
-                {/* Info */}
                 <div className="min-w-0 flex-1">
                   <h3 className="truncate text-sm font-bold text-gray-900">
                     {item.name}
@@ -196,7 +212,10 @@ const CartPage = () => {
                     برند: {item.brand}
                   </p>
 
-                  {/* Variants */}
+                  <p className="mt-1 text-xs text-gray-600">
+                    قیمت واحد: {(item.price || 0).toLocaleString()} تومان
+                  </p>
+
                   <div className="mt-2 flex flex-wrap gap-2">
                     {item.size && (
                       <span className="rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700">
@@ -221,44 +240,54 @@ const CartPage = () => {
                                       : "#ccc",
                           }}
                         />
+                        <span className="text-xs text-gray-700">
+                          {item.color}
+                        </span>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Price */}
                 <div className="text-right">
                   <p className="font-bold text-gray-900">
-                    {(item.price || 0).toLocaleString()}
+                    {((item.price / 10) * item.quantity).toLocaleString()}
                   </p>
                   <p className="text-xs text-gray-500">تومان</p>
+                  <p className="mt-1 text-xs text-gray-400">
+                    {formatQuantity(item.quantity)}
+                  </p>
                 </div>
               </div>
 
-              {/* Quantity & Delete */}
               <div className="flex items-center justify-between border-t border-gray-100 pt-3">
-                <div className="flex items-center gap-2 rounded-lg bg-gray-100 p-1">
-                  <button
-                    onClick={() =>
-                      handleUpdateQuantity(item, item.quantity - 10)
-                    }
-                    disabled={item.quantity <= 10 || loading}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-700 transition hover:bg-gray-200 disabled:opacity-50"
-                  >
-                    −
-                  </button>
-                  <span className="w-8 text-center text-sm font-bold text-gray-900">
-                    {Math.ceil(item.quantity / 10)}
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-600">تعداد:</span>
+                  <div className="flex items-center gap-2 rounded-lg bg-gray-100 p-1">
+                    <button
+                      onClick={() =>
+                        handleUpdateQuantity(item, item.quantity - 10)
+                      }
+                      disabled={item.quantity <= 10 || loading}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-700 transition hover:bg-gray-200 disabled:opacity-50"
+                    >
+                      −
+                    </button>
+                    <span className="w-8 text-center text-sm font-bold text-gray-900">
+                      {Math.ceil(item.quantity / 10)}
+                    </span>
+                    <button
+                      onClick={() =>
+                        handleUpdateQuantity(item, item.quantity + 10)
+                      }
+                      disabled={loading}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-700 transition hover:bg-gray-200 disabled:opacity-50"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    ({item.quantity} جفت)
                   </span>
-                  <button
-                    onClick={() =>
-                      handleUpdateQuantity(item, item.quantity + 10)
-                    }
-                    disabled={loading}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-700 transition hover:bg-gray-200 disabled:opacity-50"
-                  >
-                    +
-                  </button>
                 </div>
 
                 <button
@@ -283,28 +312,32 @@ const CartPage = () => {
           ))}
         </div>
 
-        {/* Bottom Section - جزئی از صفحه */}
         <div className="rounded-2xl border-t border-gray-200 bg-white p-6 shadow-sm">
-          {/* Price Breakdown */}
           <div className="mb-6 space-y-3 text-sm">
             <div className="flex justify-between text-gray-600">
-              <span>مبلغ کل</span>
+              <span>
+                مبلغ کل (
+                {cartItems.reduce((sum, item) => sum + item.quantity, 0)} جفت)
+              </span>
               <span>{total.toLocaleString()} تومان</span>
             </div>
-            <div className="flex justify-between text-gray-600">
-              <span>مالیات</span>
-              <span>2,000 تومان</span>
-            </div>
+
             <div className="flex justify-between text-green-600">
               <span>تخفیف</span>
-              <span>-2,500 تومان</span>
+              <span>-{discount.toLocaleString()} تومان</span>
             </div>
+
             {isTelegram && (
-              <div className="flex justify-between font-semibold text-green-600">
+              <div className="flex justify-between text-green-600">
                 <span>تخفیف تلگرام</span>
-                <span>-1,000 تومان</span>
+                <span>-{telegramDiscount.toLocaleString()} تومان</span>
               </div>
             )}
+
+            <div className="flex justify-between text-gray-600">
+              <span>مالیات و حمل</span>
+              <span>+{tax.toLocaleString()} تومان</span>
+            </div>
 
             <div className="flex justify-between border-t border-gray-200 pt-3 text-lg font-bold text-gray-900">
               <span>قابل پرداخت</span>
@@ -312,7 +345,6 @@ const CartPage = () => {
             </div>
           </div>
 
-          {/* Buttons */}
           <div className="flex gap-3">
             <Link
               href="/products"
@@ -323,19 +355,20 @@ const CartPage = () => {
             <button
               disabled={loading || cartItems.length === 0}
               onClick={() => setModalOpen(true)}
-              className="flex-1 rounded-full bg-cyan-500 py-3 font-bold text-white transition hover:bg-cyan-600 disabled:opacity-50"
+              className="flex-1 rounded-full bg-cyan-500 py-3 font-bold text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isTelegram ? "تایید سفارش" : "پرداخت"}
+              {loading ? "در حال پردازش..." : "تکمیل سفارش"}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Modal */}
       <CheckoutModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onConfirm={handleConfirmOrder}
+        cartItems={cartItems}
+        totalPrice={finalAmount}
         telegramUser={telegramUser}
       />
     </div>

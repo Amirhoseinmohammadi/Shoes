@@ -9,6 +9,9 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Iran Steps",
   description: "This is Home for kids shoes",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+  ),
 };
 
 export default function RootLayout({
@@ -17,21 +20,28 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html suppressHydrationWarning lang="fa">
+    <html suppressHydrationWarning lang="fa" dir="rtl">
       <head>
         <link
           href="https://cdn.jsdelivr.net/gh/rastikerdar/shabnam-font@v5.0.1/dist/font-face.css"
           rel="stylesheet"
+          type="text/css"
         />
         {process.env.NODE_ENV === "production" && (
-          <script src="https://telegram.org/js/telegram-web-app.js" async />
+          <script
+            src="https://telegram.org/js/telegram-web-app.js"
+            async
+            defer
+          />
         )}
       </head>
-      <body className="font-shabnam">
+      <body className="font-shabnam antialiased">
         <Providers>
           <ToastProvider>
             <Header />
-            <PageTransition>{children}</PageTransition>
+            <main className="min-h-screen">
+              <PageTransition>{children}</PageTransition>
+            </main>
             <Footer />
           </ToastProvider>
         </Providers>

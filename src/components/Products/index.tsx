@@ -3,6 +3,13 @@
 import { useState } from "react";
 import SingleShoe from "./SingleShoe";
 import { useApi } from "@/hooks/useApi";
+import {
+  MagnifyingGlassIcon,
+  ExclamationTriangleIcon,
+  ArrowPathIcon,
+  FaceFrownIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 
 interface ShoesProps {
   telegramUser?: any;
@@ -19,22 +26,18 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
 
   if (isLoading) {
     return (
-      <section className="min-h-screen bg-gray-50 py-8">
+      <section className="min-h-screen bg-gradient-to-b from-cyan-600 via-blue-600 to-indigo-700 py-10">
         <div className="container mx-auto px-4">
-          {/* Search Bar Skeleton */}
-          <div className="mb-8 h-12 w-full animate-pulse rounded-2xl bg-gray-300"></div>
-
-          {/* Grid Skeleton */}
+          <div className="mb-10 h-14 w-full animate-pulse rounded-2xl bg-white/10 backdrop-blur-sm"></div>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-            {[...Array(8)].map((_, index) => (
-              <div key={index} className="animate-pulse">
-                <div className="mb-3 aspect-square rounded-2xl bg-gray-300"></div>
-                <div className="mb-2 h-4 rounded bg-gray-300"></div>
-                <div className="mb-3 h-4 w-3/4 rounded bg-gray-300"></div>
-                <div className="flex gap-2">
-                  <div className="h-10 flex-1 rounded-xl bg-gray-300"></div>
-                  <div className="h-10 w-10 rounded-xl bg-gray-300"></div>
-                </div>
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={i}
+                className="overflow-hidden rounded-2xl bg-white/10 p-4 shadow-md backdrop-blur-sm"
+              >
+                <div className="aspect-square w-full animate-pulse rounded-xl bg-white/20"></div>
+                <div className="mt-4 h-4 w-3/4 animate-pulse rounded-md bg-white/20"></div>
+                <div className="mt-2 h-3 w-1/2 animate-pulse rounded-md bg-white/20"></div>
               </div>
             ))}
           </div>
@@ -45,44 +48,22 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
 
   if (error) {
     return (
-      <section className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="mb-2">
-            <svg
-              className="mx-auto h-16 w-16 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+      <section className="flex min-h-screen items-center justify-center bg-gradient-to-b from-cyan-600 via-blue-600 to-indigo-700 p-6">
+        <div className="max-w-md rounded-3xl bg-white/10 p-8 text-center shadow-2xl backdrop-blur-xl">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-500/20">
+            <ExclamationTriangleIcon className="h-10 w-10 text-red-400" />
           </div>
-          <h3 className="mb-2 text-lg font-semibold text-gray-900">
+          <h3 className="mb-3 text-2xl font-bold text-white">
             خطا در بارگذاری محصولات
           </h3>
-          <p className="mb-6 text-gray-500">لطفاً بعداً دوباره تلاش کنید</p>
+          <p className="mb-8 text-gray-200">
+            مشکلی در دریافت محصولات پیش آمد. لطفاً دوباره تلاش کنید.
+          </p>
           <button
             onClick={() => window.location.reload()}
-            className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-6 py-2.5 font-semibold text-white transition-all hover:bg-cyan-600 hover:shadow-lg"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-cyan-600 px-6 py-3 font-semibold text-white shadow-lg transition-all hover:scale-105 hover:shadow-cyan-500/40"
           >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
+            <ArrowPathIcon className="h-5 w-5" />
             تلاش مجدد
           </button>
         </div>
@@ -91,97 +72,90 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
   }
 
   return (
-    <section className="min-h-screen bg-gray-50 py-8">
+    <section className="min-h-screen bg-gradient-to-b from-cyan-600 via-blue-600 to-indigo-700 py-10">
       <div className="container mx-auto px-4">
-        {/* Header */}
         <div className="mb-8">
-          <h1 className="mb-4 text-3xl font-bold text-gray-900">
-            کفش‌های جدید
-          </h1>
-
-          {/* Search Bar */}
-          <div className="relative">
+          <div className="relative mx-auto max-w-3xl">
+            <MagnifyingGlassIcon className="absolute top-1/2 right-5 -translate-y-1/2 text-gray-300" />
             <input
               type="text"
-              placeholder="جستجو کفش مورد نظرتان..."
+              placeholder="جستجو بین محصولات..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-2xl border-2 border-gray-200 bg-white px-4 py-3 placeholder-gray-400 transition-all focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 focus:outline-none"
+              className="w-full rounded-2xl border border-white/20 bg-white/10 py-4 pr-12 pl-4 text-white placeholder-gray-300 shadow-inner backdrop-blur-md transition-all focus:border-cyan-400 focus:bg-white/20 focus:ring-2 focus:ring-cyan-300/50"
             />
-            <svg
-              className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-          </div>
-        </div>
-
-        {/* Products Grid or Empty State */}
-        {filteredShoes.length > 0 ? (
-          <>
-            {/* Results Counter */}
-            <div className="mb-6 flex items-center gap-2 text-sm text-gray-600">
-              <span className="font-semibold text-gray-900">
-                {filteredShoes.length}
-              </span>
-              <span>محصول پیدا شد</span>
-            </div>
-
-            {/* Grid */}
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-              {filteredShoes.map((shoe) => (
-                <SingleShoe
-                  key={shoe.id}
-                  shoe={shoe}
-                  telegramUser={telegramUser}
-                />
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="rounded-2xl border-2 border-dashed border-gray-300 bg-white py-16 text-center">
-            <div className="mb-4">
-              <svg
-                className="mx-auto h-16 w-16 text-gray-300"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <h3 className="mb-2 text-lg font-semibold text-gray-900">
-              محصولی یافت نشد
-            </h3>
-            <p className="text-gray-500">
-              {searchQuery
-                ? "با این نام محصولی پیدا نشد. لطفاً جستجو را دوباره امتحان کنید"
-                : "هنوز هیچ محصولی اضافه نشده است"}
-            </p>
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-6 py-2 font-semibold text-white transition-all hover:bg-cyan-600"
+                className="absolute top-1/2 left-4 -translate-y-1/2 rounded-lg p-1.5 text-gray-300 hover:bg-white/10 hover:text-white"
               >
-                پاک کردن جستجو
+                <XMarkIcon className="h-5 w-5" />
               </button>
             )}
           </div>
+        </div>
+
+        {filteredShoes.length > 0 ? (
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+            {filteredShoes.map((shoe, i) => (
+              <div
+                key={shoe.id}
+                style={{
+                  animation: `fadeInUp 0.5s ease-out ${i * 0.05}s both`,
+                }}
+              >
+                <SingleShoe shoe={shoe} telegramUser={telegramUser} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mx-auto max-w-lg text-center">
+            <div className="rounded-3xl bg-white/10 p-10 shadow-xl backdrop-blur-md">
+              <div className="mx-auto mb-6 flex h-28 w-28 items-center justify-center rounded-full bg-white/20">
+                <FaceFrownIcon className="h-14 w-14 text-white/70" />
+              </div>
+              <h3 className="mb-2 text-2xl font-bold text-white">
+                محصولی یافت نشد
+              </h3>
+              <p className="mb-6 text-gray-200">
+                {searchQuery ? (
+                  <>
+                    هیچ محصولی با نام{" "}
+                    <span className="font-semibold text-cyan-300">
+                      "{searchQuery}"
+                    </span>{" "}
+                    یافت نشد.
+                  </>
+                ) : (
+                  "هنوز هیچ محصولی اضافه نشده است."
+                )}
+              </p>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-cyan-600 px-6 py-3 font-semibold text-white shadow-md transition-all hover:scale-105"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                  پاک کردن جستجو
+                </button>
+              )}
+            </div>
+          </div>
         )}
       </div>
+
+      <style jsx>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </section>
   );
 };

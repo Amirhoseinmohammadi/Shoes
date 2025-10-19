@@ -44,7 +44,21 @@
   --shadow-sticky: inset 0 -1px 0 0 rgba(0, 0, 0, 0.1);
   --shadow-sticky-dark: inset 0 -1px 0 0 rgba(255, 255, 255, 0.1);
 }
+@layer utilities {
+  @keyframes floating {
+    0%,
+    100% {
+      transform: translateY(0) rotate(0deg);
+    }
+    50% {
+      transform: translateY(-10px) rotate(-2deg);
+    }
+  }
 
+  .animate-floating {
+    animation: floating 3s ease-in-out infinite;
+  }
+}
 @keyframes slide-down {
   0% {
     transform: translate(-50%, -100%);
@@ -53,24 +67,6 @@
   100% {
     transform: translate(-50%, 0);
     opacity: 1;
-  }
-}
-
-.animate-slide-down {
-  animation: slide-down 0.3s ease-out forwards;
-}
-
-.safe-area-top {
-  padding-top: env(safe-area-inset-top, 20px);
-}
-
-.safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 80px);
-}
-
-@supports (padding: max(0px)) {
-  .safe-area-bottom {
-    padding-bottom: max(env(safe-area-inset-bottom, 80px), 80px);
   }
 }
 
@@ -91,7 +87,6 @@
     font-family: "Shabnam", sans-serif;
     font-optical-sizing: auto;
     direction: rtl;
-    padding-top: env(safe-area-inset-top, 3px);
   }
 }
 
