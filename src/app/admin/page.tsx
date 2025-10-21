@@ -51,11 +51,17 @@ function AdminCard({
 
 function StatCard({ value, label, color, icon }: StatCard) {
   return (
-    <div className="rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur-md transition-all hover:-translate-y-1 hover:shadow-2xl">
+    <div className="rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur-md transition-all hover:-translate-y-1 hover:shadow-2xl dark:bg-gray-800/80 dark:hover:shadow-gray-700/50">
       <div className="flex flex-col items-center text-center">
         {icon}
-        <div className={`mt-3 text-3xl font-bold ${color}`}>{value}</div>
-        <div className="mt-2 text-sm text-gray-600">{label}</div>
+        <div
+          className={`mt-3 text-3xl font-bold ${color} dark:${color.replace("600", "400")}`}
+        >
+          {value}
+        </div>
+        <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          {label}
+        </div>
       </div>
     </div>
   );
@@ -63,13 +69,13 @@ function StatCard({ value, label, color, icon }: StatCard) {
 
 function LoadingSkeleton() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cyan-50 to-blue-100 px-4 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-cyan-50 to-blue-100 px-4 py-12 dark:from-gray-900 dark:to-gray-800">
       <div className="mx-auto max-w-5xl">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {[1, 2].map((item) => (
             <div
               key={item}
-              className="h-48 animate-pulse rounded-3xl bg-gray-300 p-8"
+              className="h-48 animate-pulse rounded-3xl bg-gray-300 p-8 dark:bg-gray-700"
             ></div>
           ))}
         </div>
@@ -78,7 +84,7 @@ function LoadingSkeleton() {
           {[1, 2, 3].map((item) => (
             <div
               key={item}
-              className="h-32 animate-pulse rounded-3xl bg-gray-300 p-6"
+              className="h-32 animate-pulse rounded-3xl bg-gray-300 p-6 dark:bg-gray-700"
             ></div>
           ))}
         </div>
@@ -135,19 +141,23 @@ export default function AdminPage() {
       value: stats.activeProducts,
       label: "محصول فعال",
       color: "text-cyan-600",
-      icon: <CubeIcon className="h-8 w-8 text-cyan-500" />,
+      icon: <CubeIcon className="h-8 w-8 text-cyan-500 dark:text-cyan-400" />,
     },
     {
       value: stats.newOrders,
       label: "سفارش جدید",
       color: "text-emerald-600",
-      icon: <ClipboardDocumentListIcon className="h-8 w-8 text-emerald-500" />,
+      icon: (
+        <ClipboardDocumentListIcon className="h-8 w-8 text-emerald-500 dark:text-emerald-400" />
+      ),
     },
     {
       value: stats.onlineUsers,
       label: "کاربر آنلاین",
       color: "text-orange-600",
-      icon: <UserGroupIcon className="h-8 w-8 text-orange-500" />,
+      icon: (
+        <UserGroupIcon className="h-8 w-8 text-orange-500 dark:text-orange-400" />
+      ),
     },
   ];
 
@@ -176,13 +186,13 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="safe-area-top safe-area-bottom min-h-screen bg-gradient-to-br from-cyan-50 to-blue-100 px-4 py-12">
+    <div className="safe-area-top safe-area-bottom min-h-screen bg-gradient-to-br from-cyan-50 to-blue-100 px-4 py-12 dark:from-gray-900 dark:to-gray-800">
       <div className="mx-auto max-w-7xl">
         <div className="mb-12 text-center">
-          <h1 className="mb-4 text-4xl font-bold text-gray-800">
+          <h1 className="mb-4 text-4xl font-bold text-gray-800 dark:text-white">
             🛠️ پنل مدیریت
           </h1>
-          <p className="mx-auto max-w-2xl text-lg text-gray-600">
+          <p className="mx-auto max-w-2xl text-lg text-gray-600 dark:text-gray-400">
             به پنل مدیریت خوش آمدید. از اینجا می‌توانید تمام بخش‌های سایت را
             مدیریت کنید.
           </p>
@@ -203,7 +213,7 @@ export default function AdminPage() {
         </div>
 
         <div className="mt-16">
-          <h2 className="mb-8 text-center text-2xl font-bold text-gray-800">
+          <h2 className="mb-8 text-center text-2xl font-bold text-gray-800 dark:text-white">
             📊 آمار کلی
           </h2>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -220,8 +230,8 @@ export default function AdminPage() {
         </div>
 
         <div className="mt-16">
-          <div className="rounded-3xl bg-white/80 p-8 shadow-lg backdrop-blur-md">
-            <h2 className="mb-6 text-2xl font-bold text-gray-800">
+          <div className="rounded-3xl bg-white/80 p-8 shadow-lg backdrop-blur-md dark:bg-gray-800/80">
+            <h2 className="mb-6 text-2xl font-bold text-gray-800 dark:text-white">
               📋 فعالیت‌های اخیر
             </h2>
             <div className="space-y-4">
@@ -230,46 +240,51 @@ export default function AdminPage() {
                   action: "سفارش جدید",
                   user: "علی محمدی",
                   time: "۲ دقیقه پیش",
-                  color: "text-green-600",
+                  color: "text-green-600 dark:text-green-400",
                 },
                 {
                   action: "ویرایش محصول",
                   user: "مریم کریمی",
                   time: "۱۵ دقیقه پیش",
-                  color: "text-blue-600",
+                  color: "text-blue-600 dark:text-blue-400",
                 },
                 {
                   action: "ثبت کاربر جدید",
                   user: "رضا احمدی",
                   time: "۱ ساعت پیش",
-                  color: "text-purple-600",
+                  color: "text-purple-600 dark:text-purple-400",
                 },
                 {
                   action: "تغییر وضعیت سفارش",
                   user: "سارا نظری",
                   time: "۲ ساعت پیش",
-                  color: "text-orange-600",
+                  color: "text-orange-600 dark:text-orange-400",
                 },
               ].map((activity, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between border-b border-gray-200 pb-4 last:border-0 last:pb-0"
+                  className="flex items-center justify-between border-b border-gray-200 pb-4 last:border-0 last:pb-0 dark:border-gray-700"
                 >
                   <div className="flex items-center space-x-4 space-x-reverse">
                     <div
-                      className={`h-3 w-3 rounded-full ${activity.color.replace("text", "bg")}`}
+                      className={`h-3 w-3 rounded-full ${activity.color.replace("text", "bg").replace("600", "500").replace("dark:text", "")}`}
                     ></div>
                     <div>
-                      <span className="font-medium text-gray-800">
+                      <span className="font-medium text-gray-800 dark:text-white">
                         {activity.action}
                       </span>
-                      <span className="text-gray-600"> توسط </span>
-                      <span className="font-medium text-gray-800">
+                      <span className="text-gray-600 dark:text-gray-400">
+                        {" "}
+                        توسط{" "}
+                      </span>
+                      <span className="font-medium text-gray-800 dark:text-white">
                         {activity.user}
                       </span>
                     </div>
                   </div>
-                  <span className="text-sm text-gray-500">{activity.time}</span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {activity.time}
+                  </span>
                 </div>
               ))}
             </div>

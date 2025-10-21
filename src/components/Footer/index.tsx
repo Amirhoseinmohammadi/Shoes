@@ -6,7 +6,7 @@ const Footer = () => {
 
   return (
     <footer
-      className="border-t border-gray-200 bg-white py-12 dark:bg-gray-900"
+      className="border-t border-gray-200 bg-gray-200 py-12 dark:bg-gray-900"
       role="contentinfo"
     >
       <div className="container mx-auto px-4">

@@ -4,6 +4,7 @@ import Products from "@/components/Products";
 import Hero from "@/components/Hero";
 import { useTelegram } from "@/hooks/useTelegram";
 import { useState, useEffect } from "react";
+import ThemeToggler from "@/components/Header/ThemeToggler";
 
 export default function Home() {
   const { user: telegramUser, loading, isTelegram } = useTelegram();
@@ -51,10 +52,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggler />
+      </div>
       <Hero />
-
       <TelegramStatus />
-
       <ProductsSection />
     </div>
   );

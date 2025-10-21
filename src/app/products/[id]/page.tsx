@@ -23,16 +23,16 @@ export default function ProductPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 pt-4 pb-32">
+      <div className="min-h-screen bg-gray-50 pt-4 pb-32 dark:bg-gray-900">
         <div className="mx-auto max-w-2xl px-4">
           <div className="animate-pulse space-y-4">
-            <div className="h-80 rounded-2xl bg-gray-300"></div>
-            <div className="h-8 w-1/2 rounded bg-gray-300"></div>
-            <div className="h-6 w-1/3 rounded bg-gray-300"></div>
+            <div className="h-80 rounded-2xl bg-gray-300 dark:bg-gray-700"></div>
+            <div className="h-8 w-1/2 rounded bg-gray-300 dark:bg-gray-700"></div>
+            <div className="h-6 w-1/3 rounded bg-gray-300 dark:bg-gray-700"></div>
             <div className="space-y-3">
-              <div className="h-4 rounded bg-gray-300"></div>
-              <div className="h-4 rounded bg-gray-300"></div>
-              <div className="h-4 w-2/3 rounded bg-gray-300"></div>
+              <div className="h-4 rounded bg-gray-300 dark:bg-gray-700"></div>
+              <div className="h-4 rounded bg-gray-300 dark:bg-gray-700"></div>
+              <div className="h-4 w-2/3 rounded bg-gray-300 dark:bg-gray-700"></div>
             </div>
           </div>
         </div>
@@ -42,10 +42,10 @@ export default function ProductPage() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 pb-32">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 pb-32 dark:bg-gray-900">
         <div className="text-center">
           <svg
-            className="mx-auto mb-2 h-12 w-12 text-red-500"
+            className="mx-auto mb-2 h-12 w-12 text-red-500 dark:text-red-400"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -57,10 +57,10 @@ export default function ProductPage() {
               d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <h2 className="mb-1 text-lg font-semibold text-gray-900">
+          <h2 className="mb-1 text-lg font-semibold text-gray-900 dark:text-white">
             خطا در دریافت محصول
           </h2>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-400">
             {error?.message || "لطفاً بعداً دوباره تلاش کنید"}
           </p>
         </div>
@@ -70,9 +70,9 @@ export default function ProductPage() {
 
   if (!product) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 pb-32">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 pb-32 dark:bg-gray-900">
         <div className="text-center">
-          <p className="text-gray-600">محصولی یافت نشد</p>
+          <p className="text-gray-600 dark:text-gray-400">محصولی یافت نشد</p>
         </div>
       </div>
     );
@@ -118,18 +118,17 @@ export default function ProductPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-32">
+    <div className="min-h-screen bg-gray-50 pb-32 dark:bg-gray-900">
       <div className="mx-auto max-w-2xl px-4 py-4">
         {/* Header */}
-
         <div className="mb-6 flex items-center justify-end align-middle">
-          <span> بازگشت</span>
+          <span className="text-gray-700 dark:text-gray-300">بازگشت</span>
           <Link
             href="/"
-            className="rounded-lg p-2 transition hover:bg-gray-200"
+            className="rounded-lg p-2 transition hover:bg-gray-200 dark:hover:bg-gray-700"
           >
             <svg
-              className="h-6 w-6 text-gray-700"
+              className="h-6 w-6 text-gray-700 dark:text-gray-300"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -145,8 +144,8 @@ export default function ProductPage() {
         </div>
 
         {/* Product Image */}
-        <div className="mb-6 overflow-hidden rounded-2xl bg-white p-4 shadow-sm">
-          <div className="relative mb-4 aspect-square overflow-hidden rounded-xl bg-gray-100">
+        <div className="mb-6 overflow-hidden rounded-2xl bg-white p-4 shadow-sm dark:bg-gray-800">
+          <div className="relative mb-4 aspect-square overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-700">
             <Image
               src={displayImage}
               alt={product.name}
@@ -165,8 +164,8 @@ export default function ProductPage() {
                   onClick={() => setCurrentImageIndex(idx)}
                   className={`relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border-2 transition ${
                     currentImageIndex === idx
-                      ? "border-cyan-500"
-                      : "border-gray-200"
+                      ? "border-cyan-500 dark:border-cyan-400"
+                      : "border-gray-200 dark:border-gray-600"
                   }`}
                 >
                   <Image
@@ -185,16 +184,16 @@ export default function ProductPage() {
         {/* Product Info */}
         <div className="space-y-4">
           {/* Name & Price */}
-          <div className="rounded-2xl bg-white p-4 shadow-sm">
-            <h2 className="mb-2 text-2xl font-bold text-gray-900">
+          <div className="rounded-2xl bg-white p-4 shadow-sm dark:bg-gray-800">
+            <h2 className="mb-2 text-2xl font-bold text-gray-900 dark:text-white">
               {product.name}
             </h2>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-gray-900">
+              <span className="text-2xl font-bold text-gray-900 dark:text-white">
                 {(product.price || 0).toLocaleString()} تومان
               </span>
               {product.originalPrice && (
-                <span className="text-sm text-gray-400 line-through">
+                <span className="text-sm text-gray-400 line-through dark:text-gray-500">
                   {product.originalPrice.toLocaleString()}
                 </span>
               )}
@@ -203,8 +202,10 @@ export default function ProductPage() {
 
           {/* Available Colors */}
           {variants.length > 0 && (
-            <div className="rounded-2xl bg-white p-4 shadow-sm">
-              <h3 className="mb-3 font-bold text-gray-900">رنگ موجود</h3>
+            <div className="rounded-2xl bg-white p-4 shadow-sm dark:bg-gray-800">
+              <h3 className="mb-3 font-bold text-gray-900 dark:text-white">
+                رنگ موجود
+              </h3>
               <div className="flex gap-3">
                 {variants.map((variant, idx) => (
                   <button
@@ -212,8 +213,8 @@ export default function ProductPage() {
                     onClick={() => setSelectedColor(idx)}
                     className={`h-12 w-12 rounded-full border-4 transition ${
                       selectedColor === idx
-                        ? "border-cyan-500 ring-2 ring-cyan-200"
-                        : "border-gray-300"
+                        ? "border-cyan-500 ring-2 ring-cyan-200 dark:border-cyan-400 dark:ring-cyan-800"
+                        : "border-gray-300 dark:border-gray-600"
                     }`}
                     style={{
                       backgroundColor:
@@ -235,34 +236,38 @@ export default function ProductPage() {
           )}
 
           {/* Description */}
-          <div className="rounded-2xl bg-white p-4 shadow-sm">
-            <h3 className="mb-2 font-bold text-gray-900">توضیحات</h3>
-            <p className="text-sm leading-relaxed text-gray-600">
+          <div className="rounded-2xl bg-white p-4 shadow-sm dark:bg-gray-800">
+            <h3 className="mb-2 font-bold text-gray-900 dark:text-white">
+              توضیحات
+            </h3>
+            <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-400">
               {product.description || "توضیحی موجود نیست"}
             </p>
           </div>
 
           {/* Reviews */}
           {product.reviews && product.reviews.length > 0 && (
-            <div className="rounded-2xl bg-white p-4 shadow-sm">
-              <h3 className="mb-3 font-bold text-gray-900">نظرات</h3>
+            <div className="rounded-2xl bg-white p-4 shadow-sm dark:bg-gray-800">
+              <h3 className="mb-3 font-bold text-gray-900 dark:text-white">
+                نظرات
+              </h3>
               <div className="space-y-3">
                 {product.reviews.slice(0, 2).map((review, idx) => (
                   <div
                     key={idx}
-                    className="border-b border-gray-200 pb-3 last:border-b-0"
+                    className="border-b border-gray-200 pb-3 last:border-b-0 dark:border-gray-700"
                   >
                     <div className="mb-1 flex items-center gap-2">
-                      <div className="h-8 w-8 flex-shrink-0 rounded-full bg-gray-300"></div>
+                      <div className="h-8 w-8 flex-shrink-0 rounded-full bg-gray-300 dark:bg-gray-600"></div>
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-900">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
                           {review.author || "کاربر"}
                         </p>
                         <div className="flex gap-0.5">
                           {[...Array(5)].map((_, i) => (
                             <svg
                               key={i}
-                              className={`h-3 w-3 ${i < (review.rating || 0) ? "text-yellow-400" : "text-gray-300"}`}
+                              className={`h-3 w-3 ${i < (review.rating || 0) ? "text-yellow-400" : "text-gray-300 dark:text-gray-600"}`}
                               fill="currentColor"
                               viewBox="0 0 20 20"
                             >
@@ -272,7 +277,9 @@ export default function ProductPage() {
                         </div>
                       </div>
                     </div>
-                    <p className="text-xs text-gray-600">{review.text}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      {review.text}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -282,8 +289,8 @@ export default function ProductPage() {
       </div>
 
       {/* Fixed Bottom Buttons */}
-      <div className="fixed right-0 bottom-0 left-0 flex gap-2 border-t border-gray-200 bg-white px-4 py-3 pb-6">
-        <button className="flex-1 rounded-full border-2 border-cyan-500 py-3 font-bold text-cyan-500 transition hover:bg-cyan-50">
+      <div className="fixed right-0 bottom-0 left-0 flex gap-2 border-t border-gray-200 bg-white px-4 py-3 pb-6 dark:border-gray-700 dark:bg-gray-800">
+        <button className="flex-1 rounded-full border-2 border-cyan-500 py-3 font-bold text-cyan-500 transition hover:bg-cyan-50 dark:border-cyan-400 dark:text-cyan-400 dark:hover:bg-cyan-900/20">
           <svg
             className="mx-auto h-5 w-5"
             fill="currentColor"
@@ -295,7 +302,7 @@ export default function ProductPage() {
         <button
           onClick={handleAddToCart}
           disabled={loading}
-          className="flex flex-1 items-center justify-center gap-2 rounded-full bg-cyan-500 py-3 font-bold text-white transition hover:bg-cyan-600 disabled:opacity-50"
+          className="flex flex-1 items-center justify-center gap-2 rounded-full bg-cyan-500 py-3 font-bold text-white transition hover:bg-cyan-600 disabled:opacity-50 dark:bg-cyan-600 dark:hover:bg-cyan-700"
         >
           {loading ? (
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>

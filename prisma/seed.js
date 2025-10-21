@@ -4,17 +4,17 @@ const shoesData = require("../src/components/Products/shoesData");
 const prisma = new PrismaClient();
 
 async function main() {
-  // ایجاد کاربر پیش‌فرض بدون مشخص کردن id
-  await prisma.user.create({
-    data: {
-      username: "defaultuser",
-    },
+  await prisma.user.upsert({
+    where: { username: "defaultuser" },
+    update: {},
+    create: { username: "defaultuser" },
   });
 
-  // اضافه کردن محصولات و جزئیات آن‌ها
   for (const product of shoesData) {
-    await prisma.product.create({
-      data: {
+    await prisma.product.upsert({
+      where: { name: product.name },
+      update: {},
+      create: {
         name: product.name,
         brand: product.brand,
         price: product.price,
@@ -22,9 +22,7 @@ async function main() {
         variants: {
           create: product.variants.map((variant) => ({
             color: variant.color,
-            images: {
-              create: variant.images.map((url) => ({ url })),
-            },
+            images: { create: variant.images.map((url) => ({ url })) },
             sizes: {
               create: variant.sizes.map((size) => ({
                 size: size.size,
@@ -35,6 +33,7 @@ async function main() {
         },
       },
     });
+    console.log("Product upserted");
   }
 }
 

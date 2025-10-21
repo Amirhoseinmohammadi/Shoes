@@ -38,7 +38,6 @@ export default function TelegramWebApp() {
     try {
       setLoading(true);
 
-      // ✅ استفاده از apiClient.telegram.validateInit
       const response = await apiClient.telegram.validateInit(initData);
 
       if (response.valid && response.payload?.user) {

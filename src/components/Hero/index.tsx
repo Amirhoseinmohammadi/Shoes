@@ -12,7 +12,7 @@ const OnboardingHero = () => {
 
   return (
     <>
-      <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-blue-800 to-blue-500 px-4">
+      <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gray-200 p-6 px-4 dark:bg-gray-900">
         <div className="animate-floating">
           <Image
             src="/images/hero/locatbanner.png"
@@ -25,7 +25,7 @@ const OnboardingHero = () => {
         </div>
 
         <div
-          className={`text-center text-white transition-all delay-300 duration-1000 ${
+          className={`text-center transition-all delay-300 duration-1000 ${
             isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
           }`}
         >
@@ -34,7 +34,7 @@ const OnboardingHero = () => {
             <br />
             راحت و بادوام!
           </h1>
-          <p className="mb-30 text-lg text-gray-100">
+          <p className="mb-30 text-lg">
             مجموعه‌ای هوشمند، جذاب و خوش‌استایل برای تو
           </p>
         </div>

@@ -18,14 +18,17 @@ const ProfilePage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 pt-4 pb-32">
+      <div className="min-h-screen bg-gray-50 pt-4 pb-32 dark:bg-gray-900">
         <div className="mx-auto max-w-2xl px-4">
           <div className="animate-pulse space-y-4">
-            <div className="h-40 rounded-2xl bg-gray-300"></div>
-            <div className="h-20 rounded-2xl bg-gray-300"></div>
+            <div className="h-40 rounded-2xl bg-gray-300 dark:bg-gray-700"></div>
+            <div className="h-20 rounded-2xl bg-gray-300 dark:bg-gray-700"></div>
             <div className="space-y-3">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-16 rounded-2xl bg-gray-300"></div>
+                <div
+                  key={i}
+                  className="h-16 rounded-2xl bg-gray-300 dark:bg-gray-700"
+                ></div>
               ))}
             </div>
           </div>
@@ -36,10 +39,10 @@ const ProfilePage = () => {
 
   if (!telegramUser) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 pb-32">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 pb-32 dark:bg-gray-900">
         <div className="px-4 text-center">
           <svg
-            className="mx-auto mb-2 h-12 w-12 text-gray-400"
+            className="mx-auto mb-2 h-12 w-12 text-gray-400 dark:text-gray-500"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -51,10 +54,10 @@ const ProfilePage = () => {
               d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"
             />
           </svg>
-          <h2 className="mb-2 text-lg font-semibold text-gray-900">
+          <h2 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
             لطفاً وارد شوید
           </h2>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-400">
             برای دسترسی به پروفایل، از طریق تلگرام وارد شوید
           </p>
         </div>
@@ -88,7 +91,7 @@ const ProfilePage = () => {
       ),
       label: "تنظیمات",
       href: "/profile/settings",
-      color: "bg-blue-100 text-blue-600",
+      color: "bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400",
     },
     {
       id: "notifications",
@@ -109,7 +112,7 @@ const ProfilePage = () => {
       ),
       label: "اطلاعات",
       href: "/profile/notifications",
-      color: "bg-cyan-100 text-cyan-600",
+      color: "bg-cyan-100 text-cyan-600 dark:bg-cyan-900/20 dark:text-cyan-400",
     },
     {
       id: "orders",
@@ -130,7 +133,8 @@ const ProfilePage = () => {
       ),
       label: "سفارشات",
       href: "/order",
-      color: "bg-purple-100 text-purple-600",
+      color:
+        "bg-purple-100 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400",
     },
     {
       id: "wishlist",
@@ -151,7 +155,7 @@ const ProfilePage = () => {
       ),
       label: "علاقه‌مندی‌ها",
       href: "/profile/wishlist",
-      color: "bg-red-100 text-red-600",
+      color: "bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400",
     },
     {
       id: "logout",
@@ -176,21 +180,21 @@ const ProfilePage = () => {
           window.Telegram.WebApp.close();
         }
       },
-      color: "bg-red-100 text-red-600",
+      color: "bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400",
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-4 pb-32">
+    <div className="min-h-screen bg-gray-50 pt-4 pb-32 dark:bg-gray-900">
       <div className="mx-auto max-w-2xl px-4">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <Link
             href="/"
-            className="rounded-full p-2 transition hover:bg-gray-200"
+            className="rounded-full p-2 transition hover:bg-gray-200 dark:hover:bg-gray-700"
           >
             <svg
-              className="h-6 w-6 text-gray-700"
+              className="h-6 w-6 text-gray-700 dark:text-gray-300"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -203,7 +207,9 @@ const ProfilePage = () => {
               />
             </svg>
           </Link>
-          <h1 className="text-xl font-bold text-gray-900">پروفایل</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+            پروفایل
+          </h1>
           <div className="flex items-center gap-2">
             <ThemeToggler />
           </div>
@@ -286,18 +292,18 @@ const ProfilePage = () => {
               <Link
                 key={item.id}
                 href={item.href}
-                className="group flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm transition hover:shadow-md"
+                className="group flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm transition hover:shadow-md dark:bg-gray-800 dark:hover:shadow-gray-700/50"
               >
                 <div className="flex items-center gap-4">
                   <div className={`${item.color} rounded-full p-3`}>
                     {item.icon}
                   </div>
-                  <span className="font-semibold text-gray-900">
+                  <span className="font-semibold text-gray-900 dark:text-white">
                     {item.label}
                   </span>
                 </div>
                 <svg
-                  className="h-5 w-5 text-gray-400 transition group-hover:text-gray-600"
+                  className="h-5 w-5 text-gray-400 transition group-hover:text-gray-600 dark:group-hover:text-gray-300"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -314,18 +320,18 @@ const ProfilePage = () => {
               <button
                 key={item.id}
                 onClick={item.action}
-                className="group flex w-full items-center justify-between rounded-2xl bg-white p-4 text-left shadow-sm transition hover:shadow-md"
+                className="group flex w-full items-center justify-between rounded-2xl bg-white p-4 text-left shadow-sm transition hover:shadow-md dark:bg-gray-800 dark:hover:shadow-gray-700/50"
               >
                 <div className="flex items-center gap-4">
                   <div className={`${item.color} rounded-full p-3`}>
                     {item.icon}
                   </div>
-                  <span className="font-semibold text-gray-900">
+                  <span className="font-semibold text-gray-900 dark:text-white">
                     {item.label}
                   </span>
                 </div>
                 <svg
-                  className="h-5 w-5 text-gray-400 transition group-hover:text-gray-600"
+                  className="h-5 w-5 text-gray-400 transition group-hover:text-gray-600 dark:group-hover:text-gray-300"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -343,20 +349,32 @@ const ProfilePage = () => {
         </div>
 
         {/* Stats Section */}
-        <div className="mt-8 rounded-2xl bg-white p-4 shadow-sm">
-          <h3 className="mb-4 font-bold text-gray-900">آمار</h3>
+        <div className="mt-8 rounded-2xl bg-white p-4 shadow-sm dark:bg-gray-800">
+          <h3 className="mb-4 font-bold text-gray-900 dark:text-white">آمار</h3>
           <div className="grid grid-cols-3 gap-3">
             <div className="text-center">
-              <p className="text-2xl font-bold text-cyan-600">0</p>
-              <p className="mt-1 text-xs text-gray-600">سفارش</p>
+              <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">
+                0
+              </p>
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                سفارش
+              </p>
             </div>
-            <div className="border-r border-l border-gray-200 text-center">
-              <p className="text-2xl font-bold text-cyan-600">0</p>
-              <p className="mt-1 text-xs text-gray-600">علاقه‌مندی</p>
+            <div className="border-r border-l border-gray-200 text-center dark:border-gray-700">
+              <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">
+                0
+              </p>
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                علاقه‌مندی
+              </p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-cyan-600">0</p>
-              <p className="mt-1 text-xs text-gray-600">امتیاز</p>
+              <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">
+                0
+              </p>
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                امتیاز
+              </p>
             </div>
           </div>
         </div>

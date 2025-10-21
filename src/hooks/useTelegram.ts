@@ -17,7 +17,7 @@ export function useTelegram() {
   const [user, setUser] = useState<TelegramUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isTelegramEnv, setIsTelegramEnv] = useState(false); // ✅ اضافه کردن state
+  const [isTelegramEnv, setIsTelegramEnv] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -27,10 +27,15 @@ export function useTelegram() {
 
   useEffect(() => {
     initializeTelegram();
-  }, [pathname]);
+  }, []);
+
+  useEffect(() => {
+    if (user && pathname?.startsWith("/admin")) {
+      checkAdminAccess(user.id);
+    }
+  }, [user, pathname]);
 
   const initializeTelegram = async () => {
-    // ✅ بررسی وجود window
     if (typeof window === "undefined") {
       setLoading(false);
       return;
@@ -38,11 +43,9 @@ export function useTelegram() {
 
     const tg = (window as any).Telegram?.WebApp;
 
-    // ✅ ست کردن وضعیت تلگرام
-    setIsTelegramEnv(!!tg);
-
     if (!tg) {
       console.log("❌ محیط تلگرام یافت نشد");
+      setIsTelegramEnv(false);
       handleNonTelegramAccess();
       setLoading(false);
       return;
@@ -51,25 +54,27 @@ export function useTelegram() {
     try {
       tg.ready();
       tg.expand();
+      setIsTelegramEnv(true);
 
-      // اول از initDataUnsafe استفاده کن (سریع‌تر)
       const userData = tg.initDataUnsafe?.user;
 
       if (userData) {
+        console.log("✅ کاربر از initDataUnsafe:", userData);
         setUser(userData);
-        checkAdminAccess(userData.id);
       } else {
-        // اگر initDataUnsafe نداشت، از initData استفاده کن
         const initData = tg.initData;
         if (initData) {
+          console.log("🔄 در حال اعتبارسنجی initData...");
           const response = await apiClient.telegram.validateInit(initData);
           if (response.valid && response.payload?.user) {
+            console.log("✅ کاربر از initData:", response.payload.user);
             setUser(response.payload.user);
-            checkAdminAccess(response.payload.user.id);
           } else {
+            console.log("❌ initData نامعتبر");
             handleInvalidUser();
           }
         } else {
+          console.log("❌ هیچ داده‌ای از تلگرام دریافت نشد");
           handleInvalidUser();
         }
       }
@@ -83,11 +88,12 @@ export function useTelegram() {
   };
 
   const checkAdminAccess = (userId: number) => {
-    const isAdminPath = pathname?.startsWith("/admin");
-    if (isAdminPath && userId !== ADMIN_USER_ID) {
+    if (userId !== ADMIN_USER_ID) {
       console.log("🚫 دسترسی غیرمجاز - کاربر ID:", userId);
       router.push("/access-denied");
+      return false;
     }
+    return true;
   };
 
   const handleNonTelegramAccess = () => {
@@ -104,9 +110,8 @@ export function useTelegram() {
 
   const isAdmin = user?.id === ADMIN_USER_ID;
 
-  // متدهای utility برای تلگرام
   const sendData = (data: any) => {
-    if (typeof window === "undefined") return; // ✅ اضافه کردن چک
+    if (typeof window === "undefined") return;
     const tg = (window as any).Telegram?.WebApp;
     if (tg) {
       tg.sendData(JSON.stringify(data));
@@ -114,7 +119,7 @@ export function useTelegram() {
   };
 
   const closeApp = () => {
-    if (typeof window === "undefined") return; // ✅ اضافه کردن چک
+    if (typeof window === "undefined") return;
     const tg = (window as any).Telegram?.WebApp;
     if (tg) {
       tg.close();
@@ -122,33 +127,51 @@ export function useTelegram() {
   };
 
   const showAlert = (message: string) => {
-    if (typeof window === "undefined") return; // ✅ اضافه کردن چک
+    if (typeof window === "undefined") return;
     const tg = (window as any).Telegram?.WebApp;
     if (tg) {
       tg.showAlert(message);
+    } else {
+      alert(message);
     }
   };
 
+  const showConfirm = (message: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (typeof window === "undefined") {
+        resolve(false);
+        return;
+      }
+
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg && tg.showConfirm) {
+        tg.showConfirm(message, (confirmed: boolean) => {
+          resolve(confirmed);
+        });
+      } else {
+        resolve(confirm(message));
+      }
+    });
+  };
+
   return {
-    // داده‌ها
     user,
     loading,
     error,
 
-    // وضعیت‌ها
-    isTelegram: isTelegramEnv, // ✅ استفاده از state
+    isTelegram: isTelegramEnv,
     isAdmin,
 
-    // متدها
     sendData,
     closeApp,
     showAlert,
-    checkAdminAccess: () => {
-      if (isAdmin) return true;
-      if (pathname?.startsWith("/admin")) {
-        router.push("/access-denied");
-      }
-      return false;
+    showConfirm,
+    checkAdminAccess: () => (user ? checkAdminAccess(user.id) : false),
+
+    debug: {
+      adminId: ADMIN_USER_ID,
+      isTelegram: isTelegramEnv,
+      userLoaded: !!user,
     },
   };
 }
