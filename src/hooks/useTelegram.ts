@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { signIn, useSession } from "next-auth/react";
 import { apiClient } from "@/lib/api-client";
 
 interface TelegramUser {
@@ -18,8 +19,12 @@ export function useTelegram() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isTelegramEnv, setIsTelegramEnv] = useState(false);
+
   const router = useRouter();
   const pathname = usePathname();
+
+  // ✅ استفاده از NextAuth session
+  const { data: session, status } = useSession();
 
   const ADMIN_USER_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID
     ? parseInt(process.env.NEXT_PUBLIC_ADMIN_USER_ID)
@@ -61,6 +66,8 @@ export function useTelegram() {
       if (userData) {
         console.log("✅ کاربر از initDataUnsafe:", userData);
         setUser(userData);
+
+        await loginToNextAuth(userData, tg.initData);
       } else {
         const initData = tg.initData;
         if (initData) {
@@ -69,6 +76,8 @@ export function useTelegram() {
           if (response.valid && response.payload?.user) {
             console.log("✅ کاربر از initData:", response.payload.user);
             setUser(response.payload.user);
+
+            await loginToNextAuth(response.payload.user, initData);
           } else {
             console.log("❌ initData نامعتبر");
             handleInvalidUser();
@@ -84,6 +93,34 @@ export function useTelegram() {
       handleInvalidUser();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loginToNextAuth = async (userData: TelegramUser, initData: string) => {
+    try {
+      const params = new URLSearchParams(initData);
+      const authDate = params.get("auth_date");
+      const hash = params.get("hash");
+
+      const result = await signIn("telegram", {
+        redirect: false,
+        id: userData.id.toString(),
+        first_name: userData.first_name || "",
+        last_name: userData.last_name || "",
+        username: userData.username || "",
+        auth_date: authDate || "",
+        hash: hash || "",
+      });
+
+      if (result?.error) {
+        console.error("❌ خطا در لاگین NextAuth:", result.error);
+        setError("خطا در احراز هویت");
+      } else {
+        console.log("✅ لاگین NextAuth موفق");
+      }
+    } catch (err) {
+      console.error("❌ خطا در loginToNextAuth:", err);
+      setError("خطا در احراز هویت");
     }
   };
 
@@ -156,11 +193,14 @@ export function useTelegram() {
 
   return {
     user,
-    loading,
+    loading: loading || status === "loading",
     error,
 
     isTelegram: isTelegramEnv,
     isAdmin,
+
+    session,
+    isAuthenticated: status === "authenticated",
 
     sendData,
     closeApp,
@@ -172,6 +212,7 @@ export function useTelegram() {
       adminId: ADMIN_USER_ID,
       isTelegram: isTelegramEnv,
       userLoaded: !!user,
+      sessionStatus: status,
     },
   };
 }

@@ -1,3 +1,4 @@
+// app/api/orders/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
@@ -76,16 +77,19 @@ export async function POST(req: NextRequest) {
     for (const item of items) {
       const product = await prisma.product.findUnique({
         where: { id: item.productId },
-        select: { stock: true, name: true },
+        select: { id: true, name: true, isActive: true },
       });
 
       if (!product) {
-        return NextResponse.json({ error: `محصول یافت نشد` }, { status: 400 });
+        return NextResponse.json(
+          { error: `محصول با شناسه ${item.productId} یافت نشد` },
+          { status: 400 },
+        );
       }
 
-      if (product.stock < item.quantity) {
+      if (!product.isActive) {
         return NextResponse.json(
-          { error: `موجودی محصول ${product.name} کافی نیست` },
+          { error: `محصول ${product.name} غیرفعال است` },
           { status: 400 },
         );
       }
@@ -131,28 +135,36 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      for (const item of items) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            stock: {
-              decrement: item.quantity,
-            },
-          },
-        });
-      }
-
       return order;
     });
 
     const trackingCode = `TRK${order.id.toString().padStart(6, "0")}`;
 
+    const updatedOrder = await prisma.order.update({
+      where: { id: order.id },
+      data: { trackingCode },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                brand: true,
+                price: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
     return NextResponse.json({
       success: true,
       message: "سفارش با موفقیت ثبت شد",
-      order,
+      order: updatedOrder,
       trackingCode,
-      orderId: order.id,
+      orderId: updatedOrder.id,
     });
   } catch (error) {
     console.error("Error creating order:", error);
