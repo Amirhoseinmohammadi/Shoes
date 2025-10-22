@@ -1,11 +1,11 @@
-// app/api/orders/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {
@@ -21,12 +21,7 @@ export async function GET(req: NextRequest) {
         items: {
           include: {
             product: {
-              select: {
-                id: true,
-                name: true,
-                brand: true,
-                price: true,
-              },
+              select: { id: true, name: true, brand: true, price: true },
             },
           },
         },
@@ -46,7 +41,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {
@@ -74,25 +69,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // بررسی موجودیت و فعال بودن محصولات
     for (const item of items) {
       const product = await prisma.product.findUnique({
         where: { id: item.productId },
         select: { id: true, name: true, isActive: true },
       });
 
-      if (!product) {
+      if (!product)
         return NextResponse.json(
           { error: `محصول با شناسه ${item.productId} یافت نشد` },
           { status: 400 },
         );
-      }
-
-      if (!product.isActive) {
+      if (!product.isActive)
         return NextResponse.json(
           { error: `محصول ${product.name} غیرفعال است` },
           { status: 400 },
         );
-      }
     }
 
     const calculatedTotal = items.reduce(
@@ -101,7 +94,7 @@ export async function POST(req: NextRequest) {
     );
 
     const order = await prisma.$transaction(async (tx) => {
-      const order = await tx.order.create({
+      const created = await tx.order.create({
         data: {
           userId,
           status: "PENDING",
@@ -123,23 +116,16 @@ export async function POST(req: NextRequest) {
           items: {
             include: {
               product: {
-                select: {
-                  id: true,
-                  name: true,
-                  brand: true,
-                  price: true,
-                },
+                select: { id: true, name: true, brand: true, price: true },
               },
             },
           },
         },
       });
-
-      return order;
+      return created;
     });
 
     const trackingCode = `TRK${order.id.toString().padStart(6, "0")}`;
-
     const updatedOrder = await prisma.order.update({
       where: { id: order.id },
       data: { trackingCode },
@@ -147,12 +133,7 @@ export async function POST(req: NextRequest) {
         items: {
           include: {
             product: {
-              select: {
-                id: true,
-                name: true,
-                brand: true,
-                price: true,
-              },
+              select: { id: true, name: true, brand: true, price: true },
             },
           },
         },

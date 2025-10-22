@@ -16,8 +16,25 @@ export const authOptions: NextAuthOptions = {
         hash: { label: "Hash", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials?.id) throw new Error("Telegram ID is required");
+        // برای تست لوکال از یوزر دیفالت استفاده کن
+        if (process.env.NODE_ENV !== "production") {
+          const DEFAULT_USER_ID = 1; // آیدی یوزر دیفالت
+          const user = await prisma.user.findUnique({
+            where: { id: DEFAULT_USER_ID },
+          });
+          if (!user) throw new Error("Default user not found");
 
+          return {
+            id: user.id.toString(),
+            name: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+            email: user.email || null,
+            username: user.username || null,
+            telegramId: user.telegramId || null,
+          };
+        }
+
+        // حالت عادی تلگرام
+        if (!credentials?.id) throw new Error("Telegram ID is required");
         const telegramId = Number(credentials.id);
 
         let user = await prisma.user.findFirst({
@@ -62,7 +79,6 @@ export const authOptions: NextAuthOptions = {
       }
       return token;
     },
-
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = Number(token.id);
