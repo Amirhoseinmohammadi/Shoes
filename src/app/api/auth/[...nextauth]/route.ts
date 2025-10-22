@@ -16,16 +16,12 @@ export const authOptions: NextAuthOptions = {
         hash: { label: "Hash", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials?.id) {
-          throw new Error("Telegram ID is required");
-        }
+        if (!credentials?.id) throw new Error("Telegram ID is required");
 
         const telegramId = Number(credentials.id);
 
         let user = await prisma.user.findFirst({
-          where: {
-            username: `telegram_${telegramId}`,
-          },
+          where: { username: `telegram_${telegramId}` },
         });
 
         if (!user) {
@@ -84,10 +80,22 @@ export const authOptions: NextAuthOptions = {
 
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 روز
+    maxAge: 30 * 24 * 60 * 60,
   },
 
   secret: process.env.NEXTAUTH_SECRET,
+
+  cookies: {
+    sessionToken: {
+      name: `__Secure-next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "none",
+        path: "/",
+        secure: true,
+      },
+    },
+  },
 };
 
 const handler = NextAuth(authOptions);
