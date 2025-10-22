@@ -50,62 +50,61 @@ export default function CheckoutModal({
 
   if (!isOpen) return null;
 
-  const handleConfirm = async () => {
-    if (!name.trim()) return setError("نام و نام خانوادگی الزامی است");
-    const phoneRegex = /^[0-9]{10,15}$/;
-    if (!phoneRegex.test(phone)) return setError("شماره تماس معتبر نیست");
-    if (cartItems.length === 0) return setError("سبد خرید شما خالی است");
+ const handleConfirm = async () => {
+  if (!name.trim()) return setError("نام و نام خانوادگی الزامی است");
+  const phoneRegex = /^[0-9]{10,15}$/;
+  if (!phoneRegex.test(phone)) return setError("شماره تماس معتبر نیست");
+  if (cartItems.length === 0) return setError("سبد خرید شما خالی است");
 
-    setError("");
-    setLoading(true);
-    try {
-      const orderData = {
-        customerName: name.trim(),
-        customerPhone: phone.trim(),
-        totalPrice,
-        telegramData: telegramUser
-          ? {
-              telegramId: telegramUser.id,
-              firstName: telegramUser.first_name,
-              lastName: telegramUser.last_name,
-              username: telegramUser.username,
-              isTelegramUser: true,
-            }
-          : null,
-        items: cartItems.map((item) => ({
-          productId: item.id,
-          quantity: item.quantity || 1,
-          price: item.price,
-          color: item.color || null,
-          size: item.size || null,
-        })),
-      };
+  setError("");
+  setLoading(true);
 
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData),
-      });
+  try {
+    
+    const orderData = {
+      customerName: name.trim(),
+      customerPhone: phone.trim(),
+      totalPrice,
+      telegramData: telegramUser
+        ? {
+            telegramId: telegramUser.id,
+            firstName: telegramUser.first_name,
+            lastName: telegramUser.last_name,
+            username: telegramUser.username,
+            isTelegramUser: true,
+          }
+        : null,
+      items: cartItems.map((item) => ({
+        productId: item.id,
+        quantity: item.quantity || 1,
+        price: item.price,
+        color: item.color || null,
+        size: item.size || null,
+      })),
+    };
 
-      const result = await res.json();
-      if (!result.success) throw new Error(result.error || "خطا در ثبت سفارش");
+    const res = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(orderData),
+    });
 
-      onConfirm({
-        name,
-        phone,
-        orderId: result.orderId,
-        trackingCode: result.trackingCode,
-      });
+    const result = await res.json();
+    if (!result.success) throw new Error(result.error || "خطا در ثبت سفارش");
 
-      setName("");
-      setPhone("");
-    } catch (err: any) {
-      console.error("❌ خطا در ثبت سفارش:", err);
-      setError(err.message || "خطایی در ثبت سفارش رخ داد");
-    } finally {
-      setLoading(false);
-    }
-  };
+    setName("");
+    setPhone("");
+
+    window.location.href = "/";
+
+  } catch (err: any) {
+    console.error("❌ خطا در ثبت سفارش:", err);
+    setError(err.message || "خطایی در ثبت سفارش رخ داد");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div
