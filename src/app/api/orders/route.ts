@@ -2,8 +2,49 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
+
 const ADMIN_TELEGRAM_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID;
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+
+// ======================
+// GET: دریافت سفارشات
+// ======================
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "لطفاً وارد سیستم شوید" },
+        { status: 401 },
+      );
+    }
+
+    const orders = await prisma.order.findMany({
+      where: { userId },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: { id: true, name: true, brand: true, price: true },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json(orders);
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    return NextResponse.json(
+      { error: "خطا در دریافت سفارشات" },
+      { status: 500 },
+    );
+  }
+}
+
 
 export async function POST(req: NextRequest) {
   try {
@@ -35,7 +76,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // بررسی موجودیت و فعال بودن محصولات
     for (const item of items) {
       const product = await prisma.product.findUnique({
         where: { id: item.productId },
@@ -59,7 +99,6 @@ export async function POST(req: NextRequest) {
       0,
     );
 
-    // ایجاد سفارش
     const order = await prisma.$transaction(async (tx) => {
       const created = await tx.order.create({
         data: {
@@ -107,7 +146,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // ارسال پیام به ادمین تلگرام
     if (ADMIN_TELEGRAM_ID && BOT_TOKEN) {
       const message = `
 ✅ سفارش جدید:
