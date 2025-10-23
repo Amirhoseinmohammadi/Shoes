@@ -4,7 +4,7 @@ import "@/styles/index.css";
 import { Providers } from "./providers";
 import PageTransition from "@/components/Common/PageTransition";
 import { ToastProvider } from "@/contexts/ToastContext";
-import { ThemeProvider } from "next-themes"; // ← اضافه کن
+import { ThemeProvider } from "next-themes";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -37,7 +37,11 @@ export default function RootLayout({
         )}
       </head>
       <body className="font-shabnam antialiased">
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={true}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={true}
+        >
           <Providers>
             <ToastProvider>
               <Header />
