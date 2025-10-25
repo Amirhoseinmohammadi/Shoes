@@ -214,6 +214,13 @@ const CartPage = () => {
     useCart();
   const { showToast } = useToast();
   const { user: telegramUser, sendData, isTelegram } = useTelegram();
+  const defaultUser = {
+    id: telegramUser?.id || "guest",
+    username: telegramUser?.username || "کاربر مهمان",
+    first_name: telegramUser?.first_name || "کاربر",
+    last_name: telegramUser?.last_name || "",
+  };
+
   const [modalOpen, setModalOpen] = useState(false);
 
   const handleRemove = async (item: CartItemType) => {
@@ -370,7 +377,13 @@ const CartPage = () => {
         onConfirm={handleConfirmOrder}
         cartItems={cartItems}
         totalPrice={finalAmount}
-        telegramUser={telegramUser}
+        telegramUser={{
+          id: Number(telegramUser?.id),
+          username: telegramUser?.username,
+          first_name: telegramUser?.first_name,
+          last_name: telegramUser?.last_name,
+          photo_url: telegramUser?.photo_url,
+        }}
       />
     </div>
   );

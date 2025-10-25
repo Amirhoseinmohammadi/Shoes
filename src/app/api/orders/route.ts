@@ -3,6 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
 
+const ADMIN_TELEGRAM_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID;
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -151,6 +154,22 @@ export async function POST(req: NextRequest) {
         },
       });
     });
+
+    if (ADMIN_TELEGRAM_ID && BOT_TOKEN) {
+      const message = `
+✅ سفارش جدید:
+نام مشتری: ${customerName}
+شماره تماس: ${customerPhone}
+مبلغ کل: ${totalPrice?.toLocaleString() || calculatedTotal.toLocaleString()} تومان
+کد پیگیری: ${trackingCode}
+تعداد محصولات: ${items.length}
+      `;
+      fetch(
+        `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${ADMIN_TELEGRAM_ID}&text=${encodeURIComponent(
+          message,
+        )}`,
+      ).catch((err) => console.error("خطا در ارسال پیام به ادمین:", err));
+    }
 
     return NextResponse.json({
       success: true,

@@ -4,6 +4,7 @@ import "@/styles/index.css";
 import { Providers } from "./providers";
 import PageTransition from "@/components/Common/PageTransition";
 import { ToastProvider } from "@/contexts/ToastContext";
+import { ThemeProvider } from "next-themes";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -36,15 +37,21 @@ export default function RootLayout({
         )}
       </head>
       <body className="font-shabnam antialiased">
-        <Providers>
-          <ToastProvider>
-            <Header />
-            <main className="min-h-screen">
-              <PageTransition>{children}</PageTransition>
-            </main>
-            <Footer />
-          </ToastProvider>
-        </Providers>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={true}
+        >
+          <Providers>
+            <ToastProvider>
+              <Header />
+              <main className="min-h-screen">
+                <PageTransition>{children}</PageTransition>
+              </main>
+              <Footer />
+            </ToastProvider>
+          </Providers>
+        </ThemeProvider>
       </body>
     </html>
   );
