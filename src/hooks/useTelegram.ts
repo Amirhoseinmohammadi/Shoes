@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
-import { apiClient } from "@/lib/api-client";
 
 export interface TelegramUser {
   id: number;
@@ -26,13 +25,6 @@ interface UseTelegramReturn {
   closeApp: () => void;
   showAlert: (message: string) => void;
   showConfirm: (message: string) => Promise<boolean>;
-  checkAdminAccess: () => boolean;
-  debug: {
-    adminId: number;
-    isTelegram: boolean;
-    userLoaded: boolean;
-    sessionStatus: string;
-  };
 }
 
 export function useTelegram(): UseTelegramReturn {
@@ -72,24 +64,26 @@ export function useTelegram(): UseTelegramReturn {
       tg.expand();
       setIsTelegramEnv(true);
 
-      const userData: TelegramUser | undefined = tg.initDataUnsafe?.user;
+      let userData: TelegramUser | undefined = tg.initDataUnsafe?.user;
 
-      if (userData) {
-        setUser(userData);
-        await loginToNextAuth(userData, tg.initData);
-      } else if (tg.initData) {
+      if (!userData && tg.initData) {
         const params = new URLSearchParams(tg.initData);
         const id = params.get("id");
         if (id) {
-          const fallbackUser: TelegramUser = {
+          userData = {
             id: parseInt(id),
             first_name: params.get("first_name") || "",
             last_name: params.get("last_name") || "",
             username: params.get("username") || "",
           };
-          setUser(fallbackUser);
-          await loginToNextAuth(fallbackUser, tg.initData);
         }
+      }
+
+      if (userData) {
+        setUser(userData);
+        await loginToNextAuth(userData, tg.initData || "");
+      } else {
+        setError("تلگرام داده کاربر نداد");
       }
     } catch (err) {
       setError("خطا در احراز هویت تلگرام");
@@ -114,32 +108,20 @@ export function useTelegram(): UseTelegramReturn {
           hash: hash,
         });
       } catch {
-        setError("خطا در احراز هویت");
+        setError("خطا در احراز هویت NextAuth");
       }
     },
     [],
-  );
-
-  const checkAdminAccess = useCallback(
-    (userId: number): boolean => {
-      if (userId !== ADMIN_USER_ID) {
-        router.push("/access-denied");
-        return false;
-      }
-      return true;
-    },
-    [ADMIN_USER_ID, router],
   );
 
   useEffect(() => {
     initializeTelegram();
   }, [initializeTelegram]);
 
-  useEffect(() => {
-    if (user && pathname?.startsWith("/admin")) {
-      checkAdminAccess(user.id);
-    }
-  }, [user, pathname, checkAdminAccess]);
+  const isAdmin = useMemo(
+    () => user?.id === ADMIN_USER_ID,
+    [user, ADMIN_USER_ID],
+  );
 
   const sendData = useCallback((data: any) => {
     if (typeof window === "undefined") return;
@@ -156,7 +138,7 @@ export function useTelegram(): UseTelegramReturn {
   const showAlert = useCallback((message: string) => {
     if (typeof window === "undefined") return;
     const tg = (window as any).Telegram?.WebApp;
-    tg?.showAlert(message) ?? alert(message);
+    tg?.showAlert ? tg.showAlert(message) : alert(message);
   }, []);
 
   const showConfirm = useCallback((message: string): Promise<boolean> => {
@@ -171,11 +153,6 @@ export function useTelegram(): UseTelegramReturn {
     });
   }, []);
 
-  const isAdmin = useMemo(
-    () => user?.id === ADMIN_USER_ID,
-    [user, ADMIN_USER_ID],
-  );
-
   return {
     user,
     loading: loading || status === "loading",
@@ -188,12 +165,5 @@ export function useTelegram(): UseTelegramReturn {
     closeApp,
     showAlert,
     showConfirm,
-    checkAdminAccess: () => (user ? checkAdminAccess(user.id) : false),
-    debug: {
-      adminId: ADMIN_USER_ID,
-      isTelegram: isTelegramEnv,
-      userLoaded: !!user,
-      sessionStatus: status,
-    },
   };
 }
