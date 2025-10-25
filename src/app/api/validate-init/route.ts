@@ -1,8 +1,6 @@
-// src/app/api/validate-init/route.ts – رفع type error
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 
-// نوع initData از Telegram docs (required fields رو optional کردم تا init {} کار کنه)
 interface TelegramUser {
   id: number;
   first_name: string;
@@ -13,35 +11,32 @@ interface TelegramUser {
 }
 
 interface InitData {
-  auth_date?: string; // optional برای parsing
-  hash?: string; // optional برای parsing
-  user?: string; // JSON string
+  auth_date?: string;
+  hash?: string;
+  user?: string;
   [key: string]: string | undefined;
 }
 
-// parse initData به object (حالا {} validه)
 const parseInitData = (initData: string): InitData => {
   const params = new URLSearchParams(initData);
   const data: InitData = {};
   for (const [key, value] of params) {
-    data[key] = decodeURIComponent(value); // decode برای JSON
+    data[key] = decodeURIComponent(value);
   }
   return data;
 };
 
-// validate hash (چک می‌کنه فیلدها وجود داشته باشن)
 const validateInitData = (initData: string, botToken: string): boolean => {
   const data = parseInitData(initData);
   const receivedHash = data.hash;
   if (!receivedHash || !data.auth_date) {
-    return false; // فیلدهای لازم نباشن، invalid
+    return false;
   }
 
-  delete data.hash; // hash رو حذف
+  delete data.hash;
 
-  // data-check-string: keys sort و \n join (فقط فیلدهای non-empty)
   const dataCheckString = Object.keys(data)
-    .filter((key) => data[key] !== undefined) // فیلدهای خالی رو ignore
+    .filter((key) => data[key] !== undefined)
     .sort()
     .map((key) => `${key}=${data[key]}`)
     .join("\n");
@@ -99,7 +94,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "initData expired" }, { status: 401 });
     }
 
-    // موفقیت: user رو برگردون
     return NextResponse.json({
       valid: true,
       user,
