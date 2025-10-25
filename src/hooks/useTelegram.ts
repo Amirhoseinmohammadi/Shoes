@@ -103,12 +103,17 @@ export function useTelegram(): UseTelegramReturn {
   }, [pathname, router]);
 
   // Login to NextAuth
+
   const loginToNextAuth = useCallback(
     async (userData: TelegramUser, initData: string) => {
       try {
         const params = new URLSearchParams(initData);
-        const authDate = params.get("auth_date") || "";
-        const hash = params.get("hash") || "";
+
+        console.log("🔐 شروع لاگین NextAuth:", {
+          id: userData.id,
+          username: userData.username,
+          first_name: userData.first_name,
+        });
 
         const result = await signIn("telegram", {
           redirect: false,
@@ -116,15 +121,18 @@ export function useTelegram(): UseTelegramReturn {
           first_name: userData.first_name || "",
           last_name: userData.last_name || "",
           username: userData.username || "",
-          auth_date: authDate,
-          hash: hash,
+          auth_date: params.get("auth_date") || Date.now().toString(),
+          hash: params.get("hash") || "",
         });
 
         if (result?.error) {
           console.error("❌ خطا در لاگین NextAuth:", result.error);
-          setError("خطا در احراز هویت");
+          setError(`خطا در احراز هویت: ${result.error}`);
         } else {
-          console.log("✅ لاگین NextAuth موفق");
+          console.log("✅ لاگین NextAuth موفق بود");
+          setTimeout(() => {
+            window.location.reload();
+          }, 500);
         }
       } catch (err) {
         console.error("❌ خطا در loginToNextAuth:", err);
@@ -141,6 +149,7 @@ export function useTelegram(): UseTelegramReturn {
         router.push("/access-denied");
         return false;
       }
+      y;
       return true;
     },
     [ADMIN_USER_ID, router],

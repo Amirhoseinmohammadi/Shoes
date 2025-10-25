@@ -17,13 +17,14 @@ enum OrderStatus {
 }
 
 model User {
-  id        Int        @id @default(autoincrement())
-  username  String     @unique
-  firstName String?
-  lastName  String?
-  phone     String?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime?  @updatedAt // 👈 اضافه شد: اختیاری تا قابل اضافه‌کردن بشه
+  id         Int        @id @default(autoincrement())
+  username   String     @unique
+  telegramId Int?       @unique  
+  firstName  String?
+  lastName   String?
+  phone      String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime?  @updatedAt
 
   cartItems CartItem[]
   orders    Order[]
