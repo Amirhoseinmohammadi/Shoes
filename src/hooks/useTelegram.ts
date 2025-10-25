@@ -53,7 +53,6 @@ export function useTelegram(): UseTelegramReturn {
     [],
   );
 
-  // Initialize Telegram WebApp
   const initializeTelegram = useCallback(async () => {
     if (typeof window === "undefined") {
       setLoading(false);
@@ -63,9 +62,7 @@ export function useTelegram(): UseTelegramReturn {
     const tg = (window as any).Telegram?.WebApp;
 
     if (!tg) {
-      console.warn("❌ محیط تلگرام یافت نشد");
       setIsTelegramEnv(false);
-      if (pathname?.startsWith("/admin")) router.push("/access-denied");
       setLoading(false);
       return;
     }
@@ -81,36 +78,33 @@ export function useTelegram(): UseTelegramReturn {
         setUser(userData);
         await loginToNextAuth(userData, tg.initData);
       } else if (tg.initData) {
-        const response = await apiClient.telegram.validateInit(tg.initData);
-        if (response.valid && response.payload?.user) {
-          setUser(response.payload.user);
-          await loginToNextAuth(response.payload.user, tg.initData);
-        } else {
-          console.error("❌ initData نامعتبر");
-          if (pathname?.startsWith("/admin")) router.push("/access-denied");
+        const params = new URLSearchParams(tg.initData);
+        const id = params.get("id");
+        if (id) {
+          const fallbackUser: TelegramUser = {
+            id: parseInt(id),
+            first_name: params.get("first_name") || "",
+            last_name: params.get("last_name") || "",
+            username: params.get("username") || "",
+          };
+          setUser(fallbackUser);
+          await loginToNextAuth(fallbackUser, tg.initData);
         }
-      } else {
-        console.error("❌ هیچ داده‌ای از تلگرام دریافت نشد");
-        if (pathname?.startsWith("/admin")) router.push("/access-denied");
       }
     } catch (err) {
-      console.error("خطا در احراز هویت تلگرام:", err);
       setError("خطا در احراز هویت تلگرام");
-      if (pathname?.startsWith("/admin")) router.push("/access-denied");
     } finally {
       setLoading(false);
     }
-  }, [pathname, router]);
+  }, []);
 
-  // Login to NextAuth
   const loginToNextAuth = useCallback(
     async (userData: TelegramUser, initData: string) => {
       try {
         const params = new URLSearchParams(initData);
         const authDate = params.get("auth_date") || "";
         const hash = params.get("hash") || "";
-
-        const result = await signIn("telegram", {
+        await signIn("telegram", {
           redirect: false,
           id: userData.id.toString(),
           first_name: userData.first_name || "",
@@ -119,15 +113,7 @@ export function useTelegram(): UseTelegramReturn {
           auth_date: authDate,
           hash: hash,
         });
-
-        if (result?.error) {
-          console.error("❌ خطا در لاگین NextAuth:", result.error);
-          setError("خطا در احراز هویت");
-        } else {
-          console.log("✅ لاگین NextAuth موفق");
-        }
-      } catch (err) {
-        console.error("❌ خطا در loginToNextAuth:", err);
+      } catch {
         setError("خطا در احراز هویت");
       }
     },
@@ -137,7 +123,6 @@ export function useTelegram(): UseTelegramReturn {
   const checkAdminAccess = useCallback(
     (userId: number): boolean => {
       if (userId !== ADMIN_USER_ID) {
-        console.warn("🚫 دسترسی غیرمجاز - کاربر ID:", userId);
         router.push("/access-denied");
         return false;
       }

@@ -35,6 +35,11 @@ export default function RootLayout({
             defer
           />
         )}
+
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
       </head>
       <body className="font-shabnam antialiased">
         <ThemeProvider
