@@ -24,7 +24,7 @@ export default function BottomNavigation() {
     },
     { id: 2, href: "/order", icon: BellIcon, label: "سفارشات", badge: 0 },
     { id: 3, href: "/profile", icon: UserIcon, label: "پروفایل", badge: 0 },
-    { id: 4, href: "/admin", icon: Cog6ToothIcon, label: "مدیریت", badge: 0 },
+    // { id: 4, href: "/admin", icon: Cog6ToothIcon, label: "مدیریت", badge: 0 },
   ];
 
   const getActiveItem = () => {

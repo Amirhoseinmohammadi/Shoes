@@ -16,9 +16,8 @@ export const authOptions: NextAuthOptions = {
         hash: { label: "Hash", type: "text" },
       },
       async authorize(credentials) {
-        // برای تست لوکال از یوزر دیفالت استفاده کن
         if (process.env.NODE_ENV !== "production") {
-          const DEFAULT_USER_ID = 1; // آیدی یوزر دیفالت
+          const DEFAULT_USER_ID = 1;
           const user = await prisma.user.findUnique({
             where: { id: DEFAULT_USER_ID },
           });
@@ -33,7 +32,6 @@ export const authOptions: NextAuthOptions = {
           };
         }
 
-        // حالت عادی تلگرام
         if (!credentials?.id) throw new Error("Telegram ID is required");
         const telegramId = Number(credentials.id);
 

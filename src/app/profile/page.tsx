@@ -158,7 +158,7 @@ const ProfilePage = () => {
       color: "bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400",
     },
     {
-      id: "logout",
+      id: "admin",
       icon: (
         <svg
           className="h-6 w-6"
@@ -175,11 +175,7 @@ const ProfilePage = () => {
         </svg>
       ),
       label: "خروج",
-      action: () => {
-        if (typeof window !== "undefined" && window.Telegram?.WebApp) {
-          window.Telegram.WebApp.close();
-        }
-      },
+      href: "/admin",
       color: "bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400",
     },
   ];

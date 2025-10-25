@@ -1,33 +1,67 @@
-
-# dependencies
-/node_modules
-/.pnp
+# ────────────────
+# 🧱 Dependencies
+# ────────────────
+node_modules/
+.pnp/
 .pnp.js
-.vscode
-# testing
-/coverage
 
-# next.js
-/.next/
-/out/
+# ────────────────
+# 💻 IDE / Editors
+# ────────────────
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
 
-# production
-/build
+# ────────────────
+# 🧪 Testing
+# ────────────────
+coverage/
+*.lcov
 
-# misc
-.DS_Store
+# ────────────────
+# ⚙️ Next.js
+# ────────────────
+.next/
+out/
+build/
+
+# ────────────────
+# 🧰 Prisma
+# ────────────────
+/generated/
+prisma/dev.db
+prisma/dev.db-journal
+prisma/migrations/*/steps.json
+prisma/migrations/*/schema.prisma.tmp
+
+# ────────────────
+# 🌍 Environment
+# ────────────────
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.production.local
+.env.test.local
+
+# ────────────────
+# 🚀 Deployment
+# ────────────────
+.vercel/
 *.pem
 
-# debug
+# ────────────────
+# 🪲 Debug / Logs
+# ────────────────
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 .pnpm-debug.log*
 
-# local env files
-.env*.local
-
-# vercel
-.vercel
-
-/generated/prisma
+# ────────────────
+# 🧹 Misc
+# ────────────────
+.DS_Store
+Thumbs.db

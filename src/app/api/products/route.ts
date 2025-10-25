@@ -27,7 +27,11 @@ export async function GET(req: NextRequest) {
         );
       }
 
-      return NextResponse.json(product);
+      return NextResponse.json(product, {
+        headers: {
+          "Cache-Control": "public, max-age=60, stale-while-revalidate=30",
+        },
+      });
     }
 
     const products = await prisma.product.findMany({

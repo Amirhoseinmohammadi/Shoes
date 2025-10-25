@@ -2,6 +2,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Theme Variables */
 @theme {
   /* Breakpoints */
   --breakpoint-xs: 450px;
@@ -37,13 +38,14 @@
   --color-gray-950: #030712;
 
   /* Shadows */
-  --shadow-sign-up: 0px 5px 10px rgba(4, 10, 34, 0.2);
-  --shadow-one: 0px 2px 3px rgba(7, 7, 77, 0.05);
-  --shadow-two: 0px 5px 10px rgba(6, 8, 15, 0.1);
-  --shadow-three: 0px 5px 15px rgba(6, 8, 15, 0.05);
-  --shadow-sticky: inset 0 -1px 0 0 rgba(0, 0, 0, 0.1);
-  --shadow-sticky-dark: inset 0 -1px 0 0 rgba(255, 255, 255, 0.1);
+  --shadow-sign-up: 0 5px 10px rgba(4, 10, 34, 0.2);
+  --shadow-one: 0 2px 3px rgba(7, 7, 77, 0.05);
+  --shadow-two: 0 5px 10px rgba(6, 8, 15, 0.1);
+  --shadow-three: 0 5px 15px rgba(6, 8, 15, 0.05);
+  --shadow-sticky: inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  --shadow-sticky-dark: inset 0 -1px 0 rgba(255, 255, 255, 0.1);
 }
+
 @layer utilities {
   @keyframes floating {
     0%,
@@ -54,19 +56,19 @@
       transform: translateY(-10px) rotate(-2deg);
     }
   }
-
   .animate-floating {
     animation: floating 3s ease-in-out infinite;
   }
-}
-@keyframes slide-down {
-  0% {
-    transform: translate(-50%, -100%);
-    opacity: 0;
-  }
-  100% {
-    transform: translate(-50%, 0);
-    opacity: 1;
+
+  @keyframes slide-down {
+    0% {
+      transform: translate(-50%, -100%);
+      opacity: 0;
+    }
+    100% {
+      transform: translate(-50%, 0);
+      opacity: 1;
+    }
   }
 }
 
@@ -87,6 +89,23 @@
     font-family: "Shabnam", sans-serif;
     font-optical-sizing: auto;
     direction: rtl;
+  }
+}
+
+@layer base {
+  html,
+  body,
+  #__next {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    margin: 0;
+    min-height: 100vh;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: "Shabnam", sans-serif;
+    scroll-behavior: smooth;
   }
 }
 

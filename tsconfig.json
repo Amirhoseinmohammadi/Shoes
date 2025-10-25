@@ -1,35 +1,39 @@
 {
   "compilerOptions": {
+    "ignoreDeprecations": "6.0",
+
+    "target": "ESNext",
     "lib": ["dom", "dom.iterable", "esnext"],
+
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
+
     "allowJs": true,
     "skipLibCheck": true,
     "strict": false,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "incremental": true,
+
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "module": "esnext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
+
     "jsx": "preserve",
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "target": "ES2017"
+
+    "plugins": [{ "name": "next" }]
   },
   "include": [
     "next-env.d.ts",
     ".next/types/**/*.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    "**/*.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.d.ts",
     "prisma/seed.js",
     "src/components/Products/shoesData.js"
   ],

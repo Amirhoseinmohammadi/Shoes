@@ -12,10 +12,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: "Bot token missing" });
     }
 
-    // فوراً پاسخ بده به تلگرام تا وبهوک خطای 500 نده
     const response = NextResponse.json({ ok: true });
 
-    // پردازش async بعد از پاسخ
     (async () => {
       const chatId = update.message?.chat?.id;
       const text = update.message?.text;
@@ -59,7 +57,6 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (err: any) {
     console.error("❌ Bot handler fatal error:", err.stack || err.message);
-    // حتی در صورت خطای غیرمنتظره، 200 بده تا تلگرام دوباره وبهوک را قطع نکند
     return NextResponse.json({ ok: true });
   }
 }
