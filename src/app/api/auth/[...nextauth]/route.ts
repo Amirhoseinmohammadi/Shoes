@@ -1,19 +1,6 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
-import { validateInitData, isInitDataExpired } from "@/lib/telegram-validator";
-
-const buildInitDataString = (
-  credentials: Record<string, string | undefined>,
-): string => {
-  const params = new URLSearchParams();
-  for (const key in credentials) {
-    if (credentials[key] !== undefined) {
-      params.append(key, credentials[key] as string);
-    }
-  }
-  return params.toString();
-};
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -29,14 +16,14 @@ export const authOptions: NextAuthOptions = {
         hash: { label: "Hash", type: "text" },
       },
       async authorize(credentials) {
-        const botToken = process.env.TELEGRAM_BOT_TOKEN;
-
+        // برای تست لوکال از یوزر دیفالت استفاده کن
         if (process.env.NODE_ENV !== "production") {
-          const DEFAULT_USER_ID = 1;
+          const DEFAULT_USER_ID = 1; // آیدی یوزر دیفالت
           const user = await prisma.user.findUnique({
             where: { id: DEFAULT_USER_ID },
           });
           if (!user) throw new Error("Default user not found");
+
           return {
             id: user.id.toString(),
             name: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
@@ -46,25 +33,8 @@ export const authOptions: NextAuthOptions = {
           };
         }
 
-        if (!botToken) {
-          console.error("TELEGRAM_BOT_TOKEN is missing!");
-          return null;
-        }
-
-        const initDataString = buildInitDataString(
-          credentials as Record<string, string | undefined>,
-        );
-
-        if (!validateInitData(initDataString, botToken)) {
-          return null;
-        }
-
-        if (isInitDataExpired(credentials?.auth_date)) {
-          return null;
-        }
-
-        if (!credentials?.id) return null;
-
+        // حالت عادی تلگرام
+        if (!credentials?.id) throw new Error("Telegram ID is required");
         const telegramId = Number(credentials.id);
 
         let user = await prisma.user.findFirst({
@@ -74,10 +44,9 @@ export const authOptions: NextAuthOptions = {
         if (!user) {
           user = await prisma.user.create({
             data: {
-              username: credentials.username || `telegram_${telegramId}`,
+              username: `telegram_${telegramId}`,
               firstName: credentials.first_name || null,
               lastName: credentials.last_name || null,
-              telegramId: telegramId.toString(),
             },
           });
         } else {
@@ -86,7 +55,6 @@ export const authOptions: NextAuthOptions = {
             data: {
               firstName: credentials.first_name || user.firstName,
               lastName: credentials.last_name || user.lastName,
-              username: credentials.username || user.username,
             },
           });
         }
@@ -106,8 +74,8 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.telegramId = (user as any).telegramId;
-        token.username = (user as any).username;
+        token.telegramId = user.telegramId;
+        token.username = user.username;
       }
       return token;
     },
@@ -133,17 +101,17 @@ export const authOptions: NextAuthOptions = {
 
   secret: process.env.NEXTAUTH_SECRET,
 
-  // cookies: {
-  //   sessionToken: {
-  //     name: `__Secure-next-auth.session-token`,
-  //     options: {
-  //       httpOnly: true,
-  //       sameSite: "none",
-  //       path: "/",
-  //       secure: true,
-  //     },
-  //   },
-  // },
+  cookies: {
+    sessionToken: {
+      name: `__Secure-next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "none",
+        path: "/",
+        secure: true,
+      },
+    },
+  },
 };
 
 const handler = NextAuth(authOptions);

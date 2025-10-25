@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
+import { apiClient } from "@/lib/api-client";
 
 export interface TelegramUser {
   id: number;
@@ -25,6 +26,13 @@ interface UseTelegramReturn {
   closeApp: () => void;
   showAlert: (message: string) => void;
   showConfirm: (message: string) => Promise<boolean>;
+  checkAdminAccess: () => boolean;
+  debug: {
+    adminId: number;
+    isTelegram: boolean;
+    userLoaded: boolean;
+    sessionStatus: string;
+  };
 }
 
 export function useTelegram(): UseTelegramReturn {
@@ -45,6 +53,7 @@ export function useTelegram(): UseTelegramReturn {
     [],
   );
 
+  // Initialize Telegram WebApp
   const initializeTelegram = useCallback(async () => {
     if (typeof window === "undefined") {
       setLoading(false);
@@ -54,7 +63,9 @@ export function useTelegram(): UseTelegramReturn {
     const tg = (window as any).Telegram?.WebApp;
 
     if (!tg) {
+      console.warn("❌ محیط تلگرام یافت نشد");
       setIsTelegramEnv(false);
+      if (pathname?.startsWith("/admin")) router.push("/access-denied");
       setLoading(false);
       return;
     }
@@ -64,41 +75,42 @@ export function useTelegram(): UseTelegramReturn {
       tg.expand();
       setIsTelegramEnv(true);
 
-      let userData: TelegramUser | undefined = tg.initDataUnsafe?.user;
-
-      if (!userData && tg.initData) {
-        const params = new URLSearchParams(tg.initData);
-        const id = params.get("id");
-        if (id) {
-          userData = {
-            id: parseInt(id),
-            first_name: params.get("first_name") || "",
-            last_name: params.get("last_name") || "",
-            username: params.get("username") || "",
-          };
-        }
-      }
+      const userData: TelegramUser | undefined = tg.initDataUnsafe?.user;
 
       if (userData) {
         setUser(userData);
-        await loginToNextAuth(userData, tg.initData || "");
+        await loginToNextAuth(userData, tg.initData);
+      } else if (tg.initData) {
+        const response = await apiClient.telegram.validateInit(tg.initData);
+        if (response.valid && response.payload?.user) {
+          setUser(response.payload.user);
+          await loginToNextAuth(response.payload.user, tg.initData);
+        } else {
+          console.error("❌ initData نامعتبر");
+          if (pathname?.startsWith("/admin")) router.push("/access-denied");
+        }
       } else {
-        setError("تلگرام داده کاربر نداد");
+        console.error("❌ هیچ داده‌ای از تلگرام دریافت نشد");
+        if (pathname?.startsWith("/admin")) router.push("/access-denied");
       }
     } catch (err) {
+      console.error("خطا در احراز هویت تلگرام:", err);
       setError("خطا در احراز هویت تلگرام");
+      if (pathname?.startsWith("/admin")) router.push("/access-denied");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pathname, router]);
 
+  // Login to NextAuth
   const loginToNextAuth = useCallback(
     async (userData: TelegramUser, initData: string) => {
       try {
         const params = new URLSearchParams(initData);
         const authDate = params.get("auth_date") || "";
         const hash = params.get("hash") || "";
-        await signIn("telegram", {
+
+        const result = await signIn("telegram", {
           redirect: false,
           id: userData.id.toString(),
           first_name: userData.first_name || "",
@@ -107,21 +119,42 @@ export function useTelegram(): UseTelegramReturn {
           auth_date: authDate,
           hash: hash,
         });
-      } catch {
-        setError("خطا در احراز هویت NextAuth");
+
+        if (result?.error) {
+          console.error("❌ خطا در لاگین NextAuth:", result.error);
+          setError("خطا در احراز هویت");
+        } else {
+          console.log("✅ لاگین NextAuth موفق");
+        }
+      } catch (err) {
+        console.error("❌ خطا در loginToNextAuth:", err);
+        setError("خطا در احراز هویت");
       }
     },
     [],
+  );
+
+  const checkAdminAccess = useCallback(
+    (userId: number): boolean => {
+      if (userId !== ADMIN_USER_ID) {
+        console.warn("🚫 دسترسی غیرمجاز - کاربر ID:", userId);
+        router.push("/access-denied");
+        return false;
+      }
+      return true;
+    },
+    [ADMIN_USER_ID, router],
   );
 
   useEffect(() => {
     initializeTelegram();
   }, [initializeTelegram]);
 
-  const isAdmin = useMemo(
-    () => user?.id === ADMIN_USER_ID,
-    [user, ADMIN_USER_ID],
-  );
+  useEffect(() => {
+    if (user && pathname?.startsWith("/admin")) {
+      checkAdminAccess(user.id);
+    }
+  }, [user, pathname, checkAdminAccess]);
 
   const sendData = useCallback((data: any) => {
     if (typeof window === "undefined") return;
@@ -138,7 +171,7 @@ export function useTelegram(): UseTelegramReturn {
   const showAlert = useCallback((message: string) => {
     if (typeof window === "undefined") return;
     const tg = (window as any).Telegram?.WebApp;
-    tg?.showAlert ? tg.showAlert(message) : alert(message);
+    tg?.showAlert(message) ?? alert(message);
   }, []);
 
   const showConfirm = useCallback((message: string): Promise<boolean> => {
@@ -153,6 +186,11 @@ export function useTelegram(): UseTelegramReturn {
     });
   }, []);
 
+  const isAdmin = useMemo(
+    () => user?.id === ADMIN_USER_ID,
+    [user, ADMIN_USER_ID],
+  );
+
   return {
     user,
     loading: loading || status === "loading",
@@ -165,5 +203,12 @@ export function useTelegram(): UseTelegramReturn {
     closeApp,
     showAlert,
     showConfirm,
+    checkAdminAccess: () => (user ? checkAdminAccess(user.id) : false),
+    debug: {
+      adminId: ADMIN_USER_ID,
+      isTelegram: isTelegramEnv,
+      userLoaded: !!user,
+      sessionStatus: status,
+    },
   };
 }
