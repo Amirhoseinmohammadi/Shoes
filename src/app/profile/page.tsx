@@ -15,14 +15,19 @@ interface MenuItem {
 }
 
 const ProfilePage = () => {
-  const { user: telegramUser, loading, isAdmin } = useTelegram();
+  const {
+    user: telegramUser,
+    loading,
+    isAdmin,
+    isAuthenticated,
+  } = useTelegram();
 
   if (loading)
     return (
       <div className="min-h-screen animate-pulse bg-gray-50 dark:bg-gray-900"></div>
     );
 
-  if (!telegramUser)
+  if (!telegramUser || !isAuthenticated)
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
