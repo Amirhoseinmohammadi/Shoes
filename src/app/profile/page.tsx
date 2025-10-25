@@ -69,7 +69,7 @@ const ProfilePage = () => {
     {
       id: "admin",
       icon: "🚪",
-      label: "خروج",
+      label: "ادمین",
       href: "/admin",
       color: "bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400",
       adminOnly: true,
