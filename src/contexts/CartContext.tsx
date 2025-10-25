@@ -198,27 +198,43 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
+    // ✅ بررسی وجود cartItemId
+    if (!cartItemId || isNaN(cartItemId)) {
+      console.error("❌ شناسه نامعتبر:", cartItemId);
+      return false;
+    }
+
     setLoading(true);
     try {
-      const res = await fetch(`/api/cart?id=${cartItemId}&userId=${userId}`, {
+      console.log("🗑️ حذف آیتم:", cartItemId);
+
+      // ✅ ارسال درخواست با query parameter صحیح
+      const res = await fetch(`/api/cart?id=${cartItemId}`, {
         method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
       if (!res.ok) {
         const errorData = await res.json();
+        console.error("❌ خطای سرور:", errorData);
         throw new Error(errorData.error || "خطا در حذف محصول");
       }
 
+      const result = await res.json();
+      console.log("✅ نتیجه حذف:", result);
+
+      // ✅ به‌روزرسانی state
       setCartItems((prev) => prev.filter((i) => i.id !== cartItemId));
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error("❌ خطا در حذف محصول:", err);
       return false;
     } finally {
       setLoading(false);
     }
   };
-
   const updateItemQuantity = async (
     cartItemId: number,
     quantity: number,
