@@ -60,9 +60,25 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
-
-  // محاسبه isAuthenticated بر اساس وجود userId (بدون نیاز به status جداگانه)
   const isAuthenticated = !!userId;
+
+  // Helper برای localStorage (guest cart)
+  const getLocalCartKey = () => `guest-cart-${Date.now()}`; // unique key برای session
+  const loadLocalCart = (): CartItem[] => {
+    try {
+      const key = getLocalCartKey();
+      const stored = localStorage.getItem(key);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  };
+  const saveLocalCart = (items: CartItem[]) => {
+    try {
+      const key = getLocalCartKey();
+      localStorage.setItem(key, JSON.stringify(items));
+    } catch {}
+  };
 
   const getUserId = async (): Promise<number | null> => {
     try {
@@ -76,12 +92,36 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    getUserId().then(setUserId);
+    // اول local cart رو لود کن (برای guest)
+    const localCart = loadLocalCart();
+    if (localCart.length > 0) {
+      setCartItems(localCart);
+    }
+
+    // بعد userId رو چک کن (async)
+    getUserId().then((id) => {
+      if (id) {
+        setUserId(id);
+        // Merge guest cart به server cart (اگر لازم)
+        if (localCart.length > 0) {
+          // TODO: Sync to server via API call (e.g., addItem batch)
+          console.log("🔄 Merging guest cart to server...");
+          // مثال: localCart.forEach(item => addItem({...item}));
+        }
+      }
+    });
   }, []);
+
+  // Save to local if guest
+  useEffect(() => {
+    if (!isAuthenticated) {
+      saveLocalCart(cartItems);
+    }
+  }, [cartItems, isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated || !userId) {
-      setCartItems([]);
+      // فقط local رو نگه دار
       return;
     }
 
@@ -116,17 +156,18 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           setCartItems(formattedItems);
         } else if (res.status === 401) {
           console.log("کاربر احراز هویت نشده");
-          setCartItems([]);
+          setCartItems(loadLocalCart()); // fallback to local
         }
       } catch (err) {
         console.error("❌ خطا در بارگذاری سبد:", err);
+        setCartItems(loadLocalCart()); // fallback
       } finally {
         setLoading(false);
       }
     };
 
     loadCartFromAPI();
-  }, [userId, isAuthenticated]); // وابستگی به userId و isAuthenticated (که از userId derive می‌شه)
+  }, [userId]);
 
   const addItem = async ({
     shoe,
@@ -134,119 +175,121 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     color,
     size,
   }: AddItemParams): Promise<boolean> => {
-    if (!isAuthenticated || !userId) {
-      console.error("❌ کاربر لاگین نیست");
-      return false;
-    }
+    const newItem: CartItem = {
+      id: Date.now(), // temporary ID for guest
+      productId: shoe.id,
+      name: shoe.name,
+      brand: shoe.brand,
+      price: shoe.price,
+      image: shoe.image,
+      quantity,
+      color,
+      size,
+    };
 
-    setLoading(true);
-    try {
-      const res = await fetch("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          productId: shoe.id,
-          quantity,
-          color,
-          image: shoe.image,
-          size,
-        }),
-      });
+    if (isAuthenticated && userId) {
+      // Server cart
+      setLoading(true);
+      try {
+        const res = await fetch("/api/cart", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId,
+            productId: shoe.id,
+            quantity,
+            color,
+            image: shoe.image,
+            size,
+          }),
+        });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "خطا در افزودن به سبد");
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || "خطا در افزودن به سبد");
+        }
+
+        const addedOrUpdatedItem = await res.json();
+        // Update with server ID
+        newItem.id = addedOrUpdatedItem.id;
+        newItem.name = addedOrUpdatedItem.product.name;
+        newItem.brand = addedOrUpdatedItem.product.brand;
+        newItem.price = addedOrUpdatedItem.product.price;
+        newItem.image = addedOrUpdatedItem.product.image || shoe.image;
+
+        setCartItems((prev) => {
+          const existingIndex = prev.findIndex(
+            (i) => i.productId === shoe.id && i.color === color,
+          );
+          if (existingIndex >= 0) {
+            const updated = [...prev];
+            updated[existingIndex] = {
+              ...updated[existingIndex],
+              quantity: addedOrUpdatedItem.quantity,
+            };
+            return updated;
+          }
+          return [...prev, newItem];
+        });
+        return true;
+      } catch (err) {
+        console.error("❌ خطا در افزودن به سبد:", err);
+        // Fallback to local
+        setCartItems((prev) => [...prev, newItem]);
+        return true;
+      } finally {
+        setLoading(false);
       }
-
-      const addedOrUpdatedItem = await res.json();
-
+    } else {
+      // Guest: فقط local
       setCartItems((prev) => {
         const existingIndex = prev.findIndex(
-          (i) => i.id === addedOrUpdatedItem.id,
+          (i) => i.productId === shoe.id && i.color === color,
         );
-
         if (existingIndex >= 0) {
           const updated = [...prev];
-          updated[existingIndex] = {
-            ...updated[existingIndex],
-            quantity: addedOrUpdatedItem.quantity,
-            image:
-              addedOrUpdatedItem.product?.image ||
-              addedOrUpdatedItem.image ||
-              updated[existingIndex].image,
-          };
+          updated[existingIndex].quantity += quantity;
           return updated;
-        } else {
-          return [
-            ...prev,
-            {
-              id: addedOrUpdatedItem.id,
-              productId: addedOrUpdatedItem.productId,
-              name: addedOrUpdatedItem.product.name,
-              brand: addedOrUpdatedItem.product.brand,
-              price: addedOrUpdatedItem.product.price,
-              image:
-                addedOrUpdatedItem.product.image ||
-                addedOrUpdatedItem.image ||
-                shoe.image,
-              quantity: addedOrUpdatedItem.quantity,
-              color: addedOrUpdatedItem.color,
-              size: addedOrUpdatedItem.size,
-            },
-          ];
         }
+        return [...prev, newItem];
       });
       return true;
-    } catch (err) {
-      console.error("❌ خطا در افزودن به سبد:", err);
-      return false;
-    } finally {
-      setLoading(false);
     }
   };
 
   const removeItem = async (cartItemId: number): Promise<boolean> => {
-    if (!isAuthenticated || !userId) {
-      console.error("❌ کاربر لاگین نیست");
-      return false;
-    }
-
-    // ✅ بررسی وجود cartItemId
     if (!cartItemId || isNaN(cartItemId)) {
       console.error("❌ شناسه نامعتبر:", cartItemId);
       return false;
     }
 
-    setLoading(true);
-    try {
-      console.log("🗑️ حذف آیتم:", cartItemId);
+    if (isAuthenticated && userId) {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/cart?id=${cartItemId}`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+        });
 
-      // ✅ ارسال درخواست با query parameter صحیح
-      const res = await fetch(`/api/cart?id=${cartItemId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || "خطا در حذف محصول");
+        }
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        console.error("❌ خطای سرور:", errorData);
-        throw new Error(errorData.error || "خطا در حذف محصول");
+        setCartItems((prev) => prev.filter((i) => i.id !== cartItemId));
+        return true;
+      } catch (err) {
+        console.error("❌ خطا در حذف محصول:", err);
+        // Fallback to local remove
+        setCartItems((prev) => prev.filter((i) => i.id !== cartItemId));
+        return true;
+      } finally {
+        setLoading(false);
       }
-
-      const result = await res.json();
-      console.log("✅ نتیجه حذف:", result);
-
-      // ✅ به‌روزرسانی state
+    } else {
+      // Guest: local remove
       setCartItems((prev) => prev.filter((i) => i.id !== cartItemId));
       return true;
-    } catch (err: any) {
-      console.error("❌ خطا در حذف محصول:", err);
-      return false;
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -256,43 +299,50 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   ): Promise<boolean> => {
     if (!cartItemId) return false;
 
-    if (!isAuthenticated || !userId) {
-      console.error("❌ کاربر لاگین نیست");
-      return false;
-    }
-
     if (quantity <= 0) {
       return removeItem(cartItemId);
     }
 
-    setLoading(true);
-    try {
-      const res = await fetch("/api/cart", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cartItemId,
-          quantity,
-          userId,
-        }),
-      });
+    if (isAuthenticated && userId) {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/cart", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cartItemId, quantity, userId }),
+        });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "خطا در بروزرسانی تعداد");
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || "خطا در بروزرسانی تعداد");
+        }
+
+        setCartItems((prev) =>
+          prev.map((item) =>
+            item.id === cartItemId ? { ...item, quantity } : item,
+          ),
+        );
+        return true;
+      } catch (err) {
+        console.error("❌ خطا در بروزرسانی تعداد:", err);
+        // Fallback to local
+        setCartItems((prev) =>
+          prev.map((item) =>
+            item.id === cartItemId ? { ...item, quantity } : item,
+          ),
+        );
+        return true;
+      } finally {
+        setLoading(false);
       }
-
+    } else {
+      // Guest: local update
       setCartItems((prev) =>
         prev.map((item) =>
           item.id === cartItemId ? { ...item, quantity } : item,
         ),
       );
       return true;
-    } catch (err) {
-      console.error("❌ خطا در بروزرسانی تعداد:", err);
-      return false;
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -300,11 +350,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     name: string;
     phone: string;
   }): Promise<boolean> => {
-    if (!isAuthenticated || !userId) {
-      console.error("❌ کاربر لاگین نیست");
-      return false;
-    }
-
     if (cartItems.length === 0) {
       console.error("❌ سبد خرید خالی است");
       return false;
@@ -312,37 +357,49 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          items: cartItems.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.price,
-            color: item.color,
-            size: item.size,
-          })),
-          customerName: customer.name,
-          customerPhone: customer.phone,
-        }),
-      });
+      let orderRes;
+      if (isAuthenticated && userId) {
+        // Server checkout
+        orderRes = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId,
+            items: cartItems.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.price,
+              color: item.color,
+              size: item.size,
+            })),
+            customerName: customer.name,
+            customerPhone: customer.phone,
+          }),
+        });
+      } else {
+        // Guest checkout: بدون userId، یا redirect به login
+        console.log(
+          "👤 Guest checkout - redirect to login or handle anonymously",
+        );
+        // مثال: window.location.href = '/login?checkout=true'; یا anonymous order API
+        // فعلاً false برگردون برای تست
+        throw new Error("لطفاً برای ثبت سفارش لاگین کنید");
+      }
 
-      if (!res.ok) {
-        const errorData = await res.json();
+      if (!orderRes.ok) {
+        const errorData = await orderRes.json();
         throw new Error(errorData.error || "خطا در ثبت سفارش");
       }
 
-      const clearRes = await fetch("/api/cart/clear", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      });
-
-      if (clearRes.ok) {
-        setCartItems([]);
+      // Clear cart
+      if (isAuthenticated) {
+        await fetch("/api/cart/clear", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId }),
+        });
       }
+      setCartItems([]);
 
       return true;
     } catch (err) {

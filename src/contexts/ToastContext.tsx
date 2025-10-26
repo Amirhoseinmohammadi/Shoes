@@ -1,47 +1,76 @@
-"use client";
+"use client"; // حتماً برای client component
 
 import { createContext, useContext, useState, ReactNode } from "react";
-import {
-  CheckCircleIcon,
-  XCircleIcon,
-  ExclamationTriangleIcon,
-  InformationCircleIcon,
-} from "@heroicons/react/24/solid";
+import { CheckCircle, AlertCircle, AlertTriangle, Info } from "lucide-react"; // icons از lucide-react
 
-type ToastType = "success" | "error" | "warning" | "info";
-
-interface ToastOptions {
+// Type برای toast
+interface Toast {
+  id: string;
   message: string;
-  type?: ToastType;
+  type: "success" | "error" | "warning" | "info";
+  duration?: number;
   action?: () => void;
   actionLabel?: string;
   cancelLabel?: string;
-  duration?: number;
 }
 
+// Type برای context
 interface ToastContextType {
-  showToast: (options: ToastOptions) => void;
+  showToast: (toast: Omit<Toast, "id">) => void;
 }
 
+// Context
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
-export const ToastProvider = ({ children }: { children: ReactNode }) => {
-  const [toasts, setToasts] = useState<ToastOptions[]>([]);
+// Hook برای استفاده
+export const useToast = () => {
+  const context = useContext(ToastContext);
+  if (!context) {
+    throw new Error("useToast must be used within ToastProvider");
+  }
+  return context;
+};
 
-  const showToast = (options: ToastOptions) => {
-    setToasts((prev) => [...prev, options]);
-    if (!options.action) {
+// Provider (با explicit children type)
+export const ToastProvider = ({ children }: { children: ReactNode }) => {
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const showToast = (toast: Omit<Toast, "id">) => {
+    const id = Date.now().toString(); // unique ID
+    const newToast: Toast = { ...toast, id };
+
+    setToasts((prev) => [...prev, newToast]);
+
+    // Auto-remove بعد duration
+    if (newToast.duration) {
       setTimeout(() => {
-        setToasts((prev) => prev.filter((t) => t !== options));
-      }, options.duration || 3000);
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, newToast.duration);
     }
   };
 
-  const removeToast = (toast: ToastOptions) => {
-    setToasts((prev) => prev.filter((t) => t !== toast));
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const getBgColor = (type?: ToastType) => {
+  // Icon بر اساس type
+  const getIcon = (type: Toast["type"]) => {
+    switch (type) {
+      case "success":
+        return <CheckCircle className="h-5 w-5 text-white" />;
+      case "error":
+        return <AlertCircle className="h-5 w-5 text-white" />;
+      case "warning":
+        return <AlertTriangle className="h-5 w-5 text-white" />;
+      case "info":
+        return <Info className="h-5 w-5 text-white" />;
+      default:
+        return null;
+    }
+  };
+
+  // Color بر اساس type
+  const getColor = (type: Toast["type"]) => {
     switch (type) {
       case "success":
         return "bg-green-500 dark:bg-green-600";
@@ -56,57 +85,40 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const getIcon = (type?: ToastType) => {
-    switch (type) {
-      case "success":
-        return <CheckCircleIcon className="h-5 w-5 text-white" />;
-      case "error":
-        return <XCircleIcon className="h-5 w-5 text-white" />;
-      case "warning":
-        return <ExclamationTriangleIcon className="h-5 w-5 text-white" />;
-      case "info":
-        return <InformationCircleIcon className="h-5 w-5 text-white" />;
-      default:
-        return null;
-    }
-  };
-
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed top-0 right-4 z-50 flex flex-col gap-3">
-        {toasts.map((toast, idx) => (
+      {/* Toast Container */}
+      <div className="fixed top-4 right-4 z-50 flex max-w-sm flex-col space-y-3">
+        {toasts.map((toast) => (
           <div
-            key={idx}
-            className={`flex transform items-center gap-3 rounded-lg px-4 py-3 text-white shadow-lg transition-all duration-300 ease-in-out ${getBgColor(
-              toast.type,
-            )} animate-slide-in`}
+            key={toast.id}
+            className={`animate-slide-in flex items-center gap-3 rounded-lg px-4 py-3 text-white shadow-lg ${getColor(toast.type)}`}
           >
             {getIcon(toast.type)}
             <span className="flex-1 text-sm">{toast.message}</span>
             {toast.action && (
-              <>
+              <div className="flex gap-2">
                 <button
-                  onClick={() => removeToast(toast)}
-                  className="rounded bg-gray-200 px-2 py-1 text-xs dark:bg-gray-700 dark:text-white"
+                  onClick={() => removeToast(toast.id)}
+                  className="rounded bg-gray-200 px-2 py-1 text-xs text-gray-800 dark:bg-gray-700 dark:text-white"
                 >
                   {toast.cancelLabel || "لغو"}
                 </button>
                 <button
                   onClick={() => {
                     toast.action?.();
-                    removeToast(toast);
+                    removeToast(toast.id);
                   }}
-                  className="rounded bg-red-700 px-2 py-1 text-xs text-white hover:bg-red-800"
+                  className="rounded bg-white/20 px-2 py-1 text-xs text-white hover:bg-white/30"
                 >
                   {toast.actionLabel || "تایید"}
                 </button>
-              </>
+              </div>
             )}
           </div>
         ))}
       </div>
-
       <style jsx>{`
         .animate-slide-in {
           opacity: 0;
@@ -122,10 +134,4 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
       `}</style>
     </ToastContext.Provider>
   );
-};
-
-export const useToast = () => {
-  const context = useContext(ToastContext);
-  if (!context) throw new Error("useToast must be used within ToastProvider");
-  return context;
 };

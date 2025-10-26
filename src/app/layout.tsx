@@ -5,7 +5,9 @@ import { Providers } from "./providers";
 import PageTransition from "@/components/Common/PageTransition";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { ThemeProvider } from "next-themes";
+import { SessionProvider } from "next-auth/react"; // اضافه شده: برای NextAuth
 import type { Metadata } from "next";
+import { ReactNode } from "react"; // اضافه شده: برای type safety
 
 export const metadata: Metadata = {
   title: "Iran Steps",
@@ -47,15 +49,24 @@ export default function RootLayout({
           defaultTheme="light"
           enableSystem={true}
         >
-          <Providers>
-            <ToastProvider>
-              <Header />
-              <main className="min-h-screen">
-                <PageTransition>{children}</PageTransition>
-              </main>
-              <Footer />
-            </ToastProvider>
-          </Providers>
+          <SessionProvider
+            refetchInterval={5 * 60}
+            refetchOnWindowFocus={false}
+          >
+            {" "}
+            {/* props اضافه شده برای بهتر شدن hydration */}
+            <Providers>
+              <ToastProvider>
+                {" "}
+                {/* explicit children در داخل */}
+                <Header />
+                <main className="min-h-screen">
+                  <PageTransition>{children}</PageTransition>
+                </main>
+                <Footer />
+              </ToastProvider>
+            </Providers>
+          </SessionProvider>
         </ThemeProvider>
       </body>
     </html>
