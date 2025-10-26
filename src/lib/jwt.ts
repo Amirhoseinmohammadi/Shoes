@@ -27,7 +27,7 @@ export async function createToken(payload: JWTPayload): Promise<string> {
 export async function verifyToken(token: string): Promise<JWTPayload | null> {
   try {
     const { payload } = await jwtVerify(token, secret);
-    return payload as JWTPayload;
+    return payload as unknown as JWTPayload;
   } catch (error) {
     console.error("❌ JWT verification failed:", error);
     return null;
@@ -46,5 +46,7 @@ export function getTokenFromCookie(cookieHeader: string | null): string | null {
     {} as Record<string, string>,
   );
 
-  return cookies["auth-token"] || null;
+  return cookies["auth-token"]
+    ? decodeURIComponent(cookies["auth-token"])
+    : null;
 }
