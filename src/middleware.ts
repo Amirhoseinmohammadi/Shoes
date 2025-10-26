@@ -37,8 +37,7 @@ export async function middleware(req: NextRequest) {
     );
 
     if (payload.telegramId !== adminId) {
-      console.log("❌ دسترسی غیرمجاز به admin");
-      return new NextResponse("Access Denied", { status: 403 });
+      return NextResponse.redirect(new URL("/access-denied", req.url));
     }
   }
 
