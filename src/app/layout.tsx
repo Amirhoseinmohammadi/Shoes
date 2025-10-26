@@ -5,9 +5,14 @@ import { Providers } from "./providers";
 import PageTransition from "@/components/Common/PageTransition";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { ThemeProvider } from "next-themes";
-import { SessionProvider } from "next-auth/react"; // اضافه شده: برای NextAuth
+import dynamic from "next/dynamic"; // اضافه شده: برای dynamic import
 import type { Metadata } from "next";
-import { ReactNode } from "react"; // اضافه شده: برای type safety
+
+// Dynamic import برای SessionProvider (فقط client-side)
+const SessionProvider = dynamic(
+  () => import("next-auth/react").then((mod) => mod.SessionProvider),
+  { ssr: false }, // غیرفعال کردن SSR برای جلوگیری از server render
+);
 
 export const metadata: Metadata = {
   title: "Iran Steps",
@@ -53,12 +58,8 @@ export default function RootLayout({
             refetchInterval={5 * 60}
             refetchOnWindowFocus={false}
           >
-            {" "}
-            {/* props اضافه شده برای بهتر شدن hydration */}
             <Providers>
               <ToastProvider>
-                {" "}
-                {/* explicit children در داخل */}
                 <Header />
                 <main className="min-h-screen">
                   <PageTransition>{children}</PageTransition>
