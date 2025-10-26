@@ -7,46 +7,35 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum OrderStatus {
-  PENDING
-  CONFIRMED
-  PROCESSING
-  SHIPPED
-  DELIVERED
-  CANCELLED
-}
-
 model User {
-  id        Int        @id @default(autoincrement())
-  username  String     @unique
-  firstName String?
-  lastName  String?
-  phone     String?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime?  @updatedAt // 👈 اضافه شد: اختیاری تا قابل اضافه‌کردن بشه
-
-  cartItems CartItem[]
-  orders    Order[]
+  id         Int        @id @default(autoincrement())
+  username   String     @unique
+  firstName  String?
+  lastName   String?
+  phone      String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime?  @updatedAt
+  telegramId Int?       @unique
+  orders     Order[]
+  cartItems  CartItem[]
 
   @@map("User")
 }
 
 model Product {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique 
+  id          Int         @id @default(autoincrement())
+  name        String      @unique
   brand       String
   price       Float
   description String?
   image       String?
   category    String?
-  isActive    Boolean  @default(true)
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime? @updatedAt // 👈 اختیاری شد
-
-  cartItems  CartItem[]
-  variants   Variant[]
-  orderItems OrderItem[]
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime?   @updatedAt
+  orderItems  OrderItem[]
+  variants    Variant[]
+  cartItems   CartItem[]
 
   @@map("Product")
 }
@@ -55,9 +44,9 @@ model Variant {
   id        Int            @id @default(autoincrement())
   color     String
   productId Int
+  sizes     Size[]
   product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
   images    VariantImage[]
-  sizes     Size[]
 
   @@map("Variant")
 }
@@ -72,12 +61,11 @@ model VariantImage {
 }
 
 model Size {
-  id        Int     @id @default(autoincrement())
+  id        Int        @id @default(autoincrement())
   size      String
-  stock     Int     @default(0)
+  stock     Int        @default(0)
   variantId Int
-  variant   Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-
+  variant   Variant    @relation(fields: [variantId], references: [id], onDelete: Cascade)
   cartItems CartItem[]
 
   @@map("Size")
@@ -92,31 +80,28 @@ model CartItem {
   sizeId    Int?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size      Size?    @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  size    Size?   @relation(fields: [sizeId], references: [id], onDelete: Cascade)
-
-  @@map("cart_items") // ✅ این جدول قبلاً هم همینطور بود
+  @@map("cart_items")
 }
 
 model Order {
   id            Int         @id @default(autoincrement())
   userId        Int
   status        OrderStatus @default(PENDING)
-  total         Float?      // 👈 اختیاری شد
-  customerName  String?     // 👈 اختیاری شد
-  customerPhone String?     // 👈 اختیاری شد
+  total         Float?
+  customerName  String?
+  customerPhone String?
   address       String?
   trackingCode  String?
   notes         String?
-  telegramData  String?     
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime? @updatedAt // 👈 اختیاری شد
-
-  items OrderItem[]
-  user  User       @relation(fields: [userId], references: [id])
+  telegramData  String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime?   @updatedAt
+  user          User        @relation(fields: [userId], references: [id])
+  items         OrderItem[]
 
   @@map("Order")
 }
@@ -126,12 +111,20 @@ model OrderItem {
   orderId   Int
   productId Int
   quantity  Int
-  price     Float   
+  price     Float
   color     String?
   size      String?
-
-  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id])
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
 
   @@map("OrderItem")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
 }
