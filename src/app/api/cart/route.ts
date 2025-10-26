@@ -1,17 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
+import * as jwt from "jsonwebtoken";
 
-async function getUserId() {
-  const session = await getServerSession(authOptions);
-  return session?.user?.id;
+const JWT_SECRET = process.env.JWT_SECRET || "YOUR_STRONG_FALLBACK_SECRET";
+
+/**
+ * @param req
+ * @returns
+ */
+function getAuthenticatedUserId(req: NextRequest): number | null {
+  const authHeader = req.headers.get("Authorization");
+  const token = authHeader?.startsWith("Bearer ")
+    ? authHeader.substring(7)
+    : null;
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const decoded: any = jwt.verify(token, JWT_SECRET);
+
+    const rawUserId = decoded.userId;
+
+    if (rawUserId === undefined || rawUserId === null) {
+      return null;
+    }
+
+    const userId = parseInt(String(rawUserId), 10);
+
+    if (isNaN(userId)) {
+      console.error("❌ userId در توکن عددی نیست:", rawUserId);
+      return null;
+    }
+
+    return userId;
+  } catch (error) {
+    console.error("❌ JWT Validation Error:", error);
+    return null;
+  }
 }
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = await getUserId();
-    if (!userId)
+    const userId = getAuthenticatedUserId(req);
+
+    if (userId === null)
       return NextResponse.json(
         { error: "لطفاً وارد سیستم شوید" },
         { status: 401 },
@@ -37,10 +71,12 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
 export async function POST(req: NextRequest) {
   try {
-    const userId = await getUserId();
-    if (!userId)
+    const userId = getAuthenticatedUserId(req);
+
+    if (userId === null)
       return NextResponse.json(
         { error: "لطفاً وارد سیستم شوید" },
         { status: 401 },
@@ -96,8 +132,9 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const userId = await getUserId();
-    if (!userId)
+    const userId = getAuthenticatedUserId(req);
+
+    if (userId === null)
       return NextResponse.json(
         { error: "لطفاً وارد سیستم شوید" },
         { status: 401 },
@@ -132,6 +169,7 @@ export async function PATCH(req: NextRequest) {
         { error: "آیتم سبد خرید یافت نشد" },
         { status: 404 },
       );
+
     if (existingItem.userId !== userId)
       return NextResponse.json(
         { error: "شما دسترسی به این آیتم ندارید" },
@@ -158,8 +196,9 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const userId = await getUserId();
-    if (!userId) {
+    const userId = getAuthenticatedUserId(req);
+
+    if (userId === null) {
       return NextResponse.json(
         { error: "لطفاً وارد سیستم شوید" },
         { status: 401 },
@@ -189,7 +228,6 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // ✅ بررسی وجود آیتم
     const existingItem = await prisma.cartItem.findUnique({
       where: { id: cartItemId },
     });
@@ -202,7 +240,6 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // ✅ بررسی مالکیت
     if (existingItem.userId !== userId) {
       console.error("❌ دسترسی غیرمجاز:", {
         userId,
@@ -214,7 +251,6 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // ✅ حذف آیتم
     await prisma.cartItem.delete({ where: { id: cartItemId } });
 
     console.log("✅ آیتم حذف شد:", cartItemId);

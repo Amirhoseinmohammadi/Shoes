@@ -1,19 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
+import * as jwt from "jsonwebtoken";
 
+const JWT_SECRET = process.env.JWT_SECRET || "YOUR_STRONG_FALLBACK_SECRET";
 const ADMIN_TELEGRAM_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID;
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
+function getRawUserIdFromToken(req: NextRequest): string | null {
+  const authHeader = req.headers.get("Authorization");
+  const token = authHeader?.startsWith("Bearer ")
+    ? authHeader.substring(7)
+    : null;
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const decoded: any = jwt.verify(token, JWT_SECRET);
+
+    if (decoded.userId === undefined || decoded.userId === null) {
+      return null;
+    }
+
+    return String(decoded.userId);
+  } catch (error) {
+    console.error("❌ JWT Validation Error:", error);
+    return null;
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
+    const rawUserId = getRawUserIdFromToken(req);
 
-    if (!userId) {
+    if (!rawUserId) {
       return NextResponse.json(
         { success: false, error: "لطفاً وارد سیستم شوید" },
+        { status: 401 },
+      );
+    }
+
+    const userId = parseInt(rawUserId, 10);
+
+    if (isNaN(userId)) {
+      console.error("❌ userId معتبر (عددی) نیست:", rawUserId);
+      return NextResponse.json(
+        { success: false, error: "توکن نامعتبر است (شناسه کاربری عددی نیست)" },
         { status: 401 },
       );
     }
@@ -48,13 +81,22 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
+    const rawUserId = getRawUserIdFromToken(req);
 
-    if (!userId) {
+    if (!rawUserId) {
       console.error("❌ کاربر لاگین نیست");
       return NextResponse.json(
         { success: false, error: "لطفاً وارد سیستم شوید" },
+        { status: 401 },
+      );
+    }
+
+    const userId = parseInt(rawUserId, 10);
+
+    if (isNaN(userId)) {
+      console.error("❌ userId معتبر (عددی) نیست:", rawUserId);
+      return NextResponse.json(
+        { success: false, error: "توکن نامعتبر است (شناسه کاربری عددی نیست)" },
         { status: 401 },
       );
     }
@@ -65,7 +107,6 @@ export async function POST(req: NextRequest) {
     const { items, customerName, customerPhone, totalPrice, telegramData } =
       body;
 
-    // ✅ اعتبارسنجی دقیق
     if (!items || !Array.isArray(items) || items.length === 0) {
       console.error("❌ آیتم‌ها خالی هستند");
       return NextResponse.json(
@@ -90,7 +131,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ بررسی وجود محصولات
     const productIds = items.map((i: any) => i.productId);
     console.log("🔍 بررسی محصولات:", productIds);
 
@@ -132,19 +172,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ✅ ساخت آیتم‌ها با قیمت صحیح
     const itemsWithPrice = items.map((item: any) => {
       const product = productsMap.get(item.productId)!;
       return {
         productId: item.productId,
         quantity: item.quantity || 1,
-        price: product.price, // ✅ قیمت از دیتابیس
+        price: product.price,
         color: item.color || null,
         size: item.size || null,
       };
     });
 
-    // ✅ محاسبه قیمت کل
     const calculatedTotal = itemsWithPrice.reduce(
       (sum, i) => sum + i.price * i.quantity,
       0,
@@ -153,13 +191,12 @@ export async function POST(req: NextRequest) {
     console.log("💰 قیمت محاسبه شده:", calculatedTotal);
     console.log("💰 قیمت ارسالی:", totalPrice);
 
-    // ✅ ساخت سفارش
     const order = await prisma.$transaction(async (tx) => {
       const created = await tx.order.create({
         data: {
           userId,
           status: "PENDING",
-          total: totalPrice || calculatedTotal, // ✅ اگه نداشت محاسبه میکنیم
+          total: totalPrice || calculatedTotal,
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
           telegramData: telegramData ? JSON.stringify(telegramData) : null,
@@ -176,7 +213,6 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // ✅ ساخت کد پیگیری
       const trackingCode = `TRK${created.id.toString().padStart(6, "0")}`;
 
       return tx.order.update({
@@ -196,7 +232,6 @@ export async function POST(req: NextRequest) {
 
     console.log("✅ سفارش ثبت شد:", order.id, "کد پیگیری:", order.trackingCode);
 
-    // ✅ ارسال پیام به ادمین
     if (ADMIN_TELEGRAM_ID && BOT_TOKEN) {
       const message = `
 ✅ سفارش جدید!
