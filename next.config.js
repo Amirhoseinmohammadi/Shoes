@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  productionBrowserSourceMaps: true,
 
   images: {
     formats: ["image/webp", "image/avif"],

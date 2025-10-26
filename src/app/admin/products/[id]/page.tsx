@@ -62,7 +62,6 @@ export default function EditProductPage() {
         const data = await res.json();
         console.log("داده‌های دریافت شده:", data);
 
-        // تنظیم فرم با مقادیر درست
         setForm({
           name: data.name || "",
           brand: data.brand || "",

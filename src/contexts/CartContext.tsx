@@ -59,6 +59,10 @@ export const useCart = () => {
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState<number | null>(null);
+
+  // محاسبه isAuthenticated بر اساس وجود userId (بدون نیاز به status جداگانه)
+  const isAuthenticated = !!userId;
 
   const getUserId = async (): Promise<number | null> => {
     try {
@@ -74,8 +78,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     getUserId().then(setUserId);
   }, []);
-  const [userId, setUserId] = useState<number | null>(null);
-  const isAuthenticated = status === "authenticated" && !!userId;
 
   useEffect(() => {
     if (!isAuthenticated || !userId) {
@@ -124,7 +126,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     };
 
     loadCartFromAPI();
-  }, [userId, isAuthenticated]);
+  }, [userId, isAuthenticated]); // وابستگی به userId و isAuthenticated (که از userId derive می‌شه)
 
   const addItem = async ({
     shoe,
@@ -247,6 +249,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     }
   };
+
   const updateItemQuantity = async (
     cartItemId: number,
     quantity: number,
