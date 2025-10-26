@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { signIn, useSession } from "next-auth/react";
 
 export interface TelegramUser {
   id: number;
@@ -21,19 +20,13 @@ interface UseTelegramReturn {
   isTelegram: boolean;
   isAdmin: boolean;
   isAuthenticated: boolean;
-  session: any;
   theme: string;
   sendData: (data: any) => void;
   closeApp: () => void;
   showAlert: (message: string) => void;
   showConfirm: (message: string) => Promise<boolean>;
   checkAdminAccess: () => boolean;
-  debug: {
-    adminId: number;
-    isTelegram: boolean;
-    userLoaded: boolean;
-    sessionStatus: string;
-  };
+  logout: () => Promise<void>;
 }
 
 export function useTelegram(): UseTelegramReturn {
@@ -41,11 +34,11 @@ export function useTelegram(): UseTelegramReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isTelegramEnv, setIsTelegramEnv] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [theme, setTheme] = useState<string>("light");
 
   const router = useRouter();
   const pathname = usePathname();
-  const { data: session, status } = useSession();
 
   const ADMIN_USER_ID = useMemo(
     () =>
@@ -64,7 +57,7 @@ export function useTelegram(): UseTelegramReturn {
     const tg = (window as any).Telegram?.WebApp;
 
     if (!tg) {
-      console.warn("❌ محیط تلگرام یافت نشد - حالت عادی");
+      console.warn("❌ محیط تلگرام یافت نشد");
       setIsTelegramEnv(false);
       setLoading(false);
       return;
@@ -96,7 +89,7 @@ export function useTelegram(): UseTelegramReturn {
       });
 
       setUser(userData);
-      await loginToNextAuth(userData);
+      await loginWithJWT(userData);
     } catch (err: any) {
       console.error("❌ خطا در initialize تلگرام:", err);
       setError("خطا در احراز هویت تلگرام");
@@ -105,43 +98,49 @@ export function useTelegram(): UseTelegramReturn {
     }
   }, []);
 
-  const loginToNextAuth = useCallback(async (userData: TelegramUser) => {
+  const loginWithJWT = useCallback(async (userData: TelegramUser) => {
     try {
-      console.log("🔐 شروع لاگین NextAuth با داده‌های:", {
-        id: userData.id,
-        username: userData.username,
-        first_name: userData.first_name,
+      console.log("🔐 شروع لاگین JWT");
+
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          telegramId: userData.id,
+          firstName: userData.first_name,
+          lastName: userData.last_name,
+          username: userData.username,
+        }),
       });
 
-      const result = await signIn("telegram", {
-        redirect: false,
-        id: userData.id.toString(),
-        first_name: userData.first_name || "",
-        last_name: userData.last_name || "",
-        username: userData.username || "",
-        auth_date: Date.now().toString(),
-        hash: "dummy", // مهم نیست چون validate نمیکنیم
-      });
+      const result = await res.json();
 
-      console.log("📥 نتیجه signIn:", result);
-
-      if (result?.error) {
-        console.error("❌ خطا در لاگین NextAuth:", result.error);
-        setError(`خطا در احراز هویت: ${result.error}`);
-      } else if (result?.ok) {
-        console.log("✅ لاگین NextAuth موفق بود");
-
-        // ✅ صبر کردن برای ست شدن session
-        setTimeout(() => {
-          console.log("🔄 رفرش صفحه برای اعمال session");
-          window.location.reload();
-        }, 500);
+      if (!result.success) {
+        throw new Error(result.error || "خطا در لاگین");
       }
+
+      console.log("✅ لاگین JWT موفق");
+      setIsAuthenticated(true);
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     } catch (err: any) {
-      console.error("❌ خطا در loginToNextAuth:", err);
+      console.error("❌ خطا در لاگین JWT:", err);
       setError("خطا در احراز هویت");
     }
   }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      setIsAuthenticated(false);
+      setUser(null);
+      router.push("/");
+    } catch (err) {
+      console.error("❌ خطا در خروج:", err);
+    }
+  }, [router]);
 
   const checkAdminAccess = useCallback(
     (userId: number): boolean => {
@@ -158,11 +157,6 @@ export function useTelegram(): UseTelegramReturn {
   useEffect(() => {
     initializeTelegram();
   }, [initializeTelegram]);
-
-  useEffect(() => {
-    console.log("📊 Session status:", status);
-    console.log("👤 Session data:", session);
-  }, [status, session]);
 
   useEffect(() => {
     if (user && pathname?.startsWith("/admin")) {
@@ -207,23 +201,17 @@ export function useTelegram(): UseTelegramReturn {
 
   return {
     user,
-    loading: loading || status === "loading",
+    loading,
     error,
     isTelegram: isTelegramEnv,
     isAdmin,
-    isAuthenticated: status === "authenticated",
-    session,
+    isAuthenticated,
     theme,
     sendData,
     closeApp,
     showAlert,
     showConfirm,
     checkAdminAccess: () => (user ? checkAdminAccess(user.id) : false),
-    debug: {
-      adminId: ADMIN_USER_ID,
-      isTelegram: isTelegramEnv,
-      userLoaded: !!user,
-      sessionStatus: status,
-    },
+    logout,
   };
 }

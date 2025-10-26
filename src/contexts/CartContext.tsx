@@ -7,7 +7,6 @@ import {
   ReactNode,
   useEffect,
 } from "react";
-import { useSession } from "next-auth/react";
 
 export interface CartItem {
   id: number;
@@ -61,8 +60,21 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const { data: session, status } = useSession();
-  const userId = session?.user?.id;
+  const getUserId = async (): Promise<number | null> => {
+    try {
+      const res = await fetch("/api/auth/me");
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.user?.id || null;
+    } catch {
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    getUserId().then(setUserId);
+  }, []);
+  const [userId, setUserId] = useState<number | null>(null);
   const isAuthenticated = status === "authenticated" && !!userId;
 
   useEffect(() => {
