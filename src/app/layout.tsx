@@ -5,14 +5,8 @@ import { Providers } from "./providers";
 import PageTransition from "@/components/Common/PageTransition";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { ThemeProvider } from "next-themes";
-import dynamic from "next/dynamic"; // اضافه شده: برای dynamic import
+import { SessionWrapper } from "@/components/SessionWrapper"; // اضافه شده: import wrapper
 import type { Metadata } from "next";
-
-// Dynamic import برای SessionProvider (فقط client-side)
-const SessionProvider = dynamic(
-  () => import("next-auth/react").then((mod) => mod.SessionProvider),
-  { ssr: false }, // غیرفعال کردن SSR برای جلوگیری از server render
-);
 
 export const metadata: Metadata = {
   title: "Iran Steps",
@@ -54,10 +48,9 @@ export default function RootLayout({
           defaultTheme="light"
           enableSystem={true}
         >
-          <SessionProvider
-            refetchInterval={5 * 60}
-            refetchOnWindowFocus={false}
-          >
+          <SessionWrapper>
+            {" "}
+            {/* استفاده از wrapper به جای direct SessionProvider */}
             <Providers>
               <ToastProvider>
                 <Header />
@@ -67,7 +60,7 @@ export default function RootLayout({
                 <Footer />
               </ToastProvider>
             </Providers>
-          </SessionProvider>
+          </SessionWrapper>
         </ThemeProvider>
       </body>
     </html>
