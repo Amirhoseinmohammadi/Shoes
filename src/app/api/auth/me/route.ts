@@ -7,9 +7,12 @@ export async function GET(req: NextRequest) {
     const cookieHeader = req.headers.get("cookie");
     const token = getTokenFromCookie(cookieHeader);
 
+    console.log("🔍 Cookie Header:", cookieHeader ? "exists" : "missing");
+    console.log("🔍 Token:", token ? "exists" : "missing");
+
     if (!token) {
       return NextResponse.json(
-        { success: false, error: "لطفاً وارد شوید" },
+        { success: false, error: "توکن یافت نشد - لطفاً وارد شوید" },
         { status: 401 },
       );
     }
@@ -48,9 +51,9 @@ export async function GET(req: NextRequest) {
       user,
     });
   } catch (error: any) {
-    console.error("❌ خطا در دریافت اطلاعات کاربر:", error);
+    console.error("❌ خطا در /api/auth/me:", error);
     return NextResponse.json(
-      { success: false, error: "خطا در دریافت اطلاعات" },
+      { success: false, error: "خطا در دریافت اطلاعات کاربر" },
       { status: 500 },
     );
   }

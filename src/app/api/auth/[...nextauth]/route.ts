@@ -1,24 +1,17 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import bcrypt from "bcrypt"; // import bcrypt
-import { PrismaClient } from "@prisma/client"; // اگر Prisma داری
+import bcrypt from "bcrypt";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// تابع verifyPassword (اضافه شده)
-async function verifyPassword(
-  plainPassword: string,
-  hashedPassword: string,
-): Promise<boolean> {
-  try {
-    return await bcrypt.compare(plainPassword, hashedPassword);
-  } catch (error) {
-    console.error("خطا در چک رمز عبور:", error);
-    return false;
-  }
+if (!process.env.NEXTAUTH_SECRET) {
+  throw new Error("NEXTAUTH_SECRET must be set in environment variables");
 }
 
 const handler = NextAuth({
+  secret: process.env.NEXTAUTH_SECRET,
+
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -32,31 +25,27 @@ const handler = NextAuth({
         }
 
         try {
-          // پیدا کردن کاربر از DB (Prisma مثال)
           const user = await prisma.user.findUnique({
             where: { email: credentials.email as string },
           });
 
           if (!user) {
-            return null; // کاربر پیدا نشد
+            return null;
           }
 
-          // چک رمز عبور با تابع جدید
-          const isValidPassword = await verifyPassword(
+          const isValidPassword = await bcrypt.compare(
             credentials.password as string,
-            user.password, // فرض: hashed در DB
+            user.password,
           );
 
           if (!isValidPassword) {
-            return null; // رمز غلط
+            return null;
           }
 
-          // کاربر معتبر: id, email و... رو برگردون
           return {
             id: user.id.toString(),
             email: user.email,
             name: user.name,
-            // هر field دیگه‌ای که می‌خوای
           };
         } catch (error) {
           console.error("خطا در authorize:", error);
@@ -66,9 +55,12 @@ const handler = NextAuth({
     }),
   ],
   pages: {
-    signIn: "/login", // صفحه لاگین سفارشی
+    signIn: "/login",
   },
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 روز
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -77,7 +69,7 @@ const handler = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      if (token) {
+      if (token && session.user) {
         session.user.id = token.id as string;
       }
       return session;
