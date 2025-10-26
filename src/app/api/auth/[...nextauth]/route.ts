@@ -1,6 +1,28 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
+import crypto from "crypto";
+
+function validateTelegramAuth(authData: any, botToken: string): boolean {
+  const { hash, ...data } = authData;
+
+  const checkString = Object.keys(data)
+    .sort()
+    .map((key) => `${key}=${data[key]}`)
+    .join("\n");
+
+  const secretKey = crypto
+    .createHmac("sha256", "WebAppData")
+    .update(botToken)
+    .digest();
+
+  const calculatedHash = crypto
+    .createHmac("sha256", secretKey)
+    .update(checkString)
+    .digest("hex");
+
+  return hash === calculatedHash;
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -16,77 +38,50 @@ export const authOptions: NextAuthOptions = {
         hash: { label: "Hash", type: "text" },
       },
       async authorize(credentials) {
-        try {
-          console.log("🔐 NextAuth authorize شروع شد");
-          console.log("📝 Credentials:", {
-            id: credentials?.id,
-            username: credentials?.username,
-            first_name: credentials?.first_name,
-          });
-
-          if (!credentials?.id) {
-            console.error("❌ Telegram ID موجود نیست");
-            throw new Error("Telegram ID is required");
-          }
-
-          const telegramId = parseInt(credentials.id);
-
-          if (isNaN(telegramId)) {
-            console.error("❌ Telegram ID نامعتبر است");
-            throw new Error("Invalid Telegram ID");
-          }
-
-          console.log("🔍 جستجوی کاربر با telegramId:", telegramId);
-
-          let user = await prisma.user.findUnique({
-            where: { telegramId: telegramId },
-          });
-
-          if (user) {
-            console.log("✅ کاربر موجود یافت شد:", user.id);
-
-            user = await prisma.user.update({
-              where: { id: user.id },
-              data: {
-                firstName: credentials.first_name || user.firstName,
-                lastName: credentials.last_name || user.lastName,
-                username: credentials.username || user.username,
-                updatedAt: new Date(),
-              },
-            });
-          } else {
-            console.log("➕ ساخت کاربر جدید");
-
-            // ✅ ساخت کاربر جدید
-            user = await prisma.user.create({
-              data: {
-                telegramId: telegramId,
-                username: credentials.username || `user_${telegramId}`,
-                firstName: credentials.first_name || null,
-                lastName: credentials.last_name || null,
-              },
-            });
-
-            console.log("✅ کاربر جدید ساخته شد:", user.id);
-          }
-
-          const userData = {
-            id: user.id.toString(),
-            name:
-              `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-              "کاربر",
-            email: user.email || null,
-            telegramId: telegramId.toString(),
-            username: user.username || null,
-          };
-
-          console.log("✅ کاربر احراز هویت شد:", userData);
-          return userData;
-        } catch (error: any) {
-          console.error("❌ خطا در authorize:", error);
-          console.error("Stack:", error.stack);
-          throw error;
+        if (!credentials?.id) {
+          throw new Error("Telegram ID is required");
         }
+
+        const telegramId = parseInt(credentials.id);
+
+        const botToken = process.env.TELEGRAM_BOT_TOKEN;
+        if (botToken) {
+          const isValid = validateTelegramAuth(credentials, botToken);
+          if (!isValid) {
+            throw new Error("Invalid Telegram authentication");
+          }
+        }
+
+        let user = await prisma.user.findUnique({
+          where: { telegramId: telegramId },
+        });
+
+        if (!user) {
+          user = await prisma.user.create({
+            data: {
+              telegramId: telegramId,
+              username: credentials.username || `user_${telegramId}`,
+              firstName: credentials.first_name || null,
+              lastName: credentials.last_name || null,
+            },
+          });
+        } else {
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              firstName: credentials.first_name || user.firstName,
+              lastName: credentials.last_name || user.lastName,
+              username: credentials.username || user.username,
+            },
+          });
+        }
+
+        return {
+          id: user.id.toString(),
+          name: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+          telegramId: telegramId.toString(),
+          username: user.username || null,
+        };
       },
     }),
   ],
@@ -104,7 +99,6 @@ export const authOptions: NextAuthOptions = {
 
     async session({ session, token }) {
       if (token && session.user) {
-        console.log("📋 Session callback - token:", token);
         session.user.id = parseInt(token.id as string);
         session.user.telegramId = token.telegramId as string;
         session.user.username = token.username as string;
@@ -141,7 +135,7 @@ export const authOptions: NextAuthOptions = {
     },
   },
 
-  debug: true,
+  debug: process.env.NODE_ENV === "development",
 };
 
 const handler = NextAuth(authOptions);

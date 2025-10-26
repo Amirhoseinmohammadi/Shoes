@@ -120,7 +120,7 @@ export function useTelegram(): UseTelegramReturn {
         last_name: userData.last_name || "",
         username: userData.username || "",
         auth_date: Date.now().toString(),
-        hash: "dummy",
+        hash: "dummy", // مهم نیست چون validate نمیکنیم
       });
 
       console.log("📥 نتیجه signIn:", result);
@@ -131,6 +131,7 @@ export function useTelegram(): UseTelegramReturn {
       } else if (result?.ok) {
         console.log("✅ لاگین NextAuth موفق بود");
 
+        // ✅ صبر کردن برای ست شدن session
         setTimeout(() => {
           console.log("🔄 رفرش صفحه برای اعمال session");
           window.location.reload();

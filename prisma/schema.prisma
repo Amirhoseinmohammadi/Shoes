@@ -10,14 +10,15 @@ datasource db {
 model User {
   id         Int        @id @default(autoincrement())
   username   String     @unique
+  telegramId Int?       @unique  
   firstName  String?
   lastName   String?
   phone      String?
   createdAt  DateTime   @default(now())
   updatedAt  DateTime?  @updatedAt
-  telegramId Int?       @unique
-  orders     Order[]
-  cartItems  CartItem[]
+
+  cartItems CartItem[]
+  orders    Order[]
 
   @@map("User")
 }

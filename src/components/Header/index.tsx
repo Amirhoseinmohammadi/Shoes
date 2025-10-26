@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
+import { useCart } from "@/contexts/CartContext";
+
 import {
   HomeIcon,
   ShoppingCartIcon,
@@ -11,7 +13,7 @@ import {
 
 export default function BottomNavigation() {
   const pathname = usePathname();
-  const [cartItems] = useState(3);
+  const { cartItems } = useCart();
 
   const navItems = [
     { id: 0, href: "/", icon: HomeIcon, label: "خانه", badge: 0 },

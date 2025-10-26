@@ -159,41 +159,74 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const userId = await getUserId();
-    if (!userId)
+    if (!userId) {
       return NextResponse.json(
         { error: "لطفاً وارد سیستم شوید" },
         { status: 401 },
       );
+    }
 
     const { searchParams } = new URL(req.url);
     const cartItemIdParam = searchParams.get("id");
+
+    console.log("🗑️ حذف آیتم سبد:", cartItemIdParam);
+
+    if (!cartItemIdParam) {
+      console.error("❌ شناسه آیتم موجود نیست");
+      return NextResponse.json(
+        { error: "شناسه آیتم الزامی است" },
+        { status: 400 },
+      );
+    }
+
     const cartItemId = Number(cartItemIdParam);
-    if (!cartItemIdParam || isNaN(cartItemId))
+
+    if (isNaN(cartItemId)) {
+      console.error("❌ شناسه نامعتبر:", cartItemIdParam);
       return NextResponse.json(
         { error: "شناسه آیتم نامعتبر است" },
         { status: 400 },
       );
+    }
 
+    // ✅ بررسی وجود آیتم
     const existingItem = await prisma.cartItem.findUnique({
       where: { id: cartItemId },
     });
-    if (!existingItem)
+
+    if (!existingItem) {
+      console.error("❌ آیتم یافت نشد:", cartItemId);
       return NextResponse.json(
         { error: "آیتم سبد خرید یافت نشد" },
         { status: 404 },
       );
-    if (existingItem.userId !== userId)
+    }
+
+    // ✅ بررسی مالکیت
+    if (existingItem.userId !== userId) {
+      console.error("❌ دسترسی غیرمجاز:", {
+        userId,
+        itemUserId: existingItem.userId,
+      });
       return NextResponse.json(
         { error: "شما دسترسی به این آیتم ندارید" },
         { status: 403 },
       );
+    }
 
+    // ✅ حذف آیتم
     await prisma.cartItem.delete({ where: { id: cartItemId } });
-    return NextResponse.json({ success: true, message: "آیتم حذف شد" });
-  } catch (err) {
-    console.error("DELETE /api/cart error:", err);
+
+    console.log("✅ آیتم حذف شد:", cartItemId);
+
+    return NextResponse.json({
+      success: true,
+      message: "آیتم با موفقیت حذف شد",
+    });
+  } catch (err: any) {
+    console.error("❌ DELETE /api/cart error:", err);
     return NextResponse.json(
-      { error: "خطا در حذف از سبد خرید" },
+      { error: "خطا در حذف از سبد خرید", details: err.message },
       { status: 500 },
     );
   }
