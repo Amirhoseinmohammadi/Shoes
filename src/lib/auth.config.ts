@@ -1,10 +1,6 @@
-import NextAuth from "next-auth";
+import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
-
-if (!process.env.NEXTAUTH_SECRET) {
-  throw new Error("NEXTAUTH_SECRET must be set in environment variables");
-}
 
 declare module "next-auth" {
   interface Session {
@@ -41,7 +37,7 @@ declare module "next-auth/jwt" {
   }
 }
 
-const handler = NextAuth({
+export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 
   providers: [
@@ -181,6 +177,4 @@ const handler = NextAuth({
   },
 
   debug: process.env.NODE_ENV === "development",
-});
-
-export { handler as GET, handler as POST };
+};

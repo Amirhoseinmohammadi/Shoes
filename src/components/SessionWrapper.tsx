@@ -1,12 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
-import dynamic from "next/dynamic";
-
-const SessionProviderInner = dynamic(
-  () => import("next-auth/react").then((mod) => mod.SessionProvider),
-  { ssr: false },
-);
+import { SessionProvider } from "next-auth/react";
 
 interface SessionWrapperProps {
   children: ReactNode;
@@ -14,8 +9,12 @@ interface SessionWrapperProps {
 
 export function SessionWrapper({ children }: SessionWrapperProps) {
   return (
-    <SessionProviderInner refetchInterval={5 * 60} refetchOnWindowFocus={false}>
+    <SessionProvider
+      refetchInterval={5 * 60}
+      refetchOnWindowFocus={true}
+      refetchWhenOffline={false}
+    >
       {children}
-    </SessionProviderInner>
+    </SessionProvider>
   );
 }

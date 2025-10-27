@@ -5,7 +5,7 @@ import { Providers } from "./providers";
 import PageTransition from "@/components/Common/PageTransition";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { ThemeProvider } from "next-themes";
-import { SessionWrapper } from "@/components/SessionWrapper"; // اضافه شده: import wrapper
+import { SessionWrapper } from "@/components/SessionWrapper";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -29,13 +29,10 @@ export default function RootLayout({
           rel="stylesheet"
           type="text/css"
         />
-        {process.env.NODE_ENV === "production" && (
-          <script
-            src="https://telegram.org/js/telegram-web-app.js"
-            async
-            defer
-          />
-        )}
+        <script
+          src="https://telegram.org/js/telegram-web-app.js"
+          strategy="beforeInteractive"
+        />
 
         <meta
           name="viewport"
@@ -43,14 +40,12 @@ export default function RootLayout({
         />
       </head>
       <body className="font-shabnam antialiased">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem={true}
-        >
-          <SessionWrapper>
-            {" "}
-            {/* استفاده از wrapper به جای direct SessionProvider */}
+        <SessionWrapper>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            enableSystem={true}
+          >
             <Providers>
               <ToastProvider>
                 <Header />
@@ -60,8 +55,8 @@ export default function RootLayout({
                 <Footer />
               </ToastProvider>
             </Providers>
-          </SessionWrapper>
-        </ThemeProvider>
+          </ThemeProvider>
+        </SessionWrapper>
       </body>
     </html>
   );

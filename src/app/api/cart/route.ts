@@ -1,60 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import * as jwt from "jsonwebtoken";
-
-const JWT_SECRET = process.env.JWT_SECRET || "YOUR_STRONG_FALLBACK_SECRET";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 /**
- * @param req
- * @returns
+ * Get authenticated user from NextAuth session
  */
-function getAuthenticatedUserId(req: NextRequest): number | null {
-  const authHeader = req.headers.get("Authorization");
-  const token = authHeader?.startsWith("Bearer ")
-    ? authHeader.substring(7)
-    : null;
+async function getAuthenticatedUser(req: NextRequest) {
+  const session = await getServerSession(authOptions);
 
-  if (!token) {
+  if (!session?.user?.id) {
     return null;
   }
 
-  try {
-    const decoded: any = jwt.verify(token, JWT_SECRET);
-
-    const rawUserId = decoded.userId;
-
-    if (rawUserId === undefined || rawUserId === null) {
-      return null;
-    }
-
-    const userId = parseInt(String(rawUserId), 10);
-
-    if (isNaN(userId)) {
-      console.error("❌ userId در توکن عددی نیست:", rawUserId);
-      return null;
-    }
-
-    return userId;
-  } catch (error) {
-    console.error("❌ JWT Validation Error:", error);
-    return null;
-  }
+  return {
+    id: parseInt(session.user.id),
+    telegramId: session.user.telegramId,
+    email: session.user.email,
+    role: session.user.role,
+  };
 }
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = getAuthenticatedUserId(req);
+    const user = await getAuthenticatedUser(req);
 
-    if (userId === null)
+    if (!user) {
       return NextResponse.json(
         { error: "لطفاً وارد سیستم شوید" },
         { status: 401 },
       );
+    }
 
     const cartItems = await prisma.cartItem.findMany({
-      where: { userId },
+      where: { userId: user.id },
       include: {
-        product: { include: { variants: { include: { images: true } } } },
+        product: {
+          include: {
+            variants: {
+              include: {
+                images: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -74,32 +63,45 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = getAuthenticatedUserId(req);
+    const user = await getAuthenticatedUser(req);
 
-    if (userId === null)
+    if (!user) {
       return NextResponse.json(
         { error: "لطفاً وارد سیستم شوید" },
         { status: 401 },
       );
+    }
 
-    const { productId, quantity, color } = await req.json();
-    if (!productId || !quantity)
+    const { productId, quantity, color, size } = await req.json();
+
+    if (!productId || !quantity) {
       return NextResponse.json(
         { error: "productId و quantity الزامی هستند" },
         { status: 400 },
       );
+    }
 
     const product = await prisma.product.findUnique({
       where: { id: productId },
       select: { id: true, isActive: true },
     });
-    if (!product)
-      return NextResponse.json({ error: "محصول یافت نشد" }, { status: 404 });
-    if (!product.isActive)
-      return NextResponse.json({ error: "محصول غیرفعال است" }, { status: 400 });
 
+    if (!product) {
+      return NextResponse.json({ error: "محصول یافت نشد" }, { status: 404 });
+    }
+
+    if (!product.isActive) {
+      return NextResponse.json({ error: "محصول غیرفعال است" }, { status: 400 });
+    }
+
+    // Find existing item with same product, color, and size
     const existing = await prisma.cartItem.findFirst({
-      where: { userId, productId, color: color || null },
+      where: {
+        userId: user.id,
+        productId,
+        color: color || null,
+        size: size || null,
+      },
     });
 
     if (existing) {
@@ -107,16 +109,38 @@ export async function POST(req: NextRequest) {
         where: { id: existing.id },
         data: { quantity: existing.quantity + quantity },
         include: {
-          product: { include: { variants: { include: { images: true } } } },
+          product: {
+            include: {
+              variants: {
+                include: {
+                  images: true,
+                },
+              },
+            },
+          },
         },
       });
       return NextResponse.json(updated);
     }
 
     const newItem = await prisma.cartItem.create({
-      data: { userId, productId, quantity, color: color || null },
+      data: {
+        userId: user.id,
+        productId,
+        quantity,
+        color: color || null,
+        size: size || null,
+      },
       include: {
-        product: { include: { variants: { include: { images: true } } } },
+        product: {
+          include: {
+            variants: {
+              include: {
+                images: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -132,13 +156,14 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const userId = getAuthenticatedUserId(req);
+    const user = await getAuthenticatedUser(req);
 
-    if (userId === null)
+    if (!user) {
       return NextResponse.json(
         { error: "لطفاً وارد سیستم شوید" },
         { status: 401 },
       );
+    }
 
     const { cartItemId, quantity } = await req.json();
     const itemId = Number(cartItemId);
@@ -155,32 +180,45 @@ export async function PATCH(req: NextRequest) {
         { status: 400 },
       );
     }
-    if (itemQuantity <= 0)
+
+    if (itemQuantity <= 0) {
       return NextResponse.json(
         { error: "تعداد باید بیشتر از 0 باشد" },
         { status: 400 },
       );
+    }
 
     const existingItem = await prisma.cartItem.findUnique({
       where: { id: itemId },
     });
-    if (!existingItem)
+
+    if (!existingItem) {
       return NextResponse.json(
         { error: "آیتم سبد خرید یافت نشد" },
         { status: 404 },
       );
+    }
 
-    if (existingItem.userId !== userId)
+    if (existingItem.userId !== user.id) {
       return NextResponse.json(
         { error: "شما دسترسی به این آیتم ندارید" },
         { status: 403 },
       );
+    }
 
     const updatedItem = await prisma.cartItem.update({
       where: { id: itemId },
       data: { quantity: itemQuantity },
       include: {
-        product: { include: { variants: { include: { images: true } } } },
+        product: {
+          include: {
+            variants: {
+              include: {
+                images: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -196,9 +234,9 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const userId = getAuthenticatedUserId(req);
+    const user = await getAuthenticatedUser(req);
 
-    if (userId === null) {
+    if (!user) {
       return NextResponse.json(
         { error: "لطفاً وارد سیستم شوید" },
         { status: 401 },
@@ -208,10 +246,7 @@ export async function DELETE(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const cartItemIdParam = searchParams.get("id");
 
-    console.log("🗑️ حذف آیتم سبد:", cartItemIdParam);
-
     if (!cartItemIdParam) {
-      console.error("❌ شناسه آیتم موجود نیست");
       return NextResponse.json(
         { error: "شناسه آیتم الزامی است" },
         { status: 400 },
@@ -221,7 +256,6 @@ export async function DELETE(req: NextRequest) {
     const cartItemId = Number(cartItemIdParam);
 
     if (isNaN(cartItemId)) {
-      console.error("❌ شناسه نامعتبر:", cartItemIdParam);
       return NextResponse.json(
         { error: "شناسه آیتم نامعتبر است" },
         { status: 400 },
@@ -233,18 +267,13 @@ export async function DELETE(req: NextRequest) {
     });
 
     if (!existingItem) {
-      console.error("❌ آیتم یافت نشد:", cartItemId);
       return NextResponse.json(
         { error: "آیتم سبد خرید یافت نشد" },
         { status: 404 },
       );
     }
 
-    if (existingItem.userId !== userId) {
-      console.error("❌ دسترسی غیرمجاز:", {
-        userId,
-        itemUserId: existingItem.userId,
-      });
+    if (existingItem.userId !== user.id) {
       return NextResponse.json(
         { error: "شما دسترسی به این آیتم ندارید" },
         { status: 403 },
@@ -253,16 +282,14 @@ export async function DELETE(req: NextRequest) {
 
     await prisma.cartItem.delete({ where: { id: cartItemId } });
 
-    console.log("✅ آیتم حذف شد:", cartItemId);
-
     return NextResponse.json({
       success: true,
       message: "آیتم با موفقیت حذف شد",
     });
   } catch (err: any) {
-    console.error("❌ DELETE /api/cart error:", err);
+    console.error("DELETE /api/cart error:", err);
     return NextResponse.json(
-      { error: "خطا در حذف از سبد خرید", details: err.message },
+      { error: "خطا در حذف از سبد خرید" },
       { status: 500 },
     );
   }

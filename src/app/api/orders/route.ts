@@ -1,55 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import * as jwt from "jsonwebtoken";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth.config";
 
-const JWT_SECRET = process.env.JWT_SECRET || "YOUR_STRONG_FALLBACK_SECRET";
 const ADMIN_TELEGRAM_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID;
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
-function getRawUserIdFromToken(req: NextRequest): string | null {
-  const authHeader = req.headers.get("Authorization");
-  const token = authHeader?.startsWith("Bearer ")
-    ? authHeader.substring(7)
-    : null;
-
-  if (!token) {
-    return null;
-  }
-
-  try {
-    const decoded: any = jwt.verify(token, JWT_SECRET);
-
-    if (decoded.userId === undefined || decoded.userId === null) {
-      return null;
-    }
-
-    return String(decoded.userId);
-  } catch (error) {
-    console.error("❌ JWT Validation Error:", error);
-    return null;
-  }
-}
-
 export async function GET(req: NextRequest) {
   try {
-    const rawUserId = getRawUserIdFromToken(req);
+    const session = await getServerSession(authOptions);
 
-    if (!rawUserId) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, error: "لطفاً وارد سیستم شوید" },
         { status: 401 },
       );
     }
 
-    const userId = parseInt(rawUserId, 10);
-
-    if (isNaN(userId)) {
-      console.error("❌ userId معتبر (عددی) نیست:", rawUserId);
-      return NextResponse.json(
-        { success: false, error: "توکن نامعتبر است (شناسه کاربری عددی نیست)" },
-        { status: 401 },
-      );
-    }
+    const userId = parseInt(session.user.id);
 
     const orders = await prisma.order.findMany({
       where: { userId },
@@ -57,7 +25,13 @@ export async function GET(req: NextRequest) {
         items: {
           include: {
             product: {
-              select: { id: true, name: true, brand: true, price: true },
+              select: {
+                id: true,
+                name: true,
+                brand: true,
+                price: true,
+                image: true,
+              },
             },
           },
         },
@@ -81,9 +55,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const rawUserId = getRawUserIdFromToken(req);
+    const session = await getServerSession(authOptions);
 
-    if (!rawUserId) {
+    if (!session?.user?.id) {
       console.error("❌ کاربر لاگین نیست");
       return NextResponse.json(
         { success: false, error: "لطفاً وارد سیستم شوید" },
@@ -91,16 +65,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const userId = parseInt(rawUserId, 10);
-
-    if (isNaN(userId)) {
-      console.error("❌ userId معتبر (عددی) نیست:", rawUserId);
-      return NextResponse.json(
-        { success: false, error: "توکن نامعتبر است (شناسه کاربری عددی نیست)" },
-        { status: 401 },
-      );
-    }
-
+    const userId = parseInt(session.user.id);
     const body = await req.json();
     console.log("📦 داده‌های دریافتی:", JSON.stringify(body, null, 2));
 
@@ -136,7 +101,13 @@ export async function POST(req: NextRequest) {
 
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
-      select: { id: true, name: true, price: true, isActive: true },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        isActive: true,
+        stock: true,
+      },
     });
 
     console.log("✅ محصولات یافت شده:", products.length);
@@ -170,6 +141,16 @@ export async function POST(req: NextRequest) {
           { status: 400 },
         );
       }
+      if (product.stock < (item.quantity || 1)) {
+        console.error(`❌ موجودی محصول ${product.name} کافی نیست`);
+        return NextResponse.json(
+          {
+            success: false,
+            error: `موجودی محصول ${product.name} کافی نیست (موجودی: ${product.stock})`,
+          },
+          { status: 400 },
+        );
+      }
     }
 
     const itemsWithPrice = items.map((item: any) => {
@@ -192,6 +173,18 @@ export async function POST(req: NextRequest) {
     console.log("💰 قیمت ارسالی:", totalPrice);
 
     const order = await prisma.$transaction(async (tx) => {
+      // کاهش موجودی محصولات
+      for (const item of items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: {
+              decrement: item.quantity || 1,
+            },
+          },
+        });
+      }
+
       const created = await tx.order.create({
         data: {
           userId,
@@ -233,18 +226,34 @@ export async function POST(req: NextRequest) {
     console.log("✅ سفارش ثبت شد:", order.id, "کد پیگیری:", order.trackingCode);
 
     if (ADMIN_TELEGRAM_ID && BOT_TOKEN) {
-      const message = `
+      try {
+        const itemsList = order.items
+          .map((item) => `• ${item.product.name} - ${item.quantity} عدد`)
+          .join("\n");
+
+        const message = `
 ✅ سفارش جدید!
 🆔 کد پیگیری: ${order.trackingCode}
 👤 مشتری: ${customerName}
 📞 تماس: ${customerPhone}
 💰 مبلغ: ${(totalPrice || calculatedTotal).toLocaleString()} تومان
-📦 تعداد: ${items.length} محصول
-      `.trim();
+📦 محصولات:
+${itemsList}
+        `.trim();
 
-      fetch(
-        `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${ADMIN_TELEGRAM_ID}&text=${encodeURIComponent(message)}`,
-      ).catch((err) => console.error("❌ خطا در ارسال پیام به ادمین:", err));
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            chat_id: ADMIN_TELEGRAM_ID,
+            text: message,
+          }),
+        });
+      } catch (err) {
+        console.error("❌ خطا در ارسال پیام به ادمین:", err);
+      }
     }
 
     return NextResponse.json({
