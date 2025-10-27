@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { signIn, signOut, useSession } from "next-auth/react";
 
 export interface TelegramUser {
   id: number;
@@ -27,6 +28,7 @@ interface UseTelegramReturn {
   showConfirm: (message: string) => Promise<boolean>;
   checkAdminAccess: () => boolean;
   logout: () => Promise<void>;
+  loginWithTelegram: (userData: TelegramUser) => Promise<void>;
 }
 
 export function useTelegram(): UseTelegramReturn {
@@ -34,9 +36,9 @@ export function useTelegram(): UseTelegramReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isTelegramEnv, setIsTelegramEnv] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [theme, setTheme] = useState<string>("light");
 
+  const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -47,6 +49,16 @@ export function useTelegram(): UseTelegramReturn {
         : 697803275,
     [],
   );
+
+  // وضعیت احراز هویت از NextAuth
+  const isAuthenticated = useMemo(() => {
+    return status === "authenticated" && !!session?.user;
+  }, [session, status]);
+
+  // بررسی آیا کاربر ادمین است
+  const isAdmin = useMemo(() => {
+    return session?.user?.role === "ADMIN" || user?.id === ADMIN_USER_ID;
+  }, [session, user, ADMIN_USER_ID]);
 
   const initializeTelegram = useCallback(async () => {
     if (typeof window === "undefined") {
@@ -89,52 +101,53 @@ export function useTelegram(): UseTelegramReturn {
       });
 
       setUser(userData);
-      await loginWithJWT(userData);
+
+      // اگر کاربر لاگین نکرده، با تلگرام لاگین کن
+      if (status === "unauthenticated") {
+        await loginWithTelegram(userData);
+      }
     } catch (err: any) {
       console.error("❌ خطا در initialize تلگرام:", err);
       setError("خطا در احراز هویت تلگرام");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [status]);
 
-  const loginWithJWT = useCallback(async (userData: TelegramUser) => {
+  const loginWithTelegram = useCallback(async (userData: TelegramUser) => {
     try {
-      console.log("🔐 شروع لاگین JWT");
+      console.log("🔐 شروع لاگین با NextAuth");
 
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          telegramId: userData.id,
-          firstName: userData.first_name,
-          lastName: userData.last_name,
-          username: userData.username,
-        }),
+      const result = await signIn("telegram", {
+        telegramId: userData.id.toString(),
+        firstName: userData.first_name,
+        lastName: userData.last_name,
+        username: userData.username,
+        redirect: false,
       });
 
-      const result = await res.json();
-
-      if (!result.success) {
-        throw new Error(result.error || "خطا در لاگین");
+      if (result?.error) {
+        throw new Error(result.error);
       }
 
-      console.log("✅ لاگین JWT موفق");
-      setIsAuthenticated(true);
+      console.log("✅ لاگین با NextAuth موفق");
 
+      // رفرش صفحه برای به روزرسانی session
       setTimeout(() => {
         window.location.reload();
-      }, 500);
+      }, 1000);
     } catch (err: any) {
-      console.error("❌ خطا در لاگین JWT:", err);
+      console.error("❌ خطا در لاگین با NextAuth:", err);
       setError("خطا در احراز هویت");
     }
   }, []);
 
   const logout = useCallback(async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      setIsAuthenticated(false);
+      await signOut({
+        redirect: false,
+        callbackUrl: "/",
+      });
       setUser(null);
       router.push("/");
     } catch (err) {
@@ -143,26 +156,47 @@ export function useTelegram(): UseTelegramReturn {
   }, [router]);
 
   const checkAdminAccess = useCallback(
-    (userId: number): boolean => {
-      if (userId !== ADMIN_USER_ID) {
-        console.warn("🚫 دسترسی غیرمجاز - کاربر ID:", userId);
-        router.push("/access-denied");
-        return false;
+    (userId?: number): boolean => {
+      // بررسی از طریق session NextAuth
+      if (session?.user?.role !== "ADMIN") {
+        // یا بررسی از طریق تلگرام
+        if (userId && userId !== ADMIN_USER_ID) {
+          console.warn("🚫 دسترسی غیرمجاز - کاربر ID:", userId);
+          router.push("/access-denied");
+          return false;
+        }
       }
       return true;
     },
-    [ADMIN_USER_ID, router],
+    [session, ADMIN_USER_ID, router],
   );
 
   useEffect(() => {
     initializeTelegram();
   }, [initializeTelegram]);
 
+  // بررسی دسترسی ادمین هنگام تغییر مسیر
   useEffect(() => {
-    if (user && pathname?.startsWith("/admin")) {
-      checkAdminAccess(user.id);
+    if (pathname?.startsWith("/admin")) {
+      const hasAccess = checkAdminAccess(user?.id);
+      if (!hasAccess) {
+        return;
+      }
     }
   }, [user, pathname, checkAdminAccess]);
+
+  // همگام‌سازی user state با session
+  useEffect(() => {
+    if (session?.user && !user) {
+      // اگر session داریم اما user state نداریم، آن را تنظیم کنیم
+      setUser({
+        id: session.user.telegramId,
+        first_name: session.user.firstName,
+        last_name: session.user.lastName,
+        username: session.user.username,
+      });
+    }
+  }, [session, user]);
 
   const sendData = useCallback((data: any) => {
     if (typeof window === "undefined") return;
@@ -194,14 +228,9 @@ export function useTelegram(): UseTelegramReturn {
     });
   }, []);
 
-  const isAdmin = useMemo(
-    () => user?.id === ADMIN_USER_ID,
-    [user, ADMIN_USER_ID],
-  );
-
   return {
     user,
-    loading,
+    loading: loading || status === "loading",
     error,
     isTelegram: isTelegramEnv,
     isAdmin,
@@ -211,7 +240,8 @@ export function useTelegram(): UseTelegramReturn {
     closeApp,
     showAlert,
     showConfirm,
-    checkAdminAccess: () => (user ? checkAdminAccess(user.id) : false),
+    checkAdminAccess: () => checkAdminAccess(user?.id),
     logout,
+    loginWithTelegram,
   };
 }
