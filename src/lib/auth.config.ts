@@ -40,6 +40,15 @@ declare module "next-auth/jwt" {
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 روز
+  },
+
+  jwt: {
+    maxAge: 30 * 24 * 60 * 60, // 30 روز - هماهنگ با session
+  },
+
   providers: [
     CredentialsProvider({
       id: "telegram",
@@ -53,13 +62,15 @@ export const authOptions: NextAuthOptions = {
 
       async authorize(credentials) {
         if (!credentials?.telegramId) {
-          throw new Error("Telegram ID الزامی است");
+          console.error("❌ Telegram ID ارائه نشده");
+          return null; // بهتر از throw Error است
         }
 
         const telegramId = parseInt(credentials.telegramId);
 
         if (isNaN(telegramId)) {
-          throw new Error("Telegram ID نامعتبر است");
+          console.error("❌ Telegram ID نامعتبر:", credentials.telegramId);
+          return null;
         }
 
         try {
@@ -77,6 +88,7 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!user) {
+            console.log("👤 ایجاد کاربر جدید:", telegramId);
             user = await prisma.user.create({
               data: {
                 telegramId,
@@ -95,6 +107,7 @@ export const authOptions: NextAuthOptions = {
               },
             });
           } else {
+            console.log("🔄 به‌روزرسانی کاربر موجود:", user.id);
             user = await prisma.user.update({
               where: { id: user.id },
               data: {
@@ -115,6 +128,8 @@ export const authOptions: NextAuthOptions = {
             });
           }
 
+          console.log("✅ کاربر احراز هویت شد:", user.id);
+
           return {
             id: user.id.toString(),
             telegramId: user.telegramId,
@@ -122,11 +137,11 @@ export const authOptions: NextAuthOptions = {
             firstName: user.firstName || undefined,
             lastName: user.lastName || undefined,
             email: user.email || undefined,
-            role: user.role || undefined,
+            role: user.role || "USER",
           };
         } catch (error) {
           console.error("❌ خطا در احراز هویت:", error);
-          throw new Error("خطا در احراز هویت");
+          return null;
         }
       },
     }),
@@ -134,12 +149,7 @@ export const authOptions: NextAuthOptions = {
 
   pages: {
     signIn: "/",
-    error: "/",
-  },
-
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 روز
+    error: "/auth/error",
   },
 
   callbacks: {
@@ -150,7 +160,7 @@ export const authOptions: NextAuthOptions = {
         token.username = user.username;
         token.firstName = user.firstName;
         token.lastName = user.lastName;
-        token.role = user.role;
+        token.role = user.role || "USER";
       }
 
       if (trigger === "update" && session) {
@@ -172,9 +182,31 @@ export const authOptions: NextAuthOptions = {
           role: token.role as string | undefined,
         };
       }
+
+      console.log("🔐 Session created for user:", session.user?.telegramId);
       return session;
+    },
+
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      else if (new URL(url).origin === baseUrl) return url;
+      return baseUrl;
     },
   },
 
   debug: process.env.NODE_ENV === "development",
+
+  logger: {
+    error(code, metadata) {
+      console.error(`NextAuth Error [${code}]:`, metadata);
+    },
+    warn(code) {
+      console.warn(`NextAuth Warning [${code}]`);
+    },
+    debug(code, metadata) {
+      if (process.env.NODE_ENV === "development") {
+        console.log(`NextAuth Debug [${code}]:`, metadata);
+      }
+    },
+  },
 };

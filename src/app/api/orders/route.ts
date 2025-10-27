@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth.config";
 const ADMIN_TELEGRAM_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID;
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
+// دریافت لیست سفارشات کاربر
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -39,11 +40,7 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(orders, {
-      headers: {
-        "Cache-Control": "public, max-age=60, stale-while-revalidate=30",
-      },
-    });
+    return NextResponse.json(orders);
   } catch (error) {
     console.error("❌ Error fetching orders:", error);
     return NextResponse.json(
@@ -53,6 +50,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// ایجاد سفارش جدید
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);

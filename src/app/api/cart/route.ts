@@ -3,37 +3,21 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 
-/**
- * Get authenticated user from NextAuth session
- */
-async function getAuthenticatedUser(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.id) {
-    return null;
-  }
-
-  return {
-    id: parseInt(session.user.id),
-    telegramId: session.user.telegramId,
-    email: session.user.email,
-    role: session.user.role,
-  };
-}
-
 export async function GET(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req);
+    const session = await getServerSession(authOptions);
 
-    if (!user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "لطفاً وارد سیستم شوید" },
         { status: 401 },
       );
     }
 
+    const userId = parseInt(session.user.id);
+
     const cartItems = await prisma.cartItem.findMany({
-      where: { userId: user.id },
+      where: { userId },
       include: {
         product: {
           include: {
@@ -47,11 +31,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(cartItems, {
-      headers: {
-        "Cache-Control": "public, max-age=60, stale-while-revalidate=30",
-      },
-    });
+    return NextResponse.json(cartItems);
   } catch (err) {
     console.error("GET /api/cart error:", err);
     return NextResponse.json(
@@ -63,15 +43,16 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req);
+    const session = await getServerSession(authOptions);
 
-    if (!user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "لطفاً وارد سیستم شوید" },
         { status: 401 },
       );
     }
 
+    const userId = parseInt(session.user.id);
     const { productId, quantity, color, size } = await req.json();
 
     if (!productId || !quantity) {
@@ -83,7 +64,7 @@ export async function POST(req: NextRequest) {
 
     const product = await prisma.product.findUnique({
       where: { id: productId },
-      select: { id: true, isActive: true },
+      select: { id: true, isActive: true, stock: true },
     });
 
     if (!product) {
@@ -94,10 +75,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "محصول غیرفعال است" }, { status: 400 });
     }
 
+    // بررسی موجودی
+    if (product.stock < quantity) {
+      return NextResponse.json(
+        { error: `موجودی محصول کافی نیست (موجودی: ${product.stock})` },
+        { status: 400 },
+      );
+    }
+
     // Find existing item with same product, color, and size
     const existing = await prisma.cartItem.findFirst({
       where: {
-        userId: user.id,
+        userId,
         productId,
         color: color || null,
         size: size || null,
@@ -125,7 +114,7 @@ export async function POST(req: NextRequest) {
 
     const newItem = await prisma.cartItem.create({
       data: {
-        userId: user.id,
+        userId,
         productId,
         quantity,
         color: color || null,
@@ -156,40 +145,34 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req);
+    const session = await getServerSession(authOptions);
 
-    if (!user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "لطفاً وارد سیستم شوید" },
         { status: 401 },
       );
     }
 
+    const userId = parseInt(session.user.id);
     const { cartItemId, quantity } = await req.json();
-    const itemId = Number(cartItemId);
-    const itemQuantity = Number(quantity);
 
-    if (
-      !cartItemId ||
-      quantity == null ||
-      isNaN(itemId) ||
-      isNaN(itemQuantity)
-    ) {
+    if (!cartItemId || quantity === undefined) {
       return NextResponse.json(
-        { error: "cartItemId یا quantity نامعتبر است" },
+        { error: "cartItemId و quantity الزامی هستند" },
         { status: 400 },
       );
     }
 
-    if (itemQuantity <= 0) {
+    if (quantity <= 0) {
       return NextResponse.json(
         { error: "تعداد باید بیشتر از 0 باشد" },
         { status: 400 },
       );
     }
 
-    const existingItem = await prisma.cartItem.findUnique({
-      where: { id: itemId },
+    const existingItem = await prisma.cartItem.findFirst({
+      where: { id: cartItemId, userId },
     });
 
     if (!existingItem) {
@@ -199,16 +182,9 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    if (existingItem.userId !== user.id) {
-      return NextResponse.json(
-        { error: "شما دسترسی به این آیتم ندارید" },
-        { status: 403 },
-      );
-    }
-
     const updatedItem = await prisma.cartItem.update({
-      where: { id: itemId },
-      data: { quantity: itemQuantity },
+      where: { id: cartItemId },
+      data: { quantity },
       include: {
         product: {
           include: {
@@ -234,36 +210,30 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req);
+    const session = await getServerSession(authOptions);
 
-    if (!user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "لطفاً وارد سیستم شوید" },
         { status: 401 },
       );
     }
 
+    const userId = parseInt(session.user.id);
     const { searchParams } = new URL(req.url);
-    const cartItemIdParam = searchParams.get("id");
+    const cartItemId = searchParams.get("id");
 
-    if (!cartItemIdParam) {
+    if (!cartItemId) {
       return NextResponse.json(
         { error: "شناسه آیتم الزامی است" },
         { status: 400 },
       );
     }
 
-    const cartItemId = Number(cartItemIdParam);
+    const cartItemIdNum = parseInt(cartItemId);
 
-    if (isNaN(cartItemId)) {
-      return NextResponse.json(
-        { error: "شناسه آیتم نامعتبر است" },
-        { status: 400 },
-      );
-    }
-
-    const existingItem = await prisma.cartItem.findUnique({
-      where: { id: cartItemId },
+    const existingItem = await prisma.cartItem.findFirst({
+      where: { id: cartItemIdNum, userId },
     });
 
     if (!existingItem) {
@@ -273,20 +243,15 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    if (existingItem.userId !== user.id) {
-      return NextResponse.json(
-        { error: "شما دسترسی به این آیتم ندارید" },
-        { status: 403 },
-      );
-    }
-
-    await prisma.cartItem.delete({ where: { id: cartItemId } });
+    await prisma.cartItem.delete({
+      where: { id: cartItemIdNum },
+    });
 
     return NextResponse.json({
       success: true,
       message: "آیتم با موفقیت حذف شد",
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error("DELETE /api/cart error:", err);
     return NextResponse.json(
       { error: "خطا در حذف از سبد خرید" },

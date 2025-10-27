@@ -10,6 +10,7 @@ import CheckoutModal from "@/components/CheckoutModal";
 
 interface CartItemType {
   id: number;
+  productId: number;
   name: string;
   brand?: string;
   price: number;
@@ -17,21 +18,11 @@ interface CartItemType {
   size?: string;
   color?: string;
   image?: string;
-  product?: {
-    variants?: { images?: { url: string }[] }[];
-  };
-}
-
-interface TelegramUserType {
-  id?: number;
-  username?: string;
 }
 
 interface CheckoutCustomer {
   name: string;
   phone: string;
-  orderId?: number;
-  trackingCode?: string;
 }
 
 const formatQuantity = (quantity: number) =>
@@ -50,8 +41,8 @@ const calculateFinalAmount = (
 interface CartItemCardProps {
   item: CartItemType;
   loading: boolean;
-  onUpdateQuantity: (item: CartItemType, quantity: number) => void;
-  onRemove: (item: CartItemType) => void;
+  onUpdateQuantity: (itemId: number, quantity: number) => void;
+  onRemove: (itemId: number) => void;
 }
 
 const CartItemCard = ({
@@ -164,7 +155,7 @@ const CartItemCard = ({
             <button
               onClick={() =>
                 onUpdateQuantity(
-                  item,
+                  item.id,
                   Math.max(0, item.quantity - quantityIncrement),
                 )
               }
@@ -178,7 +169,7 @@ const CartItemCard = ({
             </span>
             <button
               onClick={() =>
-                onUpdateQuantity(item, item.quantity + quantityIncrement)
+                onUpdateQuantity(item.id, item.quantity + quantityIncrement)
               }
               disabled={loading}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-600 transition hover:bg-white hover:text-gray-800 disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
@@ -192,7 +183,7 @@ const CartItemCard = ({
         </div>
 
         <button
-          onClick={() => onRemove(item)}
+          onClick={() => onRemove(item.id)}
           disabled={loading}
           className="rounded-lg p-2 text-red-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
         >
@@ -210,26 +201,27 @@ const CartItemCard = ({
 };
 
 const CartPage = () => {
-  const { cartItems, removeItem, updateItemQuantity, checkout, loading } =
-    useCart();
+  const {
+    cartItems,
+    removeItem,
+    updateItemQuantity,
+    checkout,
+    loading,
+    isAuthenticated,
+  } = useCart();
   const { showToast } = useToast();
   const { user: telegramUser, sendData, isTelegram } = useTelegram();
-  const defaultUser = {
-    id: telegramUser?.id || "guest",
-    username: telegramUser?.username || "کاربر مهمان",
-    first_name: telegramUser?.first_name || "کاربر",
-    last_name: telegramUser?.last_name || "",
-  };
 
   const [modalOpen, setModalOpen] = useState(false);
 
-  const handleRemove = async (item: CartItemType) => {
+  const handleRemove = async (itemId: number) => {
     if (loading) return;
+
     showToast({
-      message: `آیا از حذف ${item.name} مطمئن هستید؟`,
+      message: "آیا از حذف این محصول مطمئن هستید؟",
       type: "warning",
       action: async () => {
-        const success = await removeItem(item.id);
+        const success = await removeItem(itemId);
         showToast({
           message: success ? "محصول حذف شد" : "خطا در حذف محصول",
           type: success ? "success" : "error",
@@ -240,16 +232,28 @@ const CartPage = () => {
     });
   };
 
-  const handleUpdateQuantity = async (
-    item: CartItemType,
-    newQuantity: number,
-  ) => {
+  const handleUpdateQuantity = async (itemId: number, newQuantity: number) => {
     if (loading) return;
-    if (newQuantity <= 0) return handleRemove(item);
-    await updateItemQuantity(item.id, newQuantity);
+    if (newQuantity <= 0) return handleRemove(itemId);
+
+    const success = await updateItemQuantity(itemId, newQuantity);
+    if (!success) {
+      showToast({
+        message: "خطا در به‌روزرسانی تعداد",
+        type: "error",
+      });
+    }
   };
 
   const handleConfirmOrder = async (customer: CheckoutCustomer) => {
+    if (!isAuthenticated) {
+      showToast({
+        message: "لطفاً برای ثبت سفارش وارد شوید",
+        type: "error",
+      });
+      return;
+    }
+
     const finalAmount = calculateFinalAmount(
       cartItems,
       2500,
@@ -257,30 +261,33 @@ const CartPage = () => {
       isTelegram ? 1000 : 0,
     );
 
-    const orderData = {
-      ...customer,
-      telegramUserId: telegramUser?.id,
-      telegramUsername: telegramUser?.username,
-      items: cartItems,
-      totalAmount: finalAmount,
-    };
+    const success = await checkout(customer);
 
-    const success = await checkout(orderData);
-    showToast({
-      message: success
-        ? `سفارش با موفقیت ثبت شد! کد پیگیری: ${customer.trackingCode || "در حال پردازش"}`
-        : "خطا در ثبت سفارش",
-      type: success ? "success" : "error",
-    });
+    if (success) {
+      showToast({
+        message: "سفارش با موفقیت ثبت شد!",
+        type: "success",
+      });
 
-    if (success && isTelegram) {
-      sendData({ action: "order_created", order: orderData, success: true });
+      if (isTelegram) {
+        sendData({
+          action: "order_created",
+          items: cartItems.length,
+          total: finalAmount,
+          success: true,
+        });
+      }
+
+      setModalOpen(false);
+    } else {
+      showToast({
+        message: "خطا در ثبت سفارش",
+        type: "error",
+      });
     }
-
-    if (success) setModalOpen(false);
   };
 
-  if (cartItems.length === 0)
+  if (cartItems.length === 0) {
     return (
       <div className="safe-area-bottom flex min-h-screen items-center justify-center bg-gray-200 dark:bg-gray-900">
         <div className="px-4 text-center">
@@ -299,6 +306,7 @@ const CartPage = () => {
         </div>
       </div>
     );
+  }
 
   const total = calculateTotal(cartItems);
   const discount = 2500;

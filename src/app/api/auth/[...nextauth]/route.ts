@@ -44,6 +44,16 @@ declare module "next-auth/jwt" {
 const handler = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
 
+  // اضافه کردن این برای رفع خطای JWT
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 روز
+  },
+
+  jwt: {
+    maxAge: 30 * 24 * 60 * 60, // هماهنگ با session
+  },
+
   providers: [
     CredentialsProvider({
       id: "telegram",
@@ -57,13 +67,15 @@ const handler = NextAuth({
 
       async authorize(credentials) {
         if (!credentials?.telegramId) {
-          throw new Error("Telegram ID الزامی است");
+          console.error("❌ Telegram ID ارائه نشده");
+          return null; // تغییر از throw Error به return null
         }
 
         const telegramId = parseInt(credentials.telegramId);
 
         if (isNaN(telegramId)) {
-          throw new Error("Telegram ID نامعتبر است");
+          console.error("❌ Telegram ID نامعتبر:", credentials.telegramId);
+          return null;
         }
 
         try {
@@ -126,11 +138,11 @@ const handler = NextAuth({
             firstName: user.firstName || undefined,
             lastName: user.lastName || undefined,
             email: user.email || undefined,
-            role: user.role || undefined,
+            role: user.role || "USER", // مقدار پیش‌فرض اضافه شد
           };
         } catch (error) {
           console.error("❌ خطا در احراز هویت:", error);
-          throw new Error("خطا در احراز هویت");
+          return null; // تغییر از throw Error به return null
         }
       },
     }),
@@ -141,11 +153,6 @@ const handler = NextAuth({
     error: "/",
   },
 
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 روز
-  },
-
   callbacks: {
     async jwt({ token, user, trigger, session }) {
       if (user) {
@@ -154,7 +161,7 @@ const handler = NextAuth({
         token.username = user.username;
         token.firstName = user.firstName;
         token.lastName = user.lastName;
-        token.role = user.role;
+        token.role = user.role || "USER";
       }
 
       if (trigger === "update" && session) {
