@@ -92,9 +92,15 @@ const OrdersPage = () => {
     async function fetchOrders() {
       try {
         setLoading(true);
+        console.log("🔄 در حال دریافت سفارشات...");
+
         const res = await fetch("/api/orders");
+        console.log("📡 وضعیت پاسخ:", res.status);
 
         if (!res.ok) {
+          const errorText = await res.text();
+          console.error("❌ خطا در پاسخ:", errorText);
+
           if (res.status === 401) {
             throw new Error("لطفاً وارد سیستم شوید");
           }
@@ -102,15 +108,15 @@ const OrdersPage = () => {
         }
 
         const data: Order[] = await res.json();
+        console.log("✅ سفارشات دریافت شد:", data.length);
         setOrders(data);
       } catch (err: any) {
-        console.error("Error fetching orders:", err);
+        console.error("❌ Error fetching orders:", err);
         setError(err.message || "خطا در دریافت سفارشات");
       } finally {
         setLoading(false);
       }
     }
-
     fetchOrders();
   }, [status]);
 
