@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken, getTokenFromCookie } from "@/lib/jwt";
+import { getToken } from "next-auth/jwt";
 
 const protectedRoutes = ["/admin", "/profile", "/cart", "/order"];
 const adminRoutes = ["/admin"];
@@ -10,41 +10,47 @@ export async function middleware(req: NextRequest) {
   const isProtected = protectedRoutes.some((route) =>
     pathname.startsWith(route),
   );
-  const isAdmin = adminRoutes.some((route) => pathname.startsWith(route));
+  const isAdminRoute = adminRoutes.some((route) => pathname.startsWith(route));
 
+  // اگر مسیر محافظت شده نیست، اجازه دسترسی بده
   if (!isProtected) {
     return NextResponse.next();
   }
 
-  const cookieHeader = req.headers.get("cookie");
-  const token = getTokenFromCookie(cookieHeader);
+  try {
+    // دریافت توکن از NextAuth
+    const token = await getToken({
+      req,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
 
-  if (!token) {
-    console.log("❌ توکن موجود نیست - redirect به /");
-    return NextResponse.redirect(new URL("/", req.url));
-  }
-
-  const payload = await verifyToken(token);
-
-  if (!payload) {
-    console.log("❌ توکن نامعتبر - redirect به /");
-    return NextResponse.redirect(new URL("/", req.url));
-  }
-
-  if (isAdmin) {
-    const adminId = parseInt(
-      process.env.NEXT_PUBLIC_ADMIN_USER_ID || "697803275",
-    );
-
-    if (payload.telegramId !== adminId) {
-      return NextResponse.redirect(new URL("/access-denied", req.url));
+    // اگر توکن وجود ندارد یا کاربر لاگین نکرده
+    if (!token) {
+      console.log("❌ کاربر لاگین نکرده - redirect به /");
+      return NextResponse.redirect(new URL("/", req.url));
     }
-  }
 
-  console.log("✅ دسترسی مجاز:", pathname);
-  return NextResponse.next();
+    // اگر مسیر ادمین است، بررسی دسترسی
+    if (isAdminRoute) {
+      const isAdmin =
+        token.role === "ADMIN" ||
+        token.telegramId ===
+          parseInt(process.env.NEXT_PUBLIC_ADMIN_USER_ID || "697803275");
+
+      if (!isAdmin) {
+        console.log("🚫 دسترسی غیرمجاز به ادمین - redirect به /access-denied");
+        return NextResponse.redirect(new URL("/access-denied", req.url));
+      }
+    }
+
+    console.log("✅ دسترسی مجاز:", pathname, "کاربر:", token.telegramId);
+    return NextResponse.next();
+  } catch (error) {
+    console.error("❌ خطا در middleware:", error);
+    return NextResponse.redirect(new URL("/", req.url));
+  }
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/profile/:path*", "/cart", "/order"],
+  matcher: ["/admin/:path*", "/profile/:path*", "/cart", "/order", "/checkout"],
 };
