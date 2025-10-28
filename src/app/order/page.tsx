@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 
 interface Product {
   id: number;
@@ -31,6 +29,7 @@ interface Order {
   items: OrderItem[];
 }
 
+// تبدیل وضعیت سفارش به label، رنگ و آیکون
 const getStatusInfo = (status: string) => {
   const statusMap: Record<
     string,
@@ -73,24 +72,17 @@ const OrdersPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { data: session, status } = useSession();
-  const router = useRouter();
+  // شبیه‌سازی auth (حالا true هست، می‌تونی به دلخواه تغییر بدی)
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
 
-  // اگر session آماده است و کاربر لاگین نیست، ری‌دایرکت شو
+  // fetch سفارشات
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
-    }
-  }, [status, router]);
-
-  // بارگذاری سفارشات فقط وقتی کاربر احراز هویت شده
-  useEffect(() => {
-    if (status !== "authenticated") return;
+    if (!isAuthenticated) return;
 
     const fetchOrders = async () => {
       try {
         setLoading(true);
-        const res = await fetch("/api/orders");
+        const res = await fetch("/api/orders"); // مسیر API سفارشات
         if (!res.ok) throw new Error("خطا در دریافت سفارشات");
         const data: Order[] = await res.json();
         setOrders(data);
@@ -102,32 +94,30 @@ const OrdersPage = () => {
     };
 
     fetchOrders();
-  }, [status]);
+  }, [isAuthenticated]);
 
-  if (status === "loading" || loading) {
+  if (!isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent"></div>
-          <p className="text-gray-600 dark:text-gray-400">در حال بارگذاری...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (status === "unauthenticated") {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <p className="mb-4 text-red-500">
-            لطفاً برای مشاهده سفارشات وارد شوید
-          </p>
+          <p className="mb-4 text-red-500">لطفاً وارد سیستم شوید</p>
           <Link
             href="/"
             className="rounded-full bg-cyan-500 px-6 py-2 text-white transition hover:bg-cyan-600"
           >
             بازگشت به صفحه اصلی
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent"></div>
+          <p className="text-gray-600 dark:text-gray-400">در حال بارگذاری...</p>
         </div>
       </div>
     );
@@ -149,7 +139,7 @@ const OrdersPage = () => {
     );
   }
 
-  if (!orders || orders.length === 0) {
+  if (!orders.length) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
@@ -186,6 +176,7 @@ const OrdersPage = () => {
                 key={order.id}
                 className="rounded-2xl bg-white p-6 shadow-sm transition hover:shadow-md dark:bg-gray-800 dark:hover:shadow-lg"
               >
+                {/* هدر سفارش */}
                 <div className="mb-4 flex items-center justify-between">
                   <div>
                     <h2 className="font-bold text-gray-900 dark:text-white">
@@ -203,6 +194,8 @@ const OrdersPage = () => {
                     {statusInfo.icon} {statusInfo.label}
                   </span>
                 </div>
+
+                {/* تاریخ سفارش */}
                 <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
                   {new Date(order.createdAt).toLocaleDateString("fa-IR", {
                     year: "numeric",
@@ -215,6 +208,8 @@ const OrdersPage = () => {
                     minute: "2-digit",
                   })}
                 </p>
+
+                {/* محصولات */}
                 <div className="mb-4">
                   <h3 className="mb-3 font-semibold text-gray-900 dark:text-white">
                     محصولات:
@@ -254,6 +249,7 @@ const OrdersPage = () => {
                     ))}
                   </ul>
                 </div>
+
                 <div className="flex items-center justify-between border-t border-gray-200 pt-4 dark:border-gray-700">
                   <span className="font-bold text-gray-900 dark:text-white">
                     جمع کل:
