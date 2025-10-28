@@ -1,28 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // استفاده از authOptions خودت
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const body = await req.json();
+    const telegramId = body.telegramId;
 
-    if (!session?.user?.id) {
+    if (!telegramId) {
       return NextResponse.json(
-        { error: "لطفاً وارد سیستم شوید" },
-        { status: 401 },
+        { error: "telegramId الزامی است" },
+        { status: 400 },
       );
     }
 
-    const userId = parseInt(session.user.id);
-
-    await prisma.cartItem.deleteMany({
-      where: { userId },
+    const deleted = await prisma.cartItem.deleteMany({
+      where: {
+        user: {
+          telegramId: Number(telegramId),
+        },
+      },
     });
 
     return NextResponse.json({
       success: true,
-      message: "سبد خرید با موفقیت پاک شد",
+      message: `سبد خرید با موفقیت پاک شد (${deleted.count} آیتم حذف شد)`,
     });
   } catch (err: any) {
     console.error("POST /api/cart/clear error:", err);
