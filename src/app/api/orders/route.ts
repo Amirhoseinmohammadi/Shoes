@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth.config";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 const ADMIN_TELEGRAM_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID;
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;

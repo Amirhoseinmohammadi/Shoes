@@ -1,3 +1,4 @@
+// src/app/api/auth/[...nextauth]/route.ts
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
@@ -38,30 +39,16 @@ declare module "next-auth/jwt" {
   }
 }
 
-const handler = NextAuth({
+export const authOptions = {
   secret: process.env.NEXTAUTH_SECRET,
-
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 روز
-  },
-
-  jwt: {
-    maxAge: 30 * 24 * 60 * 60,
-  },
-
+  session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
+  jwt: { maxAge: 30 * 24 * 60 * 60 },
   cookies: {
     sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "none", // مهم برای WebApp تلگرام
-        path: "/",
-        secure: true, // فقط https
-      },
+      name: "next-auth.session-token",
+      options: { httpOnly: true, sameSite: "none", path: "/", secure: true },
     },
   },
-
   providers: [
     CredentialsProvider({
       id: "telegram",
@@ -72,10 +59,8 @@ const handler = NextAuth({
         lastName: { label: "نام خانوادگی", type: "text" },
         username: { label: "نام کاربری", type: "text" },
       },
-
       async authorize(credentials) {
         if (!credentials?.telegramId) return null;
-
         const telegramId = parseInt(credentials.telegramId);
         if (isNaN(telegramId)) return null;
 
@@ -92,7 +77,6 @@ const handler = NextAuth({
           });
 
           if (!user) {
-            // ایجاد کاربر جدید با role
             user = await prisma.user.create({
               data: {
                 telegramId,
@@ -109,7 +93,6 @@ const handler = NextAuth({
               },
             });
           } else {
-            // آپدیت اطلاعات کاربر
             user = await prisma.user.update({
               where: { id: user.id },
               data: {
@@ -142,12 +125,7 @@ const handler = NextAuth({
       },
     }),
   ],
-
-  pages: {
-    signIn: "/",
-    error: "/",
-  },
-
+  pages: { signIn: "/", error: "/" },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -160,22 +138,21 @@ const handler = NextAuth({
       }
       return token;
     },
-
     async session({ session, token }) {
       if (token) {
         session.user = {
-          id: token.id as string,
-          telegramId: token.telegramId as number,
-          username: token.username as string | undefined,
-          firstName: token.firstName as string | undefined,
-          lastName: token.lastName as string | undefined,
+          id: token.id,
+          telegramId: token.telegramId,
+          username: token.username,
+          firstName: token.firstName,
+          lastName: token.lastName,
         };
       }
       return session;
     },
   },
-
   debug: process.env.NODE_ENV === "development",
-});
+};
 
+const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
