@@ -1,5 +1,6 @@
 "use client";
-import { usePathname } from "next/navigation";
+
+import { usePathname, useRouter } from "next/navigation";
 import { useCart } from "@/contexts/CartContext";
 
 import {
@@ -7,11 +8,11 @@ import {
   ShoppingCartIcon,
   BellIcon,
   UserIcon,
-  Cog6ToothIcon,
 } from "@heroicons/react/24/outline";
 
 export default function BottomNavigation() {
   const pathname = usePathname();
+  const router = useRouter();
   const { cartItems } = useCart();
 
   const navItems = [
@@ -38,6 +39,16 @@ export default function BottomNavigation() {
 
   const activeId = getActiveItem();
 
+  const navigate = (href: string) => {
+    if (typeof window === "undefined") return;
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg) {
+      window.location.href = href;
+    } else {
+      router.push(href);
+    }
+  };
+
   return (
     <div className="fixed right-0 bottom-0 left-0 z-50 rounded-t-3xl bg-gray-200 pt-4 shadow-[0_-6px_20px_rgba(0,0,0,0.2)] backdrop-blur-md dark:bg-gray-800">
       <div className="relative flex items-center justify-around px-4">
@@ -46,9 +57,9 @@ export default function BottomNavigation() {
           const isActive = item.id === activeId;
 
           return (
-            <a
+            <button
               key={item.id}
-              href={item.href}
+              onClick={() => navigate(item.href)}
               className={`relative flex flex-col items-center transition-all duration-300 ${
                 isActive
                   ? "text-cyan-600 dark:text-cyan-400"
@@ -75,23 +86,18 @@ export default function BottomNavigation() {
                   isActive
                     ? "translate-y-0 opacity-100"
                     : "translate-y-2 opacity-0"
-                } ${isActive ? "text-cyan-600 dark:text-cyan-400" : "text-gray-600 dark:text-gray-400"}`}
+                } ${
+                  isActive
+                    ? "text-cyan-600 dark:text-cyan-400"
+                    : "text-gray-600 dark:text-gray-400"
+                }`}
               >
                 {item.label}
               </span>
-            </a>
+            </button>
           );
         })}
       </div>
-
-      <style jsx>{`
-        a {
-          transform-origin: center;
-        }
-        a.active {
-          transform: translateY(-8px);
-        }
-      `}</style>
     </div>
   );
 }
