@@ -31,7 +31,6 @@ interface Order {
   items: OrderItem[];
 }
 
-// تابع کمکی برای تبدیل وضعیت سفارش به label و رنگ
 const getStatusInfo = (status: string) => {
   const statusMap: Record<
     string,
@@ -77,50 +76,35 @@ const OrdersPage = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  // بررسی احراز هویت
+  // اگر session آماده است و کاربر لاگین نیست، ری‌دایرکت شو
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/");
-      return;
     }
   }, [status, router]);
 
-  // بارگذاری سفارشات از API
+  // بارگذاری سفارشات فقط وقتی کاربر احراز هویت شده
   useEffect(() => {
     if (status !== "authenticated") return;
 
-    async function fetchOrders() {
+    const fetchOrders = async () => {
       try {
         setLoading(true);
-        console.log("🔄 در حال دریافت سفارشات...");
-
         const res = await fetch("/api/orders");
-        console.log("📡 وضعیت پاسخ:", res.status);
-
-        if (!res.ok) {
-          const errorText = await res.text();
-          console.error("❌ خطا در پاسخ:", errorText);
-
-          if (res.status === 401) {
-            throw new Error("لطفاً وارد سیستم شوید");
-          }
-          throw new Error("خطا در دریافت سفارشات");
-        }
-
+        if (!res.ok) throw new Error("خطا در دریافت سفارشات");
         const data: Order[] = await res.json();
-        console.log("✅ سفارشات دریافت شد:", data.length);
         setOrders(data);
       } catch (err: any) {
-        console.error("❌ Error fetching orders:", err);
         setError(err.message || "خطا در دریافت سفارشات");
       } finally {
         setLoading(false);
       }
-    }
+    };
+
     fetchOrders();
   }, [status]);
 
-  if (status === "loading") {
+  if (status === "loading" || loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
@@ -144,35 +128,6 @@ const OrdersPage = () => {
           >
             بازگشت به صفحه اصلی
           </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-4 dark:bg-gray-900">
-        <div className="mx-auto max-w-2xl">
-          <h1 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">
-            سفارشات من
-          </h1>
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="animate-pulse rounded-xl bg-white p-4 shadow dark:bg-gray-800"
-              >
-                <div className="mb-3 flex items-center justify-between">
-                  <div className="h-6 w-1/4 rounded bg-gray-200 dark:bg-gray-700"></div>
-                  <div className="h-6 w-1/4 rounded bg-gray-200 dark:bg-gray-700"></div>
-                </div>
-                <div className="space-y-2">
-                  <div className="h-4 rounded bg-gray-200 dark:bg-gray-700"></div>
-                  <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-700"></div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     );
@@ -222,7 +177,6 @@ const OrdersPage = () => {
         <h1 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">
           سفارشات من ({orders.length})
         </h1>
-
         <div className="space-y-4">
           {orders.map((order) => {
             const statusInfo = getStatusInfo(order.status);
@@ -232,7 +186,6 @@ const OrdersPage = () => {
                 key={order.id}
                 className="rounded-2xl bg-white p-6 shadow-sm transition hover:shadow-md dark:bg-gray-800 dark:hover:shadow-lg"
               >
-                {/* هدر سفارش */}
                 <div className="mb-4 flex items-center justify-between">
                   <div>
                     <h2 className="font-bold text-gray-900 dark:text-white">
@@ -250,8 +203,6 @@ const OrdersPage = () => {
                     {statusInfo.icon} {statusInfo.label}
                   </span>
                 </div>
-
-                {/* تاریخ سفارش */}
                 <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
                   {new Date(order.createdAt).toLocaleDateString("fa-IR", {
                     year: "numeric",
@@ -264,8 +215,6 @@ const OrdersPage = () => {
                     minute: "2-digit",
                   })}
                 </p>
-
-                {/* محصولات */}
                 <div className="mb-4">
                   <h3 className="mb-3 font-semibold text-gray-900 dark:text-white">
                     محصولات:
@@ -305,7 +254,6 @@ const OrdersPage = () => {
                     ))}
                   </ul>
                 </div>
-
                 <div className="flex items-center justify-between border-t border-gray-200 pt-4 dark:border-gray-700">
                   <span className="font-bold text-gray-900 dark:text-white">
                     جمع کل:
