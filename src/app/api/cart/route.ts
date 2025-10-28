@@ -1,32 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-async function getUserId() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+// تابع کمکی برای گرفتن آیدی کاربر از درخواست
+async function getUserId(req: NextRequest) {
+  try {
+    // تلاش می‌کنیم از body یا query string بگیریم
+    const { telegramId } = await req.json().catch(() => ({}));
+    const url = new URL(req.url);
+    const queryTelegramId = url.searchParams.get("telegramId");
+
+    const id = telegramId || queryTelegramId;
+    return id ? parseInt(id) : null;
+  } catch {
     return null;
   }
-  return parseInt(session.user.id);
 }
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = await getUserId();
+    const userId = await getUserId(req);
     if (!userId)
-      return NextResponse.json(
-        { error: "لطفاً وارد سیستم شوید" },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: "کاربر شناسایی نشد" }, { status: 401 });
 
     const cartItems = await prisma.cartItem.findMany({
       where: { userId },
       include: {
         product: {
-          include: {
-            variants: { include: { images: true } },
-          },
+          include: { variants: { include: { images: true } } },
         },
       },
     });
@@ -43,19 +43,21 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await getUserId();
-    if (!userId)
+    const { telegramId, productId, quantity, color, size } = await req.json();
+
+    if (!telegramId)
       return NextResponse.json(
-        { error: "لطفاً وارد سیستم شوید" },
+        { error: "شناسه کاربر الزامی است" },
         { status: 401 },
       );
 
-    const { productId, quantity, color, size } = await req.json();
     if (!productId || !quantity)
       return NextResponse.json(
         { error: "productId و quantity الزامی هستند" },
         { status: 400 },
       );
+
+    const userId = parseInt(telegramId);
 
     const product = await prisma.product.findUnique({
       where: { id: productId },
@@ -111,33 +113,26 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const userId = await getUserId();
-    if (!userId)
+    const { telegramId, cartItemId, quantity } = await req.json();
+
+    if (!telegramId)
       return NextResponse.json(
-        { error: "لطفاً وارد سیستم شوید" },
+        { error: "شناسه کاربر الزامی است" },
         { status: 401 },
       );
-
-    const { cartItemId, quantity } = await req.json();
     if (!cartItemId || quantity === undefined)
       return NextResponse.json(
         { error: "cartItemId و quantity الزامی هستند" },
         { status: 400 },
       );
-    if (quantity <= 0)
-      return NextResponse.json(
-        { error: "تعداد باید بیشتر از 0 باشد" },
-        { status: 400 },
-      );
+
+    const userId = parseInt(telegramId);
 
     const existingItem = await prisma.cartItem.findFirst({
       where: { id: cartItemId, userId },
     });
     if (!existingItem)
-      return NextResponse.json(
-        { error: "آیتم سبد خرید یافت نشد" },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "آیتم یافت نشد" }, { status: 404 });
 
     const updatedItem = await prisma.cartItem.update({
       where: { id: cartItemId },
@@ -159,37 +154,33 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const userId = await getUserId();
-    if (!userId)
+    const url = new URL(req.url);
+    const telegramId = url.searchParams.get("telegramId");
+    const cartItemId = url.searchParams.get("id");
+
+    if (!telegramId)
       return NextResponse.json(
-        { error: "لطفاً وارد سیستم شوید" },
+        { error: "شناسه کاربر الزامی است" },
         { status: 401 },
       );
-
-    const { searchParams } = new URL(req.url);
-    const cartItemId = searchParams.get("id");
     if (!cartItemId)
       return NextResponse.json(
         { error: "شناسه آیتم الزامی است" },
         { status: 400 },
       );
 
-    const cartItemIdNum = parseInt(cartItemId);
+    const userId = parseInt(telegramId);
+    const id = parseInt(cartItemId);
+
     const existingItem = await prisma.cartItem.findFirst({
-      where: { id: cartItemIdNum, userId },
+      where: { id, userId },
     });
     if (!existingItem)
-      return NextResponse.json(
-        { error: "آیتم سبد خرید یافت نشد" },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "آیتم یافت نشد" }, { status: 404 });
 
-    await prisma.cartItem.delete({ where: { id: cartItemIdNum } });
+    await prisma.cartItem.delete({ where: { id } });
 
-    return NextResponse.json({
-      success: true,
-      message: "آیتم با موفقیت حذف شد",
-    });
+    return NextResponse.json({ success: true, message: "آیتم حذف شد" });
   } catch (err) {
     console.error("DELETE /api/cart error:", err);
     return NextResponse.json(

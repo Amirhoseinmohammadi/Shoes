@@ -38,19 +38,7 @@ const calculateFinalAmount = (
   telegramDiscount = 0,
 ) => calculateTotal(items) - discount - telegramDiscount + tax;
 
-interface CartItemCardProps {
-  item: CartItemType;
-  loading: boolean;
-  onUpdateQuantity: (itemId: number, quantity: number) => void;
-  onRemove: (itemId: number) => void;
-}
-
-const CartItemCard = ({
-  item,
-  loading,
-  onUpdateQuantity,
-  onRemove,
-}: CartItemCardProps) => {
+const CartItemCard = ({ item, loading, onUpdateQuantity, onRemove }: any) => {
   const displayColor = (() => {
     switch (item.color) {
       case "سفید":
@@ -70,6 +58,7 @@ const CartItemCard = ({
 
   return (
     <div className="rounded-2xl bg-white p-4 shadow-sm transition hover:shadow-md dark:bg-gray-800 dark:hover:shadow-lg">
+      {/* تصویر و مشخصات */}
       <div className="mb-4 flex gap-4">
         <div className="flex-shrink-0">
           {item.image ? (
@@ -146,6 +135,7 @@ const CartItemCard = ({
         </div>
       </div>
 
+      {/* کنترل تعداد */}
       <div className="flex items-center justify-between border-t border-gray-200 pt-3 dark:border-gray-700">
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-700 dark:text-gray-300">
@@ -201,14 +191,8 @@ const CartItemCard = ({
 };
 
 const CartPage = () => {
-  const {
-    cartItems,
-    removeItem,
-    updateItemQuantity,
-    checkout,
-    loading,
-    isAuthenticated,
-  } = useCart();
+  const { cartItems, removeItem, updateItemQuantity, checkout, loading } =
+    useCart();
   const { showToast } = useToast();
   const { user: telegramUser, sendData, isTelegram } = useTelegram();
 
@@ -246,14 +230,6 @@ const CartPage = () => {
   };
 
   const handleConfirmOrder = async (customer: CheckoutCustomer) => {
-    if (!isAuthenticated) {
-      showToast({
-        message: "لطفاً برای ثبت سفارش وارد شوید",
-        type: "error",
-      });
-      return;
-    }
-
     const finalAmount = calculateFinalAmount(
       cartItems,
       2500,
@@ -287,6 +263,7 @@ const CartPage = () => {
     }
   };
 
+  // نمایش در صورت خالی بودن سبد
   if (cartItems.length === 0) {
     return (
       <div className="safe-area-bottom flex min-h-screen items-center justify-center bg-gray-200 dark:bg-gray-900">

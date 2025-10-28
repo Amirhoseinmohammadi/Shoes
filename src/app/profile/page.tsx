@@ -1,9 +1,7 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import ThemeToggler from "@/components/Header/ThemeToggler";
 import React, { useEffect } from "react";
 import {
@@ -15,6 +13,7 @@ import {
   FiTool,
   FiUser,
 } from "react-icons/fi";
+import { useTelegram } from "@/hooks/useTelegram";
 
 interface MenuItem {
   id: string;
@@ -27,25 +26,22 @@ interface MenuItem {
 }
 
 const ProfilePage = () => {
-  const { data: session, status } = useSession();
+  const { user: telegramUser, loading, isTelegram } = useTelegram();
   const router = useRouter();
 
-  // بررسی احراز هویت
+  // اگر از تلگرام باز نشده بود، هدایت به صفحه اصلی
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (!loading && !telegramUser) {
       router.push("/");
     }
-  }, [status, router]);
+  }, [loading, telegramUser, router]);
 
-  const handleLogout = async () => {
-    await signOut({
-      redirect: false,
-      callbackUrl: "/",
-    });
+  const handleLogout = () => {
+    // چون احراز هویت واقعی نداریم، فقط کاربر رو برمی‌گردونیم به صفحه اصلی
     router.push("/");
   };
 
-  if (status === "loading") {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
@@ -56,15 +52,15 @@ const ProfilePage = () => {
     );
   }
 
-  if (status === "unauthenticated" || !session?.user) {
+  if (!telegramUser) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="rounded-xl bg-white p-8 text-center shadow-2xl dark:bg-gray-800">
           <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">
-            ⚠️ لطفاً وارد شوید
+            ⚠️ لطفاً از طریق تلگرام وارد شوید
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            برای دسترسی به پروفایل، از طریق تلگرام وارد شوید.
+            این صفحه فقط در حالت وب‌اپ تلگرام فعال است.
           </p>
           <Link
             href="/"
@@ -77,8 +73,8 @@ const ProfilePage = () => {
     );
   }
 
-  const user = session.user;
-  const isAdmin = user.role === "ADMIN";
+  const user = telegramUser;
+  const isAdmin = user.id.toString() === process.env.NEXT_PUBLIC_ADMIN_USER_ID;
 
   const menuItems: MenuItem[] = [
     {
@@ -128,7 +124,7 @@ const ProfilePage = () => {
     {
       id: "logout",
       icon: <FiLogOut size={20} />,
-      label: "خروج از سیستم",
+      label: "خروج",
       action: handleLogout,
       color:
         "bg-orange-100 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400",
@@ -167,21 +163,18 @@ const ProfilePage = () => {
         {/* کارت اطلاعات کاربر */}
         <div className="flex items-center gap-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-cyan-600 p-6 text-white shadow-lg">
           <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white/40 bg-white/20 text-2xl font-bold">
-            {user.firstName ? user.firstName.charAt(0) : "U"}
+            {user.first_name?.charAt(0) || "U"}
           </div>
           <div className="flex-1">
             <h2 className="text-xl font-bold">
-              {user.firstName || "کاربر"} {user.lastName || ""}
+              {user.first_name} {user.last_name || ""}
             </h2>
             {user.username && (
               <p className="mt-1 text-sm text-cyan-100">@{user.username}</p>
             )}
-            {user.email && (
-              <p className="mt-1 text-sm text-cyan-100">{user.email}</p>
-            )}
             <div className="mt-2 flex flex-wrap gap-2">
               <span className="rounded-full bg-white/20 px-2 py-1 text-xs">
-                ID: {user.telegramId}
+                ID: {user.id}
               </span>
               {isAdmin && (
                 <span className="rounded-full bg-yellow-400 px-2 py-1 text-xs font-medium text-black">
@@ -189,7 +182,7 @@ const ProfilePage = () => {
                 </span>
               )}
               <span className="rounded-full bg-white/20 px-2 py-1 text-xs">
-                {user.role || "کاربر"}
+                کاربر تلگرام
               </span>
             </div>
           </div>
@@ -251,17 +244,17 @@ const ProfilePage = () => {
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">
-                شناسه تلگرام:
-              </span>
+              <span className="text-gray-600 dark:text-gray-400">نام:</span>
               <span className="font-medium text-gray-900 dark:text-white">
-                {user.telegramId}
+                {user.first_name} {user.last_name || ""}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">نقش:</span>
+              <span className="text-gray-600 dark:text-gray-400">
+                نام کاربری:
+              </span>
               <span className="font-medium text-gray-900 dark:text-white">
-                {user.role || "USER"}
+                @{user.username || "—"}
               </span>
             </div>
             <div className="flex justify-between">

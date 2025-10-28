@@ -2,8 +2,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 const ADMIN_TELEGRAM_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID;
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -21,25 +19,26 @@ interface OrderRequestBody {
   customerName: string;
   customerPhone: string;
   totalPrice?: number;
-  telegramData?: any;
+  telegramData?: any; // هر چیزی که از تلگرام فرستاده می‌شه
 }
 
-// -------------------- GET Orders --------------------
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
+    const telegramId = req.nextUrl.searchParams.get("telegramId");
+    if (!telegramId) {
       return NextResponse.json(
-        { success: false, error: "لطفاً وارد سیستم شوید" },
-        { status: 401 },
+        { success: false, error: "telegramId الزامی است" },
+        { status: 400 },
       );
     }
 
-    const userId = parseInt(session.user.id);
-
     const orders = await prisma.order.findMany({
-      where: { userId },
+      where: {
+        telegramData: {
+          path: ["id"], // فرض: telegramData = { id: number, ... }
+          equals: Number(telegramId),
+        },
+      },
       include: {
         items: {
           include: {
@@ -62,7 +61,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("❌ Error fetching orders:", error);
     return NextResponse.json(
-      { success: false, error: "خطا در دریافت سفارشات" },
+      { success: false, error: "خطا در دریافت سفارش‌ها" },
       { status: 500 },
     );
   }
@@ -71,16 +70,6 @@ export async function GET(req: NextRequest) {
 // -------------------- POST Create Order --------------------
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: "لطفاً وارد سیستم شوید" },
-        { status: 401 },
-      );
-    }
-
-    const userId = parseInt(session.user.id);
     const body: OrderRequestBody = await req.json();
     const { items, customerName, customerPhone, totalPrice, telegramData } =
       body;
@@ -126,15 +115,7 @@ export async function POST(req: NextRequest) {
     const productsMap = new Map(products.map((p) => [p.id, p]));
 
     for (const item of items) {
-      const product = productsMap.get(item.productId);
-      if (!product)
-        return NextResponse.json(
-          {
-            success: false,
-            error: `محصول با شناسه ${item.productId} یافت نشد`,
-          },
-          { status: 400 },
-        );
+      const product = productsMap.get(item.productId)!;
       if (!product.isActive)
         return NextResponse.json(
           { success: false, error: `محصول ${product.name} غیرفعال است` },
@@ -177,7 +158,6 @@ export async function POST(req: NextRequest) {
 
       const created = await tx.order.create({
         data: {
-          userId,
           status: "PENDING",
           total: totalPrice || calculatedTotal,
           customerName: customerName.trim(),
@@ -233,7 +213,6 @@ ${itemsList}
         await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          credentials: "include",
           body: JSON.stringify({ chat_id: ADMIN_TELEGRAM_ID, text: message }),
         });
       } catch (err) {

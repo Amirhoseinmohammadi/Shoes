@@ -1,7 +1,6 @@
 "use client";
 
 import { ReactNode } from "react";
-import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { CartProvider } from "@/contexts/CartContext";
@@ -30,23 +29,17 @@ export default function RootLayout({ children }: RootLayoutProps) {
         />
       </head>
       <body className="font-shabnam antialiased">
-        <SessionProvider
-          refetchInterval={5 * 60}
-          refetchOnWindowFocus
-          refetchWhenOffline={false}
-        >
-          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-            <ToastProvider>
-              <CartProvider>
-                <Header />
-                <main className="min-h-screen">
-                  <PageTransition>{children}</PageTransition>
-                </main>
-                <Footer />
-              </CartProvider>
-            </ToastProvider>
-          </ThemeProvider>
-        </SessionProvider>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <ToastProvider>
+            <CartProvider>
+              <Header />
+              <main className="min-h-screen">
+                <PageTransition>{children}</PageTransition>
+              </main>
+              <Footer />
+            </CartProvider>
+          </ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
