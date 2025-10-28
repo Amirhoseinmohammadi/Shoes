@@ -1,39 +1,96 @@
+// src/lib/api-client.ts
 const API_BASE = process.env.NEXT_PUBLIC_APP_URL || "";
 
 class ApiClient {
-  private async request(endpoint: string, options: RequestInit = {}) {
-    const base =
+  private getBase() {
+    return (
       API_BASE ||
       (typeof window !== "undefined"
         ? window.location.origin
-        : "http://localhost:3000");
-    const url = `${base}${endpoint}`;
+        : "http://localhost:3000")
+    );
+  }
+
+  private async request(
+    endpoint: string,
+    options: RequestInit = {},
+  ): Promise<any> {
+    const base = this.getBase();
+    // URL() handles trailing slashes and relative endpoints cleanly
+    const url = new URL(endpoint, base).toString();
+
+    // If caller passed a FormData body, do not set JSON content-type
+    const isFormData =
+      typeof (options as any).body !== "string" &&
+      typeof FormData !== "undefined"
+        ? (options as any).body instanceof FormData
+        : false;
+
+    const headers = {
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
+      ...(options.headers || {}),
+    };
 
     const config: RequestInit = {
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
-      credentials: "include",
       ...options,
+      headers,
+      // default to include cookies unless caller explicitly overrides
+      credentials: (options.credentials as RequestCredentials) ?? "include",
     };
 
     try {
-      console.log("🔄 Fetching from:", url);
+      // debug
+      // eslint-disable-next-line no-console
+      console.log("🔄 apiClient request:", {
+        url,
+        config: { ...config, body: !!config.body },
+      });
 
       const response = await fetch(url, config);
 
+      const contentType = response.headers.get("content-type") || "";
+
+      // If not ok, try to parse body for useful error info
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        let errorBody: any = null;
+        try {
+          if (contentType.includes("application/json")) {
+            errorBody = await response.json();
+          } else {
+            errorBody = await response.text();
+          }
+        } catch (e) {
+          // ignore parse errors
+        }
+
+        const message =
+          (errorBody && (errorBody.error || errorBody.message)) ||
+          response.statusText ||
+          `HTTP error ${response.status}`;
+
+        const err: any = new Error(message);
+        err.status = response.status;
+        err.body = errorBody;
+        throw err;
       }
 
-      return await response.json();
+      // No content
+      if (response.status === 204) return null;
+
+      // Return JSON when possible, else text
+      if (contentType.includes("application/json")) {
+        return await response.json();
+      }
+
+      return await response.text();
     } catch (error) {
-      console.error("❌ API Request failed for:", url, error);
+      // eslint-disable-next-line no-console
+      console.error("❌ apiClient request failed:", endpoint, error);
       throw error;
     }
   }
 
+  // --- auth
   auth = {
     login: (email: string, password: string) =>
       this.request("/api/auth/login", {
@@ -52,6 +109,7 @@ class ApiClient {
     getSession: () => this.request("/api/auth/session"),
   };
 
+  // --- users
   users = {
     getAll: () => this.request("/api/users"),
 
@@ -67,10 +125,11 @@ class ApiClient {
       this.request(`/api/users/${id}`, { method: "DELETE" }),
   };
 
+  // --- products
   products = {
     getAll: (category?: string) => {
       const url = category
-        ? `/api/products?category=${category}`
+        ? `/api/products?category=${encodeURIComponent(category)}`
         : "/api/products";
       return this.request(url);
     },
@@ -92,9 +151,11 @@ class ApiClient {
     delete: (id: number) =>
       this.request(`/api/products/${id}`, { method: "DELETE" }),
 
-    search: (query: string) => this.request(`/api/products/search?q=${query}`),
+    search: (query: string) =>
+      this.request(`/api/products/search?q=${encodeURIComponent(query)}`),
   };
 
+  // --- orders
   orders = {
     getAll: (userId?: number) => {
       const url = userId ? `/api/orders?userId=${userId}` : "/api/orders";
@@ -119,6 +180,7 @@ class ApiClient {
       this.request(`/api/orders/${id}`, { method: "DELETE" }),
   };
 
+  // --- categories
   categories = {
     getAll: () => this.request("/api/categories"),
 
@@ -157,3 +219,4 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient();
+export default apiClient;

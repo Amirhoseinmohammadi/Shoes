@@ -233,6 +233,7 @@ ${itemsList}
         await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ chat_id: ADMIN_TELEGRAM_ID, text: message }),
         });
       } catch (err) {

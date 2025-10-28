@@ -148,6 +148,7 @@ export default function EditProductPage() {
 
         const res = await fetch("/api/admin/upload", {
           method: "POST",
+          credentials: "include",
           body: formData,
         });
 
@@ -241,6 +242,7 @@ export default function EditProductPage() {
       const res = await fetch(`/api/admin/products/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(productData),
       });
 
@@ -271,6 +273,7 @@ export default function EditProductPage() {
     try {
       const res = await fetch(`/api/admin/products/${id}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
       if (!res.ok) {

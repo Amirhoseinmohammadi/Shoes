@@ -8,7 +8,7 @@ import {
   useEffect,
   useCallback,
 } from "react";
-import { useSession, getSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 
 export interface CartItem {
   id: number;
@@ -118,18 +118,23 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [cartItems, isAuthenticated]);
 
-  // Load cart from server with JWT
+  // Simple helper: always send cookies with fetch
+  const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+    return fetch(url, {
+      ...options,
+      // keep headers that caller passed, don't overwrite Content-Type blindly
+      headers: {
+        ...(options.headers || {}),
+      },
+      credentials: "include", // <- MOST IMPORTANT: send cookies
+    });
+  };
+
+  // Load cart from server
   const loadServerCart = async () => {
     setLoading(true);
     try {
-      const token = session?.user ? (await getSession())?.user?.id : null;
-
-      const res = await fetch("/api/cart", {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // اضافه کردن JWT
-        },
-      });
+      const res = await fetchWithAuth("/api/cart", { method: "GET" });
 
       if (res.ok) {
         const apiData = await res.json();
@@ -151,6 +156,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       } else if (res.status === 401) {
         console.log("کاربر احراز هویت نشده - استفاده از سبد خرید محلی");
         setCartItems(loadLocalCart());
+      } else {
+        console.error("خطای سرور هنگام بارگذاری سبد:", res.status);
+        setCartItems(loadLocalCart());
       }
     } catch (err) {
       console.error("❌ خطا در بارگذاری سبد خرید:", err);
@@ -160,21 +168,31 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Helper to send JWT in fetch
-  const fetchWithAuth = async (url: string, options: any = {}) => {
-    const token = session?.user ? (await getSession())?.user?.id : null;
-    return fetch(url, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        ...(options.headers || {}),
-      },
+  const addItemToLocalCart = (newItem: CartItem) => {
+    setCartItems((prev) => {
+      const existingIndex = prev.findIndex(
+        (item) =>
+          item.productId === newItem.productId &&
+          item.color === newItem.color &&
+          item.size === newItem.size,
+      );
+
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex].quantity += newItem.quantity;
+        return updated;
+      }
+
+      return [...prev, newItem];
     });
   };
 
-  // Add, remove, update, checkout - استفاده از fetchWithAuth
-  const addItem = async ({ shoe, quantity, color, size }: AddItemParams) => {
+  const addItem = async ({
+    shoe,
+    quantity,
+    color,
+    size,
+  }: AddItemParams): Promise<boolean> => {
     const temporaryId = Date.now();
     const newItem: CartItem = {
       id: temporaryId,
@@ -193,64 +211,92 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       try {
         const res = await fetchWithAuth("/api/cart", {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ productId: shoe.id, quantity, color, size }),
         });
 
-        if (!res.ok) throw new Error("خطا در افزودن به سبد");
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.error || "خطا در افزودن به سبد");
+        }
 
         const serverItem = await res.json();
-        setCartItems((prev) => [...prev, { ...newItem, id: serverItem.id }]);
+
+        setCartItems((prev) => {
+          const existingIndex = prev.findIndex(
+            (item) =>
+              item.productId === shoe.id &&
+              item.color === color &&
+              item.size === size,
+          );
+
+          if (existingIndex >= 0) {
+            const updated = [...prev];
+            updated[existingIndex] = {
+              ...updated[existingIndex],
+              id: serverItem.id,
+              quantity: serverItem.quantity,
+              name: serverItem.product?.name || updated[existingIndex].name,
+              brand: serverItem.product?.brand || updated[existingIndex].brand,
+              price: serverItem.product?.price || updated[existingIndex].price,
+            };
+            return updated;
+          }
+
+          return [
+            ...prev,
+            {
+              ...newItem,
+              id: serverItem.id,
+              name: serverItem.product?.name || newItem.name,
+              brand: serverItem.product?.brand || newItem.brand,
+              price: serverItem.product?.price || newItem.price,
+            },
+          ];
+        });
+
         return true;
       } catch (err) {
-        console.error(err);
+        console.error("❌ خطا در افزودن به سبد (server):", err);
+        // fallback to local
         addItemToLocalCart(newItem);
         return true;
       } finally {
         setLoading(false);
       }
     } else {
+      // guest
       addItemToLocalCart(newItem);
       return true;
     }
-  };
-
-  const addItemToLocalCart = (newItem: CartItem) => {
-    setCartItems((prev) => {
-      const index = prev.findIndex(
-        (item) =>
-          item.productId === newItem.productId &&
-          item.color === newItem.color &&
-          item.size === newItem.size,
-      );
-      if (index >= 0) {
-        prev[index].quantity += newItem.quantity;
-        return [...prev];
-      }
-      return [...prev, newItem];
-    });
   };
 
   const removeItem = async (cartItemId: number): Promise<boolean> => {
     if (isAuthenticated) {
       setLoading(true);
       try {
-        const res = await fetch(`/api/cart?id=${cartItemId}`, {
+        const res = await fetchWithAuth(`/api/cart?id=${cartItemId}`, {
           method: "DELETE",
         });
-        if (!res.ok) throw new Error("خطا در حذف محصول");
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.error || "خطا در حذف محصول");
+        }
 
         setCartItems((prev) => prev.filter((item) => item.id !== cartItemId));
-        return true; // ← حتما boolean برگردان
+        return true;
       } catch (err) {
         console.error("❌ خطا در حذف محصول:", err);
+        // fallback local removal
         setCartItems((prev) => prev.filter((item) => item.id !== cartItemId));
-        return true; // ← fallback هم boolean برگردون
+        return true;
       } finally {
         setLoading(false);
       }
     } else {
       setCartItems((prev) => prev.filter((item) => item.id !== cartItemId));
-      return true; // ← guest هم boolean برگردونه
+      return true;
     }
   };
 
@@ -258,32 +304,39 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     cartItemId: number,
     quantity: number,
   ): Promise<boolean> => {
-    if (quantity <= 0) return removeItem(cartItemId); // removeItem هم باید Promise<boolean> بده
+    if (quantity <= 0) {
+      return removeItem(cartItemId);
+    }
 
     if (isAuthenticated) {
       setLoading(true);
       try {
         const res = await fetchWithAuth("/api/cart", {
           method: "PATCH",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ cartItemId, quantity }),
         });
-        if (!res.ok) throw new Error("خطا در بروزرسانی تعداد");
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.error || "خطا در بروزرسانی تعداد");
+        }
 
         setCartItems((prev) =>
           prev.map((item) =>
             item.id === cartItemId ? { ...item, quantity } : item,
           ),
         );
-
-        return true; // ← اضافه شد
+        return true;
       } catch (err) {
-        console.error(err);
+        console.error("❌ خطا در بروزرسانی تعداد:", err);
+        // fallback local update
         setCartItems((prev) =>
           prev.map((item) =>
             item.id === cartItemId ? { ...item, quantity } : item,
           ),
         );
-        return true; // ← fallback هم boolean بده
+        return true;
       } finally {
         setLoading(false);
       }
@@ -293,7 +346,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           item.id === cartItemId ? { ...item, quantity } : item,
         ),
       );
-      return true; // ← برای guest
+      return true;
     }
   };
 
@@ -302,24 +355,43 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     if (!isAuthenticated) localStorage.removeItem(getLocalCartKey());
   }, [isAuthenticated]);
 
-  const checkout = async (customer: { name: string; phone: string }) => {
-    if (cartItems.length === 0) return false;
+  const checkout = async (customer: {
+    name: string;
+    phone: string;
+  }): Promise<boolean> => {
+    if (cartItems.length === 0) {
+      console.error("❌ سبد خرید خالی است");
+      return false;
+    }
+
     setLoading(true);
     try {
       const res = await fetchWithAuth("/api/orders", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: cartItems,
+          items: cartItems.map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            color: i.color,
+            size: i.size,
+            price: i.price,
+          })),
           customerName: customer.name,
           customerPhone: customer.phone,
           totalPrice,
         }),
       });
-      if (!res.ok) throw new Error("خطا در ثبت سفارش");
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || "خطا در ثبت سفارش");
+      }
+
       clearCart();
       return true;
     } catch (err) {
-      console.error(err);
+      console.error("❌ خطا در ثبت سفارش:", err);
       return false;
     } finally {
       setLoading(false);

@@ -87,6 +87,7 @@ export default function NewProductPage() {
 
         const res = await fetch("/api/admin/upload", {
           method: "POST",
+          credentials: "include",
           body: formData,
         });
 
@@ -183,6 +184,7 @@ export default function NewProductPage() {
       const res = await fetch("/api/admin/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(productData),
       });
 
