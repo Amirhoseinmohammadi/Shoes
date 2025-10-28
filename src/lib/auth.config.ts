@@ -10,8 +10,6 @@ declare module "next-auth" {
       username?: string;
       firstName?: string;
       lastName?: string;
-      email?: string;
-      role?: string;
     };
   }
 
@@ -21,8 +19,6 @@ declare module "next-auth" {
     username?: string;
     firstName?: string;
     lastName?: string;
-    email?: string;
-    role?: string;
   }
 }
 
@@ -33,7 +29,6 @@ declare module "next-auth/jwt" {
     username?: string;
     firstName?: string;
     lastName?: string;
-    role?: string;
   }
 }
 
@@ -46,7 +41,7 @@ export const authOptions: NextAuthOptions = {
   },
 
   jwt: {
-    maxAge: 30 * 24 * 60 * 60, // 30 روز - هماهنگ با session
+    maxAge: 30 * 24 * 60 * 60,
   },
 
   providers: [
@@ -63,7 +58,7 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.telegramId) {
           console.error("❌ Telegram ID ارائه نشده");
-          return null; // بهتر از throw Error است
+          return null;
         }
 
         const telegramId = parseInt(credentials.telegramId);
@@ -82,8 +77,6 @@ export const authOptions: NextAuthOptions = {
               username: true,
               firstName: true,
               lastName: true,
-              email: true,
-              role: true,
             },
           });
 
@@ -102,8 +95,6 @@ export const authOptions: NextAuthOptions = {
                 username: true,
                 firstName: true,
                 lastName: true,
-                email: true,
-                role: true,
               },
             });
           } else {
@@ -122,8 +113,6 @@ export const authOptions: NextAuthOptions = {
                 username: true,
                 firstName: true,
                 lastName: true,
-                email: true,
-                role: true,
               },
             });
           }
@@ -136,8 +125,7 @@ export const authOptions: NextAuthOptions = {
             username: user.username || undefined,
             firstName: user.firstName || undefined,
             lastName: user.lastName || undefined,
-            email: user.email || undefined,
-            role: user.role || "USER",
+            role: "admin",
           };
         } catch (error) {
           console.error("❌ خطا در احراز هویت:", error);
@@ -160,7 +148,6 @@ export const authOptions: NextAuthOptions = {
         token.username = user.username;
         token.firstName = user.firstName;
         token.lastName = user.lastName;
-        token.role = user.role || "USER";
       }
 
       if (trigger === "update" && session) {
@@ -178,12 +165,10 @@ export const authOptions: NextAuthOptions = {
           username: token.username as string | undefined,
           firstName: token.firstName as string | undefined,
           lastName: token.lastName as string | undefined,
-          email: token.email as string | undefined,
-          role: token.role as string | undefined,
         };
       }
 
-      console.log("🔐 Session created for user:", session.user?.telegramId);
+      console.log("🔐 Session ایجاد شد برای کاربر:", session.user?.telegramId);
       return session;
     },
 

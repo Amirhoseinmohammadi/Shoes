@@ -14,8 +14,6 @@ declare module "next-auth" {
       username?: string;
       firstName?: string;
       lastName?: string;
-      email?: string;
-      role?: string;
     };
   }
 
@@ -44,14 +42,13 @@ declare module "next-auth/jwt" {
 const handler = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
 
-  // اضافه کردن این برای رفع خطای JWT
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 روز
+    maxAge: 30 * 24 * 60 * 60,
   },
 
   jwt: {
-    maxAge: 30 * 24 * 60 * 60, // هماهنگ با session
+    maxAge: 30 * 24 * 60 * 60,
   },
 
   providers: [
@@ -68,7 +65,7 @@ const handler = NextAuth({
       async authorize(credentials) {
         if (!credentials?.telegramId) {
           console.error("❌ Telegram ID ارائه نشده");
-          return null; // تغییر از throw Error به return null
+          return null;
         }
 
         const telegramId = parseInt(credentials.telegramId);
@@ -87,8 +84,6 @@ const handler = NextAuth({
               username: true,
               firstName: true,
               lastName: true,
-              email: true,
-              role: true,
             },
           });
 
@@ -106,8 +101,6 @@ const handler = NextAuth({
                 username: true,
                 firstName: true,
                 lastName: true,
-                email: true,
-                role: true,
               },
             });
           } else {
@@ -125,8 +118,6 @@ const handler = NextAuth({
                 username: true,
                 firstName: true,
                 lastName: true,
-                email: true,
-                role: true,
               },
             });
           }
@@ -137,12 +128,10 @@ const handler = NextAuth({
             username: user.username || undefined,
             firstName: user.firstName || undefined,
             lastName: user.lastName || undefined,
-            email: user.email || undefined,
-            role: user.role || "USER", // مقدار پیش‌فرض اضافه شد
           };
         } catch (error) {
           console.error("❌ خطا در احراز هویت:", error);
-          return null; // تغییر از throw Error به return null
+          return null;
         }
       },
     }),
@@ -161,7 +150,6 @@ const handler = NextAuth({
         token.username = user.username;
         token.firstName = user.firstName;
         token.lastName = user.lastName;
-        token.role = user.role || "USER";
       }
 
       if (trigger === "update" && session) {
@@ -179,8 +167,6 @@ const handler = NextAuth({
           username: token.username as string | undefined,
           firstName: token.firstName as string | undefined,
           lastName: token.lastName as string | undefined,
-          email: token.email as string | undefined,
-          role: token.role as string | undefined,
         };
       }
       return session;

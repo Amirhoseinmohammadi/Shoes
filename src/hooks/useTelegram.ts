@@ -50,15 +50,16 @@ export function useTelegram(): UseTelegramReturn {
     [],
   );
 
-  // وضعیت احراز هویت از NextAuth
-  const isAuthenticated = useMemo(() => {
-    return status === "authenticated" && !!session?.user;
-  }, [session, status]);
+  const isAuthenticated = useMemo(
+    () => status === "authenticated" && !!session?.user,
+    [status, session],
+  );
 
-  // بررسی آیا کاربر ادمین است
-  const isAdmin = useMemo(() => {
-    return session?.user?.role === "ADMIN" || user?.id === ADMIN_USER_ID;
-  }, [session, user, ADMIN_USER_ID]);
+  const isAdmin = useMemo(
+    () =>
+      session?.user?.role === "ADMIN" || (user && user.id === ADMIN_USER_ID),
+    [session, user, ADMIN_USER_ID],
+  );
 
   const initializeTelegram = useCallback(async () => {
     if (typeof window === "undefined") {
@@ -76,33 +77,21 @@ export function useTelegram(): UseTelegramReturn {
     }
 
     try {
-      console.log("🚀 شروع initialize تلگرام");
-
       tg.ready();
       tg.expand();
       setIsTelegramEnv(true);
-
-      const telegramTheme = tg.colorScheme || "light";
-      setTheme(telegramTheme);
+      setTheme(tg.colorScheme || "light");
 
       const userData: TelegramUser | undefined = tg.initDataUnsafe?.user;
 
       if (!userData?.id) {
-        console.error("❌ اطلاعات کاربر تلگرام موجود نیست");
-        setError("اطلاعات کاربر تلگرام موجود نیست");
-        setLoading(false);
+        console.error("❌ اطلاعات کاربر تلگرام یافت نشد");
+        setError("اطلاعات کاربر تلگرام یافت نشد");
         return;
       }
 
-      console.log("✅ اطلاعات کاربر تلگرام:", {
-        id: userData.id,
-        username: userData.username,
-        first_name: userData.first_name,
-      });
-
       setUser(userData);
 
-      // اگر کاربر لاگین نکرده، با تلگرام لاگین کن
       if (status === "unauthenticated") {
         await loginWithTelegram(userData);
       }
@@ -116,7 +105,7 @@ export function useTelegram(): UseTelegramReturn {
 
   const loginWithTelegram = useCallback(async (userData: TelegramUser) => {
     try {
-      console.log("🔐 شروع لاگین با NextAuth");
+      console.log("🔐 تلاش برای ورود با Telegram...");
 
       const result = await signIn("telegram", {
         telegramId: userData.id.toString(),
@@ -126,28 +115,21 @@ export function useTelegram(): UseTelegramReturn {
         redirect: false,
       });
 
-      if (result?.error) {
-        throw new Error(result.error);
-      }
+      if (result?.error) throw new Error(result.error);
 
-      console.log("✅ لاگین با NextAuth موفق");
+      console.log("✅ ورود موفق با Telegram + NextAuth");
 
-      // رفرش صفحه برای به روزرسانی session
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      await new Promise((res) => setTimeout(res, 800));
+      window.location.reload();
     } catch (err: any) {
-      console.error("❌ خطا در لاگین با NextAuth:", err);
-      setError("خطا در احراز هویت");
+      console.error("❌ خطا در ورود با Telegram:", err);
+      setError("ورود ناموفق بود");
     }
   }, []);
 
   const logout = useCallback(async () => {
     try {
-      await signOut({
-        redirect: false,
-        callbackUrl: "/",
-      });
+      await signOut({ redirect: false });
       setUser(null);
       router.push("/");
     } catch (err) {
@@ -157,14 +139,13 @@ export function useTelegram(): UseTelegramReturn {
 
   const checkAdminAccess = useCallback(
     (userId?: number): boolean => {
-      // بررسی از طریق session NextAuth
-      if (session?.user?.role !== "ADMIN") {
-        // یا بررسی از طریق تلگرام
-        if (userId && userId !== ADMIN_USER_ID) {
-          console.warn("🚫 دسترسی غیرمجاز - کاربر ID:", userId);
-          router.push("/access-denied");
-          return false;
-        }
+      const isAuthorized =
+        session?.user?.role === "ADMIN" || userId === ADMIN_USER_ID;
+
+      if (!isAuthorized) {
+        console.warn("🚫 دسترسی غیرمجاز برای کاربر:", userId);
+        router.push("/access-denied");
+        return false;
       }
       return true;
     },
@@ -175,20 +156,14 @@ export function useTelegram(): UseTelegramReturn {
     initializeTelegram();
   }, [initializeTelegram]);
 
-  // بررسی دسترسی ادمین هنگام تغییر مسیر
   useEffect(() => {
     if (pathname?.startsWith("/admin")) {
-      const hasAccess = checkAdminAccess(user?.id);
-      if (!hasAccess) {
-        return;
-      }
+      checkAdminAccess(user?.id);
     }
   }, [user, pathname, checkAdminAccess]);
 
-  // همگام‌سازی user state با session
   useEffect(() => {
     if (session?.user && !user) {
-      // اگر session داریم اما user state نداریم، آن را تنظیم کنیم
       setUser({
         id: session.user.telegramId,
         first_name: session.user.firstName,
@@ -199,34 +174,32 @@ export function useTelegram(): UseTelegramReturn {
   }, [session, user]);
 
   const sendData = useCallback((data: any) => {
-    if (typeof window === "undefined") return;
     const tg = (window as any).Telegram?.WebApp;
     tg?.sendData(JSON.stringify(data));
   }, []);
 
   const closeApp = useCallback(() => {
-    if (typeof window === "undefined") return;
     const tg = (window as any).Telegram?.WebApp;
     tg?.close();
   }, []);
 
   const showAlert = useCallback((message: string) => {
-    if (typeof window === "undefined") return;
     const tg = (window as any).Telegram?.WebApp;
-    tg?.showAlert(message) ?? alert(message);
+    tg?.showAlert?.(message) ?? alert(message);
   }, []);
 
-  const showConfirm = useCallback((message: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      if (typeof window === "undefined") return resolve(false);
-      const tg = (window as any).Telegram?.WebApp;
-      if (tg && tg.showConfirm) {
-        tg.showConfirm(message, (confirmed: boolean) => resolve(confirmed));
-      } else {
-        resolve(confirm(message));
-      }
-    });
-  }, []);
+  const showConfirm = useCallback(
+    (message: string): Promise<boolean> =>
+      new Promise((resolve) => {
+        const tg = (window as any).Telegram?.WebApp;
+        if (tg?.showConfirm) {
+          tg.showConfirm(message, (confirmed: boolean) => resolve(confirmed));
+        } else {
+          resolve(confirm(message));
+        }
+      }),
+    [],
+  );
 
   return {
     user,
