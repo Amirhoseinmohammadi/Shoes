@@ -1,21 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// تابع کمکی برای گرفتن آیدی کاربر از درخواست
 async function getUserId(req: NextRequest) {
   try {
     // تلاش می‌کنیم از body یا query string بگیریم
-    const { telegramId } = await req.json().catch(() => ({}));
+    let telegramId: string | null = null;
+
+    if (req.method !== "GET") {
+      const body = await req.json().catch(() => ({}));
+      telegramId = body.telegramId;
+    }
+
     const url = new URL(req.url);
     const queryTelegramId = url.searchParams.get("telegramId");
 
-    const id = telegramId || queryTelegramId;
-    return id ? parseInt(id) : null;
+    telegramId = telegramId || queryTelegramId;
+    return telegramId ? parseInt(telegramId) : null;
   } catch {
     return null;
   }
 }
 
+// ---------------- GET Cart Items ----------------
 export async function GET(req: NextRequest) {
   try {
     const userId = await getUserId(req);
@@ -25,13 +31,11 @@ export async function GET(req: NextRequest) {
     const cartItems = await prisma.cartItem.findMany({
       where: { userId },
       include: {
-        product: {
-          include: { variants: { include: { images: true } } },
-        },
+        product: { include: { variants: { include: { images: true } } } },
       },
     });
 
-    return NextResponse.json(cartItems);
+    return NextResponse.json({ success: true, cartItems });
   } catch (err) {
     console.error("GET /api/cart error:", err);
     return NextResponse.json(
@@ -41,6 +45,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// ---------------- POST Add to Cart ----------------
 export async function POST(req: NextRequest) {
   try {
     const { telegramId, productId, quantity, color, size } = await req.json();
@@ -50,7 +55,6 @@ export async function POST(req: NextRequest) {
         { error: "شناسه کاربر الزامی است" },
         { status: 401 },
       );
-
     if (!productId || !quantity)
       return NextResponse.json(
         { error: "productId و quantity الزامی هستند" },
@@ -85,7 +89,6 @@ export async function POST(req: NextRequest) {
       color: color || null,
       size: size || null,
     };
-
     const includeProduct = {
       product: { include: { variants: { include: { images: true } } } },
     };
@@ -101,7 +104,7 @@ export async function POST(req: NextRequest) {
           include: includeProduct,
         });
 
-    return NextResponse.json(result);
+    return NextResponse.json({ success: true, cartItem: result });
   } catch (err) {
     console.error("POST /api/cart error:", err);
     return NextResponse.json(
@@ -111,6 +114,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// ---------------- PATCH Update Cart Item ----------------
 export async function PATCH(req: NextRequest) {
   try {
     const { telegramId, cartItemId, quantity } = await req.json();
@@ -142,7 +146,7 @@ export async function PATCH(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(updatedItem);
+    return NextResponse.json({ success: true, cartItem: updatedItem });
   } catch (err) {
     console.error("PATCH /api/cart error:", err);
     return NextResponse.json(
