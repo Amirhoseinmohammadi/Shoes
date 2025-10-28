@@ -41,12 +41,17 @@ declare module "next-auth/jwt" {
 
 export const authOptions = {
   secret: process.env.NEXTAUTH_SECRET,
-  session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
+  session: { strategy: "jwt" as const, maxAge: 30 * 24 * 60 * 60 },
   jwt: { maxAge: 30 * 24 * 60 * 60 },
   cookies: {
     sessionToken: {
       name: "next-auth.session-token",
-      options: { httpOnly: true, sameSite: "none", path: "/", secure: true },
+      options: {
+        httpOnly: true,
+        sameSite: "none" as const,
+        path: "/",
+        secure: true,
+      },
     },
   },
   providers: [
@@ -60,9 +65,18 @@ export const authOptions = {
         username: { label: "نام کاربری", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials?.telegramId) return null;
+        console.log("🔵 شروع authorize با:", credentials);
+
+        if (!credentials?.telegramId) {
+          console.log("❌ telegramId موجود نیست");
+          return null;
+        }
+
         const telegramId = parseInt(credentials.telegramId);
-        if (isNaN(telegramId)) return null;
+        if (isNaN(telegramId)) {
+          console.log("❌ telegramId معتبر نیست");
+          return null;
+        }
 
         try {
           let user = await prisma.user.findUnique({
@@ -77,6 +91,7 @@ export const authOptions = {
           });
 
           if (!user) {
+            console.log("✅ ایجاد کاربر جدید");
             user = await prisma.user.create({
               data: {
                 telegramId,
@@ -93,10 +108,10 @@ export const authOptions = {
               },
             });
           } else {
+            console.log("✅ بروزرسانی کاربر موجود");
             user = await prisma.user.update({
               where: { id: user.id },
               data: {
-                telegramId,
                 firstName: credentials.firstName || user.firstName,
                 lastName: credentials.lastName || user.lastName,
                 username: credentials.username || user.username,
@@ -105,9 +120,11 @@ export const authOptions = {
             });
           }
 
+          console.log("✅ کاربر احراز هویت شد:", user);
+
           return {
             id: user.id.toString(),
-            telegramId: user.telegramId,
+            telegramId: user.telegramId!,
             username: user.username || undefined,
             firstName: user.firstName || undefined,
             lastName: user.lastName || undefined,
@@ -123,6 +140,7 @@ export const authOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        console.log("✅ ذخیره اطلاعات در JWT:", user);
         token.id = user.id;
         token.telegramId = user.telegramId;
         token.username = user.username;
@@ -134,6 +152,7 @@ export const authOptions = {
     },
     async session({ session, token }) {
       if (token) {
+        console.log("✅ ذخیره اطلاعات در Session:", token);
         session.user = {
           id: token.id,
           telegramId: token.telegramId,

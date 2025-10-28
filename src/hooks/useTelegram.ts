@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -25,13 +25,27 @@ export function useTelegram() {
   const isSessionLoading = status === "loading";
 
   const loginWithTelegram = useCallback(async (tgUser: TelegramUser) => {
-    await signIn("telegram", {
-      redirect: false,
-      telegramId: tgUser.id.toString(),
-      firstName: tgUser.first_name,
-      lastName: tgUser.last_name,
-      username: tgUser.username,
-    });
+    try {
+      console.log("🔵 شروع احراز هویت تلگرام با داده:", tgUser);
+
+      const result = await signIn("telegram", {
+        redirect: false,
+        telegramId: tgUser.id.toString(),
+        firstName: tgUser.first_name || "",
+        lastName: tgUser.last_name || "",
+        username: tgUser.username || "",
+      });
+
+      console.log("✅ نتیجه احراز هویت:", result);
+
+      if (result?.error) {
+        console.error("❌ خطا در احراز هویت:", result.error);
+      } else {
+        console.log("✅ احراز هویت موفق!");
+      }
+    } catch (error) {
+      console.error("❌ خطا در loginWithTelegram:", error);
+    }
   }, []);
 
   const logout = useCallback(async () => {
@@ -44,30 +58,42 @@ export function useTelegram() {
     if (typeof window === "undefined") return;
 
     const tg = (window as any).Telegram?.WebApp;
+
     if (!tg) {
+      console.log("⚠️ تلگرام WebApp در دسترس نیست");
       setIsTelegram(false);
       setLoading(false);
       return;
     }
 
+    console.log("✅ تلگرام WebApp پیدا شد");
     setIsTelegram(true);
     tg.ready();
     tg.expand();
 
     const tgUser: TelegramUser = tg.initDataUnsafe?.user;
-    if (tgUser?.id) loginWithTelegram(tgUser);
+    console.log("👤 اطلاعات کاربر تلگرام:", tgUser);
 
-    setLoading(false);
+    if (tgUser?.id) {
+      setUser(tgUser);
+      loginWithTelegram(tgUser);
+    } else {
+      console.log("⚠️ اطلاعات کاربر تلگرام موجود نیست");
+      setLoading(false);
+    }
   }, [loginWithTelegram]);
 
   useEffect(() => {
-    if (!isSessionLoading && session?.user) {
-      setUser({
-        id: session.user.telegramId,
-        first_name: session.user.firstName,
-        last_name: session.user.lastName,
-        username: session.user.username,
-      });
+    if (!isSessionLoading) {
+      if (session?.user) {
+        console.log("✅ Session موجود است:", session.user);
+        setUser({
+          id: session.user.telegramId,
+          first_name: session.user.firstName,
+          last_name: session.user.lastName,
+          username: session.user.username,
+        });
+      }
       setLoading(false);
     }
   }, [session, isSessionLoading]);
