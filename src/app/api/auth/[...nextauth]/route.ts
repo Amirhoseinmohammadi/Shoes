@@ -23,7 +23,6 @@ declare module "next-auth" {
     username?: string;
     firstName?: string;
     lastName?: string;
-    email?: string;
     role?: string;
   }
 }
@@ -44,11 +43,23 @@ const handler = NextAuth({
 
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: 30 * 24 * 60 * 60, // 30 روز
   },
 
   jwt: {
     maxAge: 30 * 24 * 60 * 60,
+  },
+
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "none", // مهم برای WebApp تلگرام
+        path: "/",
+        secure: true, // فقط https
+      },
+    },
   },
 
   providers: [
@@ -63,17 +74,10 @@ const handler = NextAuth({
       },
 
       async authorize(credentials) {
-        if (!credentials?.telegramId) {
-          console.error("❌ Telegram ID ارائه نشده");
-          return null;
-        }
+        if (!credentials?.telegramId) return null;
 
         const telegramId = parseInt(credentials.telegramId);
-
-        if (isNaN(telegramId)) {
-          console.error("❌ Telegram ID نامعتبر:", credentials.telegramId);
-          return null;
-        }
+        if (isNaN(telegramId)) return null;
 
         try {
           let user = await prisma.user.findUnique({
@@ -88,6 +92,7 @@ const handler = NextAuth({
           });
 
           if (!user) {
+            // ایجاد کاربر جدید با role
             user = await prisma.user.create({
               data: {
                 telegramId,
@@ -104,6 +109,7 @@ const handler = NextAuth({
               },
             });
           } else {
+            // آپدیت اطلاعات کاربر
             user = await prisma.user.update({
               where: { id: user.id },
               data: {
@@ -143,19 +149,15 @@ const handler = NextAuth({
   },
 
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.telegramId = user.telegramId;
         token.username = user.username;
         token.firstName = user.firstName;
         token.lastName = user.lastName;
+        token.role = "USER";
       }
-
-      if (trigger === "update" && session) {
-        token = { ...token, ...session };
-      }
-
       return token;
     },
 

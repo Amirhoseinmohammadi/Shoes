@@ -8,7 +8,7 @@ import {
   useEffect,
   useCallback,
 } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, getSession } from "next-auth/react";
 
 export interface CartItem {
   id: number;
@@ -88,7 +88,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
-  const userId = session?.user?.id ? parseInt(session.user.id) : null;
 
   // Computed values
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -102,18 +101,15 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const initializeCart = async () => {
       if (status === "loading") return;
 
-      if (isAuthenticated && userId) {
-        // Load from server for authenticated users
-        await loadServerCart(userId);
+      if (isAuthenticated) {
+        await loadServerCart();
       } else {
-        // Load from localStorage for guests
-        const localCart = loadLocalCart();
-        setCartItems(localCart);
+        setCartItems(loadLocalCart());
       }
     };
 
     initializeCart();
-  }, [status, isAuthenticated, userId]);
+  }, [status, isAuthenticated]);
 
   // Save to localStorage when cart changes (guest only)
   useEffect(() => {
@@ -122,15 +118,21 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [cartItems, isAuthenticated]);
 
-  // Load cart from server
-  const loadServerCart = async (userId: number) => {
+  // Load cart from server with JWT
+  const loadServerCart = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/cart");
+      const token = session?.user ? (await getSession())?.user?.id : null;
+
+      const res = await fetch("/api/cart", {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // اضافه کردن JWT
+        },
+      });
 
       if (res.ok) {
         const apiData = await res.json();
-
         const formattedItems: CartItem[] = apiData.map((item: any) => ({
           id: item.id,
           productId: item.productId,
@@ -145,33 +147,35 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           color: item.color,
           size: item.size,
         }));
-
         setCartItems(formattedItems);
       } else if (res.status === 401) {
         console.log("کاربر احراز هویت نشده - استفاده از سبد خرید محلی");
-        const localCart = loadLocalCart();
-        setCartItems(localCart);
+        setCartItems(loadLocalCart());
       }
     } catch (err) {
       console.error("❌ خطا در بارگذاری سبد خرید:", err);
-      // Fallback to local storage
-      const localCart = loadLocalCart();
-      setCartItems(localCart);
+      setCartItems(loadLocalCart());
     } finally {
       setLoading(false);
     }
   };
 
-  // Add item to cart
-  const addItem = async ({
-    shoe,
-    quantity,
-    color,
-    size,
-  }: AddItemParams): Promise<boolean> => {
-    const temporaryId = Date.now();
+  // Helper to send JWT in fetch
+  const fetchWithAuth = async (url: string, options: any = {}) => {
+    const token = session?.user ? (await getSession())?.user?.id : null;
+    return fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        ...(options.headers || {}),
+      },
+    });
+  };
 
-    // Create new item
+  // Add, remove, update, checkout - استفاده از fetchWithAuth
+  const addItem = async ({ shoe, quantity, color, size }: AddItemParams) => {
+    const temporaryId = Date.now();
     const newItem: CartItem = {
       id: temporaryId,
       productId: shoe.id,
@@ -184,249 +188,160 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       size,
     };
 
-    // For authenticated users - sync with server
-    if (isAuthenticated && userId) {
+    if (isAuthenticated) {
       setLoading(true);
       try {
-        const res = await fetch("/api/cart", {
+        const res = await fetchWithAuth("/api/cart", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            productId: shoe.id,
-            quantity,
-            color,
-            size,
-          }),
+          body: JSON.stringify({ productId: shoe.id, quantity, color, size }),
         });
 
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || "خطا در افزودن به سبد");
-        }
+        if (!res.ok) throw new Error("خطا در افزودن به سبد");
 
         const serverItem = await res.json();
-
-        // Update with server data
-        setCartItems((prev) => {
-          const existingIndex = prev.findIndex(
-            (item) =>
-              item.productId === shoe.id &&
-              item.color === color &&
-              item.size === size,
-          );
-
-          if (existingIndex >= 0) {
-            const updated = [...prev];
-            updated[existingIndex] = {
-              ...updated[existingIndex],
-              id: serverItem.id,
-              quantity: serverItem.quantity,
-            };
-            return updated;
-          }
-
-          return [
-            ...prev,
-            {
-              ...newItem,
-              id: serverItem.id,
-              name: serverItem.product?.name || shoe.name,
-              brand: serverItem.product?.brand || shoe.brand,
-              price: serverItem.product?.price || shoe.price,
-              image: serverItem.product?.image || shoe.image,
-            },
-          ];
-        });
-
+        setCartItems((prev) => [...prev, { ...newItem, id: serverItem.id }]);
         return true;
-      } catch (err: any) {
-        console.error("❌ خطا در افزودن به سبد:", err.message);
-        // Fallback to local
+      } catch (err) {
+        console.error(err);
         addItemToLocalCart(newItem);
         return true;
       } finally {
         setLoading(false);
       }
     } else {
-      // Guest - local only
       addItemToLocalCart(newItem);
       return true;
     }
   };
 
-  // Helper for local cart operations
   const addItemToLocalCart = (newItem: CartItem) => {
     setCartItems((prev) => {
-      const existingIndex = prev.findIndex(
+      const index = prev.findIndex(
         (item) =>
           item.productId === newItem.productId &&
           item.color === newItem.color &&
           item.size === newItem.size,
       );
-
-      if (existingIndex >= 0) {
-        const updated = [...prev];
-        updated[existingIndex].quantity += newItem.quantity;
-        return updated;
+      if (index >= 0) {
+        prev[index].quantity += newItem.quantity;
+        return [...prev];
       }
-
       return [...prev, newItem];
     });
   };
 
-  // Remove item from cart
   const removeItem = async (cartItemId: number): Promise<boolean> => {
-    if (isAuthenticated && userId) {
+    if (isAuthenticated) {
       setLoading(true);
       try {
         const res = await fetch(`/api/cart?id=${cartItemId}`, {
           method: "DELETE",
         });
-
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || "خطا در حذف محصول");
-        }
+        if (!res.ok) throw new Error("خطا در حذف محصول");
 
         setCartItems((prev) => prev.filter((item) => item.id !== cartItemId));
-        return true;
-      } catch (err: any) {
-        console.error("❌ خطا در حذف محصول:", err.message);
-        // Fallback to local
+        return true; // ← حتما boolean برگردان
+      } catch (err) {
+        console.error("❌ خطا در حذف محصول:", err);
         setCartItems((prev) => prev.filter((item) => item.id !== cartItemId));
-        return true;
+        return true; // ← fallback هم boolean برگردون
       } finally {
         setLoading(false);
       }
     } else {
-      // Guest
       setCartItems((prev) => prev.filter((item) => item.id !== cartItemId));
-      return true;
+      return true; // ← guest هم boolean برگردونه
     }
   };
 
-  // Update item quantity
   const updateItemQuantity = async (
     cartItemId: number,
     quantity: number,
   ): Promise<boolean> => {
-    if (quantity <= 0) {
-      return removeItem(cartItemId);
-    }
+    if (quantity <= 0) return removeItem(cartItemId); // removeItem هم باید Promise<boolean> بده
 
-    if (isAuthenticated && userId) {
+    if (isAuthenticated) {
       setLoading(true);
       try {
-        const res = await fetch("/api/cart", {
+        const res = await fetchWithAuth("/api/cart", {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ cartItemId, quantity }),
         });
-
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || "خطا در بروزرسانی تعداد");
-        }
+        if (!res.ok) throw new Error("خطا در بروزرسانی تعداد");
 
         setCartItems((prev) =>
           prev.map((item) =>
             item.id === cartItemId ? { ...item, quantity } : item,
           ),
         );
-        return true;
-      } catch (err: any) {
-        console.error("❌ خطا در بروزرسانی تعداد:", err.message);
-        // Fallback to local
+
+        return true; // ← اضافه شد
+      } catch (err) {
+        console.error(err);
         setCartItems((prev) =>
           prev.map((item) =>
             item.id === cartItemId ? { ...item, quantity } : item,
           ),
         );
-        return true;
+        return true; // ← fallback هم boolean بده
       } finally {
         setLoading(false);
       }
     } else {
-      // Guest
       setCartItems((prev) =>
         prev.map((item) =>
           item.id === cartItemId ? { ...item, quantity } : item,
         ),
       );
-      return true;
+      return true; // ← برای guest
     }
   };
 
-  // Clear cart
   const clearCart = useCallback(() => {
     setCartItems([]);
-    if (!isAuthenticated) {
-      localStorage.removeItem(getLocalCartKey());
-    }
+    if (!isAuthenticated) localStorage.removeItem(getLocalCartKey());
   }, [isAuthenticated]);
 
-  // Checkout
-  const checkout = async (customer: {
-    name: string;
-    phone: string;
-  }): Promise<boolean> => {
-    if (cartItems.length === 0) {
-      console.error("❌ سبد خرید خالی است");
-      return false;
-    }
-
+  const checkout = async (customer: { name: string; phone: string }) => {
+    if (cartItems.length === 0) return false;
     setLoading(true);
     try {
-      const orderData = {
-        items: cartItems.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          price: item.price,
-          color: item.color,
-          size: item.size,
-        })),
-        customerName: customer.name,
-        customerPhone: customer.phone,
-        totalPrice: totalPrice,
-      };
-
-      const orderRes = await fetch("/api/orders", {
+      const res = await fetchWithAuth("/api/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData),
+        body: JSON.stringify({
+          items: cartItems,
+          customerName: customer.name,
+          customerPhone: customer.phone,
+          totalPrice,
+        }),
       });
-
-      if (!orderRes.ok) {
-        const errorData = await orderRes.json();
-        throw new Error(errorData.error || "خطا در ثبت سفارش");
-      }
-
-      const result = await orderRes.json();
-
-      // Clear cart after successful order
+      if (!res.ok) throw new Error("خطا در ثبت سفارش");
       clearCart();
-
       return true;
-    } catch (err: any) {
-      console.error("❌ خطا در ثبت سفارش:", err.message);
+    } catch (err) {
+      console.error(err);
       return false;
     } finally {
       setLoading(false);
     }
   };
 
-  const value: CartContextType = {
-    cartItems,
-    addItem,
-    removeItem,
-    updateItemQuantity,
-    checkout,
-    clearCart,
-    loading,
-    isAuthenticated,
-    totalItems,
-    totalPrice,
-  };
-
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return (
+    <CartContext.Provider
+      value={{
+        cartItems,
+        addItem,
+        removeItem,
+        updateItemQuantity,
+        checkout,
+        clearCart,
+        loading,
+        isAuthenticated,
+        totalItems,
+        totalPrice,
+      }}
+    >
+      {children}
+    </CartContext.Provider>
+  );
 };

@@ -62,7 +62,6 @@ export const authOptions: NextAuthOptions = {
         }
 
         const telegramId = parseInt(credentials.telegramId);
-
         if (isNaN(telegramId)) {
           console.error("❌ Telegram ID نامعتبر:", credentials.telegramId);
           return null;
@@ -81,7 +80,6 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!user) {
-            console.log("👤 ایجاد کاربر جدید:", telegramId);
             user = await prisma.user.create({
               data: {
                 telegramId,
@@ -98,7 +96,6 @@ export const authOptions: NextAuthOptions = {
               },
             });
           } else {
-            console.log("🔄 به‌روزرسانی کاربر موجود:", user.id);
             user = await prisma.user.update({
               where: { id: user.id },
               data: {
@@ -125,7 +122,6 @@ export const authOptions: NextAuthOptions = {
             username: user.username || undefined,
             firstName: user.firstName || undefined,
             lastName: user.lastName || undefined,
-            role: "admin",
           };
         } catch (error) {
           console.error("❌ خطا در احراز هویت:", error);
@@ -137,7 +133,7 @@ export const authOptions: NextAuthOptions = {
 
   pages: {
     signIn: "/",
-    error: "/auth/error",
+    error: "/",
   },
 
   callbacks: {
@@ -151,7 +147,7 @@ export const authOptions: NextAuthOptions = {
       }
 
       if (trigger === "update" && session) {
-        token = { ...token, ...session };
+        token = { ...token, ...session.user };
       }
 
       return token;
@@ -160,22 +156,24 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (token) {
         session.user = {
-          id: token.id as string,
-          telegramId: token.telegramId as number,
-          username: token.username as string | undefined,
-          firstName: token.firstName as string | undefined,
-          lastName: token.lastName as string | undefined,
+          id: token.id,
+          telegramId: token.telegramId,
+          username: token.username,
+          firstName: token.firstName,
+          lastName: token.lastName,
         };
       }
-
-      console.log("🔐 Session ایجاد شد برای کاربر:", session.user?.telegramId);
       return session;
     },
 
     async redirect({ url, baseUrl }) {
       if (url.startsWith("/")) return `${baseUrl}${url}`;
-      else if (new URL(url).origin === baseUrl) return url;
-      return baseUrl;
+      try {
+        const target = new URL(url);
+        return target.origin === baseUrl ? url : baseUrl;
+      } catch {
+        return baseUrl;
+      }
     },
   },
 
@@ -189,9 +187,8 @@ export const authOptions: NextAuthOptions = {
       console.warn(`NextAuth Warning [${code}]`);
     },
     debug(code, metadata) {
-      if (process.env.NODE_ENV === "development") {
+      if (process.env.NODE_ENV === "development")
         console.log(`NextAuth Debug [${code}]:`, metadata);
-      }
     },
   },
 };

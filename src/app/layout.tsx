@@ -1,26 +1,20 @@
-import Footer from "@/components/Footer";
-import Header from "@/components/Header";
-import "@/styles/index.css";
-import { Providers } from "./providers";
-import PageTransition from "@/components/Common/PageTransition";
-import { ToastProvider } from "@/contexts/ToastContext";
+"use client";
+
+import { ReactNode } from "react";
+import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
-import { SessionWrapper } from "@/components/SessionWrapper";
-import type { Metadata } from "next";
+import { ToastProvider } from "@/contexts/ToastContext";
+import { CartProvider } from "@/contexts/CartContext";
+import PageTransition from "@/components/Common/PageTransition";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import "@/styles/index.css";
 
-export const metadata: Metadata = {
-  title: "Iran Steps",
-  description: "This is Home for kids shoes",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
-  ),
-};
+interface RootLayoutProps {
+  children: ReactNode;
+}
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html suppressHydrationWarning lang="fa" dir="rtl">
       <head>
@@ -29,34 +23,30 @@ export default function RootLayout({
           rel="stylesheet"
           type="text/css"
         />
-        <script
-          src="https://telegram.org/js/telegram-web-app.js"
-          strategy="beforeInteractive"
-        />
-
+        <script src="https://telegram.org/js/telegram-web-app.js" />
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
       </head>
       <body className="font-shabnam antialiased">
-        <SessionWrapper>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="light"
-            enableSystem={true}
-          >
-            <Providers>
-              <ToastProvider>
+        <SessionProvider
+          refetchInterval={5 * 60}
+          refetchOnWindowFocus
+          refetchWhenOffline={false}
+        >
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+            <ToastProvider>
+              <CartProvider>
                 <Header />
                 <main className="min-h-screen">
                   <PageTransition>{children}</PageTransition>
                 </main>
                 <Footer />
-              </ToastProvider>
-            </Providers>
+              </CartProvider>
+            </ToastProvider>
           </ThemeProvider>
-        </SessionWrapper>
+        </SessionProvider>
       </body>
     </html>
   );
