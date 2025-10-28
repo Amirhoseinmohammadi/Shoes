@@ -96,17 +96,11 @@ export const authOptions = {
             user = await prisma.user.update({
               where: { id: user.id },
               data: {
+                telegramId,
                 firstName: credentials.firstName || user.firstName,
                 lastName: credentials.lastName || user.lastName,
                 username: credentials.username || user.username,
                 updatedAt: new Date(),
-              },
-              select: {
-                id: true,
-                telegramId: true,
-                username: true,
-                firstName: true,
-                lastName: true,
               },
             });
           }
