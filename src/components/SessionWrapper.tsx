@@ -8,13 +8,5 @@ interface SessionWrapperProps {
 }
 
 export function SessionWrapper({ children }: SessionWrapperProps) {
-  return (
-    <SessionProvider
-      refetchInterval={5 * 60}
-      refetchOnWindowFocus={true}
-      refetchWhenOffline={false}
-    >
-      {children}
-    </SessionProvider>
-  );
+  return <SessionProvider>{children}</SessionProvider>;
 }

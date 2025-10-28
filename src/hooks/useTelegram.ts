@@ -61,6 +61,27 @@ export function useTelegram(): UseTelegramReturn {
     [session, user, ADMIN_USER_ID],
   );
 
+  // تابع ورود با تلگرام بدون reload
+  const loginWithTelegram = useCallback(async (userData: TelegramUser) => {
+    try {
+      const result = await signIn("telegram", {
+        telegramId: userData.id.toString(),
+        firstName: userData.first_name,
+        lastName: userData.last_name,
+        username: userData.username,
+        redirect: false,
+      });
+
+      if (result?.error) throw new Error(result.error);
+
+      setUser(userData);
+      console.log("✅ ورود موفق با Telegram + NextAuth");
+    } catch (err: any) {
+      console.error("❌ خطا در ورود با Telegram:", err);
+      setError("ورود ناموفق بود");
+    }
+  }, []);
+
   const initializeTelegram = useCallback(async () => {
     if (typeof window === "undefined") {
       setLoading(false);
@@ -70,7 +91,6 @@ export function useTelegram(): UseTelegramReturn {
     const tg = (window as any).Telegram?.WebApp;
 
     if (!tg) {
-      console.warn("❌ محیط تلگرام یافت نشد");
       setIsTelegramEnv(false);
       setLoading(false);
       return;
@@ -84,16 +104,19 @@ export function useTelegram(): UseTelegramReturn {
 
       const userData: TelegramUser | undefined = tg.initDataUnsafe?.user;
 
-      if (!userData?.id) {
-        console.error("❌ اطلاعات کاربر تلگرام یافت نشد");
-        setError("اطلاعات کاربر تلگرام یافت نشد");
-        return;
+      // اگر کاربر تلگرام موجود هست و session هنوز unauthenticated است
+      if (userData?.id && status === "unauthenticated") {
+        await loginWithTelegram(userData);
       }
 
-      setUser(userData);
-
-      if (status === "unauthenticated") {
-        await loginWithTelegram(userData);
+      // اگر session فعال هست ولی user خالیه، user رو set کن
+      if (isAuthenticated && !user && session?.user?.telegramId) {
+        setUser({
+          id: session.user.telegramId,
+          first_name: session.user.firstName,
+          last_name: session.user.lastName,
+          username: session.user.username,
+        });
       }
     } catch (err: any) {
       console.error("❌ خطا در initialize تلگرام:", err);
@@ -101,31 +124,7 @@ export function useTelegram(): UseTelegramReturn {
     } finally {
       setLoading(false);
     }
-  }, [status]);
-
-  const loginWithTelegram = useCallback(async (userData: TelegramUser) => {
-    try {
-      console.log("🔐 تلاش برای ورود با Telegram...");
-
-      const result = await signIn("telegram", {
-        telegramId: userData.id.toString(),
-        firstName: userData.first_name,
-        lastName: userData.last_name,
-        username: userData.username,
-        redirect: false,
-      });
-
-      if (result?.error) throw new Error(result.error);
-
-      console.log("✅ ورود موفق با Telegram + NextAuth");
-
-      await new Promise((res) => setTimeout(res, 800));
-      window.location.reload();
-    } catch (err: any) {
-      console.error("❌ خطا در ورود با Telegram:", err);
-      setError("ورود ناموفق بود");
-    }
-  }, []);
+  }, [loginWithTelegram, session, status, isAuthenticated, user]);
 
   const logout = useCallback(async () => {
     try {
@@ -161,17 +160,6 @@ export function useTelegram(): UseTelegramReturn {
       checkAdminAccess(user?.id);
     }
   }, [user, pathname, checkAdminAccess]);
-
-  useEffect(() => {
-    if (session?.user && !user) {
-      setUser({
-        id: session.user.telegramId,
-        first_name: session.user.firstName,
-        last_name: session.user.lastName,
-        username: session.user.username,
-      });
-    }
-  }, [session, user]);
 
   const sendData = useCallback((data: any) => {
     const tg = (window as any).Telegram?.WebApp;

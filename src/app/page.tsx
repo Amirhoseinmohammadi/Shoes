@@ -4,7 +4,7 @@ import Products from "@/components/Products";
 import Hero from "@/components/Hero";
 import ThemeToggler from "@/components/Header/ThemeToggler";
 import { useTelegram } from "@/hooks/useTelegram";
-import { useSession } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import { useState, useEffect } from "react";
 
 export default function Home() {
@@ -19,7 +19,21 @@ export default function Home() {
   const isSessionLoading = sessionStatus === "loading";
   const isLoading = telegramLoading || isSessionLoading;
 
-  // Show welcome message when user is loaded
+  // 1️⃣ login خودکار به next-auth وقتی کاربر تلگرام شناسایی شد
+  useEffect(() => {
+    if (telegramUser && !telegramLoading && !session?.user) {
+      signIn("telegram", {
+        id: telegramUser.id,
+        username: telegramUser.username,
+        first_name: telegramUser.first_name,
+        last_name: telegramUser.last_name,
+        photo_url: telegramUser.photo_url,
+        redirect: false, // بدون ریدایرکت
+      });
+    }
+  }, [telegramUser, telegramLoading, session]);
+
+  // 2️⃣ نمایش پیام خوش‌آمدگویی
   useEffect(() => {
     if (!isLoading && (telegramUser || session?.user)) {
       setShowWelcome(true);
@@ -28,6 +42,7 @@ export default function Home() {
     }
   }, [telegramUser, session, isLoading]);
 
+  // 3️⃣ کامپوننت وضعیت تلگرام
   const TelegramStatus = () => {
     if (!isTelegram) return null;
 
@@ -44,7 +59,7 @@ export default function Home() {
       );
     }
 
-    if (!telegramUser) {
+    if (!telegramUser && !session?.user) {
       return (
         <div className="container mx-auto mb-6 px-4">
           <div className="rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 p-4 text-center text-white shadow-lg">
@@ -60,13 +75,11 @@ export default function Home() {
     return null;
   };
 
+  // 4️⃣ بخش محصولات
   const ProductsSection = () => {
-    // فقط زمانی render کن که کاربر load شده باشه
     if (isLoading) return null;
 
-    // پاس دادن telegramUser یا session user
     const user = telegramUser || session?.user || null;
-
     return <Products telegramUser={user} />;
   };
 
@@ -83,7 +96,7 @@ export default function Home() {
       {showWelcome && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 transform rounded-2xl bg-green-500 p-4 text-white shadow-lg">
           خوش آمدید{" "}
-          {telegramUser?.firstName || session?.user?.firstName || "کاربر"}!
+          {telegramUser?.first_name || session?.user?.firstName || "کاربر"}!
         </div>
       )}
     </div>
