@@ -7,6 +7,7 @@ import { CartProvider } from "@/contexts/CartContext";
 import PageTransition from "@/components/Common/PageTransition";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import "@/styles/index.css";
 
 interface RootLayoutProps {
   children: ReactNode;
