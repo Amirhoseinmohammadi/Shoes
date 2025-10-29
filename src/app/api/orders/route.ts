@@ -6,7 +6,6 @@ import { prisma } from "@/lib/prisma";
 const ADMIN_TELEGRAM_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID;
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
-// -------------------- Types --------------------
 interface OrderItemInput {
   productId: number;
   quantity?: number;
@@ -19,7 +18,7 @@ interface OrderRequestBody {
   customerName: string;
   customerPhone: string;
   totalPrice?: number;
-  telegramData?: any; // هر چیزی که از تلگرام فرستاده می‌شه
+  telegramData?: any;
 }
 
 export async function GET(req: NextRequest) {
@@ -35,7 +34,7 @@ export async function GET(req: NextRequest) {
     const orders = await prisma.order.findMany({
       where: {
         telegramData: {
-          path: ["id"], // فرض: telegramData = { id: number, ... }
+          path: ["id"],
           equals: Number(telegramId),
         },
       },
@@ -67,14 +66,12 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// -------------------- POST Create Order --------------------
 export async function POST(req: NextRequest) {
   try {
     const body: OrderRequestBody = await req.json();
     const { items, customerName, customerPhone, totalPrice, telegramData } =
       body;
 
-    // -------------------- Validations --------------------
     if (!items || !Array.isArray(items) || items.length === 0)
       return NextResponse.json(
         { success: false, error: "لیست محصولات الزامی است" },
@@ -147,7 +144,6 @@ export async function POST(req: NextRequest) {
       0,
     );
 
-    // -------------------- Transaction --------------------
     const order = await prisma.$transaction(async (tx) => {
       for (const item of itemsWithPrice) {
         await tx.product.update({
@@ -193,7 +189,6 @@ export async function POST(req: NextRequest) {
       });
     });
 
-    // -------------------- Notify Admin --------------------
     if (ADMIN_TELEGRAM_ID && BOT_TOKEN) {
       try {
         const itemsList = order.items

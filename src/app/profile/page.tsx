@@ -29,7 +29,6 @@ const ProfilePage = () => {
   const { user: telegramUser, loading, isTelegram } = useTelegram();
   const router = useRouter();
 
-  // اگر از تلگرام باز نشده بود، هدایت به صفحه اصلی
   useEffect(() => {
     if (!loading && !telegramUser) {
       router.push("/");
@@ -37,7 +36,6 @@ const ProfilePage = () => {
   }, [loading, telegramUser, router]);
 
   const handleLogout = () => {
-    // چون احراز هویت واقعی نداریم، فقط کاربر رو برمی‌گردونیم به صفحه اصلی
     router.push("/");
   };
 
@@ -134,7 +132,6 @@ const ProfilePage = () => {
   return (
     <div className="safe-area-bottom min-h-screen bg-gray-50 pt-4 pb-32 dark:bg-gray-900">
       <div className="mx-auto max-w-2xl px-4">
-        {/* هدر */}
         <div className="mb-6 flex items-center justify-between">
           <Link
             href="/"
@@ -160,7 +157,6 @@ const ProfilePage = () => {
           <ThemeToggler />
         </div>
 
-        {/* کارت اطلاعات کاربر */}
         <div className="flex items-center gap-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-cyan-600 p-6 text-white shadow-lg">
           <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white/40 bg-white/20 text-2xl font-bold">
             {user.first_name?.charAt(0) || "U"}
@@ -188,7 +184,6 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        {/* منو */}
         <div className="mt-6 space-y-3">
           {menuItems
             .filter((item) => !item.adminOnly || isAdmin)
@@ -229,7 +224,6 @@ const ProfilePage = () => {
             })}
         </div>
 
-        {/* اطلاعات اضافی */}
         <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
           <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">
             اطلاعات حساب

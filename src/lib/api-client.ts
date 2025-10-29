@@ -1,4 +1,3 @@
-// src/lib/api-client.ts
 const API_BASE = process.env.NEXT_PUBLIC_APP_URL || "";
 
 class ApiClient {
@@ -16,10 +15,8 @@ class ApiClient {
     options: RequestInit = {},
   ): Promise<any> {
     const base = this.getBase();
-    // URL() handles trailing slashes and relative endpoints cleanly
     const url = new URL(endpoint, base).toString();
 
-    // If caller passed a FormData body, do not set JSON content-type
     const isFormData =
       typeof (options as any).body !== "string" &&
       typeof FormData !== "undefined"
@@ -34,13 +31,11 @@ class ApiClient {
     const config: RequestInit = {
       ...options,
       headers,
-      // default to include cookies unless caller explicitly overrides
+
       credentials: (options.credentials as RequestCredentials) ?? "include",
     };
 
     try {
-      // debug
-      // eslint-disable-next-line no-console
       console.log("🔄 apiClient request:", {
         url,
         config: { ...config, body: !!config.body },
@@ -50,7 +45,6 @@ class ApiClient {
 
       const contentType = response.headers.get("content-type") || "";
 
-      // If not ok, try to parse body for useful error info
       if (!response.ok) {
         let errorBody: any = null;
         try {
@@ -59,9 +53,7 @@ class ApiClient {
           } else {
             errorBody = await response.text();
           }
-        } catch (e) {
-          // ignore parse errors
-        }
+        } catch (e) {}
 
         const message =
           (errorBody && (errorBody.error || errorBody.message)) ||
@@ -74,23 +66,19 @@ class ApiClient {
         throw err;
       }
 
-      // No content
       if (response.status === 204) return null;
 
-      // Return JSON when possible, else text
       if (contentType.includes("application/json")) {
         return await response.json();
       }
 
       return await response.text();
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error("❌ apiClient request failed:", endpoint, error);
       throw error;
     }
   }
 
-  // --- auth
   auth = {
     login: (email: string, password: string) =>
       this.request("/api/auth/login", {
@@ -109,7 +97,6 @@ class ApiClient {
     getSession: () => this.request("/api/auth/session"),
   };
 
-  // --- users
   users = {
     getAll: () => this.request("/api/users"),
 
@@ -125,7 +112,6 @@ class ApiClient {
       this.request(`/api/users/${id}`, { method: "DELETE" }),
   };
 
-  // --- products
   products = {
     getAll: (category?: string) => {
       const url = category
@@ -155,7 +141,6 @@ class ApiClient {
       this.request(`/api/products/search?q=${encodeURIComponent(query)}`),
   };
 
-  // --- orders
   orders = {
     getAll: (userId?: number) => {
       const url = userId ? `/api/orders?userId=${userId}` : "/api/orders";
@@ -180,7 +165,6 @@ class ApiClient {
       this.request(`/api/orders/${id}`, { method: "DELETE" }),
   };
 
-  // --- categories
   categories = {
     getAll: () => this.request("/api/categories"),
 

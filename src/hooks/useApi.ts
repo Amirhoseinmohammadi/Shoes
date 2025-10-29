@@ -7,10 +7,8 @@ const defaultConfig = {
 };
 
 export const useApi = {
-  // Authentication
   useSession: () => useSWR("session", apiClient.auth.getSession, defaultConfig),
 
-  // Users
   useUsers: () => useSWR("users", apiClient.users.getAll, defaultConfig),
 
   useUser: (id: number) =>
@@ -20,7 +18,6 @@ export const useApi = {
       defaultConfig,
     ),
 
-  // Products
   useProducts: (category?: string) =>
     useSWR(
       category !== undefined ? ["products", category] : "products",
@@ -35,7 +32,6 @@ export const useApi = {
       defaultConfig,
     ),
 
-  // Orders
   useOrders: (userId?: number) =>
     useSWR(
       userId !== undefined ? ["orders", userId] : null,
@@ -50,11 +46,9 @@ export const useApi = {
       defaultConfig,
     ),
 
-  // Categories
   useCategories: () =>
     useSWR("categories", apiClient.categories.getAll, defaultConfig),
 
-  // Comments
   useComments: (productId: number) =>
     useSWR(
       productId ? ["comments", productId] : null,

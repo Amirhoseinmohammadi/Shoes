@@ -28,13 +28,11 @@ export function useTelegram() {
     tg.sendData?.(JSON.stringify(data));
   };
 
-  // خروج تلگرام
   const logout = useCallback(() => {
     setUser(null);
   }, []);
 
   useEffect(() => {
-    // فقط client-side
     if (typeof window === "undefined") return;
 
     const tg = (window as any).Telegram?.WebApp;

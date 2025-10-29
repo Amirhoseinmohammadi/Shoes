@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 
 async function getUserId(req: NextRequest) {
   try {
-    // تلاش می‌کنیم از body یا query string بگیریم
     let telegramId: string | null = null;
 
     if (req.method !== "GET") {
@@ -21,7 +20,6 @@ async function getUserId(req: NextRequest) {
   }
 }
 
-// ---------------- GET Cart Items ----------------
 export async function GET(req: NextRequest) {
   try {
     const userId = await getUserId(req);
@@ -45,7 +43,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ---------------- POST Add to Cart ----------------
 export async function POST(req: NextRequest) {
   try {
     const { telegramId, productId, quantity, color, size } = await req.json();
@@ -114,7 +111,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ---------------- PATCH Update Cart Item ----------------
 export async function PATCH(req: NextRequest) {
   try {
     const { telegramId, cartItemId, quantity } = await req.json();
