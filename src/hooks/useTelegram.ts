@@ -31,7 +31,6 @@ export function useTelegram() {
   const logout = useCallback(() => {
     setUser(null);
   }, []);
-
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -47,19 +46,26 @@ export function useTelegram() {
     console.log("✅ تلگرام WebApp پیدا شد");
     setIsTelegram(true);
 
-    tg.ready?.();
-    tg.expand?.();
+    try {
+      tg.ready?.();
+      tg.expand?.();
 
-    const tgUser: TelegramUser = tg.initDataUnsafe?.user;
-    console.log("👤 اطلاعات کاربر تلگرام:", tgUser);
+      const tgUser: TelegramUser = tg.initDataUnsafe?.user;
+      console.log("👤 اطلاعات کاربر تلگرام:", tgUser);
 
-    if (tgUser?.id) {
-      loginWithTelegram(tgUser);
+      if (tgUser?.id) {
+        console.log("✅ User logged in successfully:", tgUser.id);
+        loginWithTelegram(tgUser);
+        localStorage.setItem("telegramUser", JSON.stringify(tgUser));
+      } else {
+        console.error("❌ No user ID found in Telegram data");
+      }
+    } catch (error) {
+      console.error("❌ Error initializing Telegram:", error);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }, [loginWithTelegram]);
-
   const isAuthenticated = !!user;
 
   return {

@@ -41,12 +41,7 @@ export default function BottomNavigation() {
 
   const navigate = (href: string) => {
     if (typeof window === "undefined") return;
-    const tg = (window as any).Telegram?.WebApp;
-    if (tg) {
-      window.location.href = href;
-    } else {
-      router.push(href);
-    }
+    router.push(href);
   };
 
   return (

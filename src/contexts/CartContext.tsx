@@ -88,17 +88,25 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const initUser = () => {
       try {
         const tg = (window as any)?.Telegram?.WebApp;
+
         if (tg?.initDataUnsafe?.user?.id) {
           const id = tg.initDataUnsafe.user.id;
+          console.log("✅ UserID از Telegram:", id);
           setUserId(id);
           localStorage.setItem("userId", String(id));
           return;
         }
 
         const stored = localStorage.getItem("userId");
-        if (stored) setUserId(Number(stored));
+        if (stored) {
+          console.log("✅ UserID از localStorage:", stored);
+          setUserId(Number(stored));
+          return;
+        }
+
+        console.warn("⚠️ هیچ userID پیدا نشد - cart در حالت guest است");
       } catch (e) {
-        console.error("خطا در گرفتن userId از تلگرام:", e);
+        console.error("❌ خطا در گرفتن userId:", e);
       }
     };
 
@@ -182,43 +190,72 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     name: string;
     phone: string;
   }): Promise<boolean> => {
-    if (cartItems.length === 0) return false;
+    if (cartItems.length === 0) {
+      console.error("❌ سبد خرید خالی است");
+      return false;
+    }
+
     if (!userId) {
-      console.error("❌ userId نامشخص است");
+      console.error("❌ userId نامشخص است - کاربر لاگین نیست");
+      return false;
+    }
+
+    if (!customer.name?.trim() || !customer.phone?.trim()) {
+      console.error("❌ نام و شماره تماس الزامی است");
       return false;
     }
 
     setLoading(true);
     try {
+      console.log("📤 ارسال سفارش با userId:", userId);
+
+      const orderData = {
+        userId,
+        items: cartItems.map((i) => ({
+          productId: i.productId,
+          quantity: i.quantity,
+          color: i.color || null,
+          size: i.size || null,
+          price: i.price,
+        })),
+        customerName: customer.name.trim(),
+        customerPhone: customer.phone.trim(),
+        totalPrice,
+        telegramData:
+          typeof window !== "undefined"
+            ? (window as any).Telegram?.WebApp?.initDataUnsafe?.user
+            : null,
+      };
+
+      console.log("📦 Order Payload:", orderData);
+
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          items: cartItems.map((i) => ({
-            productId: i.productId,
-            quantity: i.quantity,
-            color: i.color,
-            size: i.size,
-            price: i.price,
-          })),
-          customerName: customer.name,
-          customerPhone: customer.phone,
-          totalPrice,
-        }),
+        body: JSON.stringify(orderData),
       });
 
-      if (!res.ok) throw new Error("خطا در ثبت سفارش");
+      const responseData = await res.json();
+      console.log("📥 Server Response:", responseData);
+
+      if (!res.ok) {
+        throw new Error(responseData.message || "خطا در ثبت سفارش");
+      }
+
+      console.log("✅ سفارش با موفقیت ثبت شد:", responseData.orderId);
       clearCart();
       return true;
-    } catch (e) {
-      console.error("❌ خطا در checkout:", e);
+    } catch (e: any) {
+      console.error("❌ خطا در checkout:", {
+        message: e.message,
+        userId,
+        itemsCount: cartItems.length,
+      });
       return false;
     } finally {
       setLoading(false);
     }
   };
-
   return (
     <CartContext.Provider
       value={{

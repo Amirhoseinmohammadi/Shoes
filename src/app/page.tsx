@@ -65,7 +65,17 @@ export default function Home() {
   };
 
   const ProductsSection = () => {
-    if (loading || !telegramUser) return null;
+    if (loading) {
+      return (
+        <div className="container mx-auto px-4 py-12 text-center">
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
+            در حال بارگذاری...
+          </p>
+        </div>
+      );
+    }
+
     return <Products telegramUser={telegramUser} />;
   };
 
