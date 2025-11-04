@@ -1,5 +1,5 @@
 "use client";
-
+import { useTelegram } from "@/hooks/useTelegram";
 import {
   createContext,
   useContext,
@@ -83,35 +83,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
-
+  const { user: telegramUser } = useTelegram();
   useEffect(() => {
-    const initUser = () => {
-      try {
-        const tg = (window as any)?.Telegram?.WebApp;
-
-        if (tg?.initDataUnsafe?.user?.id) {
-          const id = tg.initDataUnsafe.user.id;
-          console.log("✅ UserID از Telegram:", id);
-          setUserId(id);
-          localStorage.setItem("userId", String(id));
-          return;
-        }
-
-        const stored = localStorage.getItem("userId");
-        if (stored) {
-          console.log("✅ UserID از localStorage:", stored);
-          setUserId(Number(stored));
-          return;
-        }
-
-        console.warn("⚠️ هیچ userID پیدا نشد - cart در حالت guest است");
-      } catch (e) {
-        console.error("❌ خطا در گرفتن userId:", e);
-      }
-    };
-
-    initUser();
-  }, []);
+    if (telegramUser?.id) {
+      setUserId(telegramUser.id);
+      console.log("✅ UserID from Telegram:", telegramUser.id);
+    }
+  }, [telegramUser?.id]);
 
   const totalItems = cartItems.reduce((sum, i) => sum + i.quantity, 0);
   const totalPrice = cartItems.reduce(

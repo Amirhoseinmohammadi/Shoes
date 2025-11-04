@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { validateInitData, isInitDataExpired } from "@/lib/telegram-validator";
+import { setSessionCookie } from "@/lib/session";
 
 interface TelegramUser {
   id: number;
@@ -18,7 +20,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "initData required" }, { status: 400 });
     }
 
+    // ✅ NEW: Verify Telegram signature
+    const isValid = validateInitData(
+      initData,
+      process.env.TELEGRAM_BOT_TOKEN || "",
+    );
+
+    if (!isValid) {
+      console.error("❌ Telegram signature validation failed");
+      return NextResponse.json(
+        { error: "Invalid Telegram data" },
+        { status: 401 },
+      );
+    }
+
     const params = new URLSearchParams(initData);
+    const authDate = params.get("auth_date");
+
+    // ✅ NEW: Check if initData is expired
+    if (isInitDataExpired(authDate)) {
+      return NextResponse.json(
+        { error: "Telegram data expired" },
+        { status: 401 },
+      );
+    }
+
     const userData = params.get("user");
 
     if (!userData) {
@@ -30,9 +56,25 @@ export async function POST(request: NextRequest) {
 
     const user: TelegramUser = JSON.parse(userData);
 
+    // ✅ NEW: Check if user is admin
+    const isAdmin =
+      user.id.toString() === process.env.NEXT_PUBLIC_ADMIN_USER_ID;
+
+    // ✅ NEW: Create server-side session
+    await setSessionCookie({
+      userId: user.id,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      username: user.username,
+      isAdmin,
+    });
+
     return NextResponse.json({
       success: true,
-      user,
+      user: {
+        ...user,
+        isAdmin,
+      },
     });
   } catch (error) {
     console.error("Error parsing Telegram init data:", error);

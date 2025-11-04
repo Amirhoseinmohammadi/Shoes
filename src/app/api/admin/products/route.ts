@@ -1,10 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard"; // ✅ NEW
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // ✅ NEW: Require admin authentication
+    const req = await requireAuth(request, true);
+    if (!req) {
+      return NextResponse.json(
+        { error: "Unauthorized - admin access required" },
+        { status: 401 },
+      );
+    }
+
+    console.log(`✅ Admin ${req.userId} accessed products`);
+
     const products = await prisma.product.findMany({
       include: {
         variants: {
@@ -18,6 +30,7 @@ export async function GET() {
         id: "desc",
       },
     });
+
     return NextResponse.json(products, {
       headers: {
         "Cache-Control": "public, max-age=60, stale-while-revalidate=30",
@@ -32,9 +45,20 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const data = await req.json();
+    // ✅ NEW: Require admin authentication
+    const req = await requireAuth(request, true);
+    if (!req) {
+      return NextResponse.json(
+        { error: "Unauthorized - admin access required" },
+        { status: 401 },
+      );
+    }
+
+    const data = await request.json();
+
+    console.log(`✅ Admin ${req.userId} creating product`);
 
     const product = await prisma.product.create({
       data: {

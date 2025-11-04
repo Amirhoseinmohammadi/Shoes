@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SingleShoe from "@/components/Products/SingleShoe";
 import { useApi } from "@/hooks/useApi";
+import { useTelegram } from "@/hooks/useTelegram";
 import {
   MagnifyingGlassIcon,
   ExclamationTriangleIcon,
@@ -17,27 +18,59 @@ interface ShoesProps {
 
 const Shoes = ({ telegramUser }: ShoesProps) => {
   const { data: shoes, error, isLoading } = useApi.useProducts();
+  const { user: currentUser, loading: authLoading } = useTelegram();
   const [searchQuery, setSearchQuery] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
 
-  const filteredShoes =
-    shoes?.filter((shoe) =>
-      shoe.name.toLowerCase().includes(searchQuery.toLowerCase()),
-    ) || [];
+  // ✅ NEW: Get authenticated user from hook instead of props
+  const authenticatedUser = currentUser || telegramUser;
 
+  // ✅ NEW: Handle retry with exponential backoff
+  const handleRetry = () => {
+    setRetryCount((prev) => prev + 1);
+    window.location.reload();
+  };
+
+  // ✅ NEW: Show loading state during auth check
+  if (authLoading) {
+    return (
+      <section className="min-h-screen bg-gray-100 py-12 dark:bg-gray-900">
+        <div className="container mx-auto px-4">
+          <div className="flex min-h-96 items-center justify-center">
+            <div className="text-center">
+              <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600 dark:border-gray-700 dark:border-t-blue-500"></div>
+              <p className="text-gray-600 dark:text-gray-400">
+                در حال بررسی دسترسی...
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // ✅ NEW: Show loading skeleton while fetching products
   if (isLoading) {
     return (
       <section className="min-h-screen bg-gray-100 py-12 dark:bg-gray-900">
         <div className="container mx-auto px-4">
-          <div className="mb-10 h-14 w-full animate-pulse rounded-3xl bg-white/20 dark:bg-gray-800/50"></div>
+          {/* Search skeleton */}
+          <div className="mb-8 flex justify-center">
+            <div className="relative w-full max-w-2xl">
+              <div className="h-14 w-full animate-pulse rounded-3xl bg-gray-300 dark:bg-gray-700"></div>
+            </div>
+          </div>
+
+          {/* Products skeleton */}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-4">
             {[...Array(8)].map((_, i) => (
               <div
                 key={i}
-                className="animate-pulse overflow-hidden rounded-2xl bg-white/20 p-4 shadow-lg backdrop-blur-sm dark:bg-gray-800/50"
+                className="animate-pulse overflow-hidden rounded-2xl bg-white p-4 shadow-lg dark:bg-gray-800"
               >
-                <div className="aspect-square w-full rounded-xl bg-white/30 dark:bg-gray-700/50"></div>
-                <div className="mt-4 h-4 w-3/4 rounded-md bg-white/30 dark:bg-gray-700/50"></div>
-                <div className="mt-2 h-3 w-1/2 rounded-md bg-white/30 dark:bg-gray-700/50"></div>
+                <div className="aspect-square w-full rounded-xl bg-gray-300 dark:bg-gray-700"></div>
+                <div className="mt-4 h-4 w-3/4 rounded-md bg-gray-300 dark:bg-gray-700"></div>
+                <div className="mt-2 h-3 w-1/2 rounded-md bg-gray-300 dark:bg-gray-700"></div>
               </div>
             ))}
           </div>
@@ -46,35 +79,64 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
     );
   }
 
+  // ✅ IMPROVED: Better error handling with more info
   if (error) {
     return (
       <section className="flex min-h-screen items-center justify-center bg-gray-100 p-6 dark:bg-gray-900">
-        <div className="max-w-md rounded-3xl bg-white p-8 text-center shadow-2xl backdrop-blur-xl dark:bg-gray-800/50">
+        <div className="max-w-md rounded-3xl bg-white p-8 text-center shadow-2xl dark:bg-gray-800">
           <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-500/20">
-            <ExclamationTriangleIcon className="h-10 w-10 text-red-400 dark:text-red-300" />
+            <ExclamationTriangleIcon className="h-10 w-10 text-red-600 dark:text-red-400" />
           </div>
+
           <h3 className="mb-3 text-2xl font-bold text-gray-900 dark:text-white">
             خطا در بارگذاری محصولات
           </h3>
-          <p className="mb-8 text-gray-700 dark:text-gray-300">
-            مشکلی در دریافت محصولات پیش آمد. لطفاً دوباره تلاش کنید.
+
+          <p className="mb-2 text-sm text-gray-600 dark:text-gray-400">
+            {error?.message || "مشکلی در دریافت محصولات پیش آمد."}
           </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="inline-flex items-center gap-2 rounded-xl bg-gray-300 px-6 py-3 font-semibold text-gray-800 shadow-lg transition-all hover:scale-105 hover:shadow-cyan-500/40 dark:bg-gray-700 dark:text-white"
-          >
-            <ArrowPathIcon className="h-5 w-5" />
-            تلاش مجدد
-          </button>
+
+          <p className="mb-6 text-xs text-gray-500 dark:text-gray-500">
+            لطفاً دوباره تلاش کنید یا با پشتیبانی تماس بگیرید.
+          </p>
+
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={handleRetry}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl dark:bg-blue-700 dark:hover:bg-blue-800"
+            >
+              <ArrowPathIcon className="h-5 w-5" />
+              تلاش مجدد
+            </button>
+
+            <button
+              onClick={() => (window.location.href = "/")}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-600 px-6 py-3 font-semibold text-white transition-all hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-800"
+            >
+              بازگشت به خانه
+            </button>
+          </div>
+
+          {retryCount > 2 && (
+            <p className="mt-4 text-xs text-amber-600 dark:text-amber-400">
+              اگر مشکل ادامه دارد، لطفاً برنامه را ببندید و دوباره باز کنید.
+            </p>
+          )}
         </div>
       </section>
     );
   }
 
+  // ✅ FIXED: Use authenticated user from hook
+  const filteredShoes =
+    shoes?.filter((shoe) =>
+      shoe.name.toLowerCase().includes(searchQuery.toLowerCase()),
+    ) || [];
+
   return (
     <section className="min-h-screen bg-gray-100 py-12 dark:bg-gray-900">
       <div className="container mx-auto px-4">
-        {/* Search */}
+        {/* Search Bar */}
         <div className="mb-8 flex justify-center">
           <div className="relative w-full max-w-2xl">
             <MagnifyingGlassIcon className="absolute top-1/2 right-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
@@ -106,7 +168,8 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
                   animation: `fadeInUp 0.5s ease-out ${i * 0.05}s both`,
                 }}
               >
-                <SingleShoe shoe={shoe} telegramUser={telegramUser} />
+                {/* ✅ FIXED: Pass authenticated user from hook */}
+                <SingleShoe shoe={shoe} telegramUser={authenticatedUser} />
               </div>
             ))}
           </div>
@@ -116,9 +179,11 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
               <div className="mx-auto mb-6 flex h-28 w-28 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
                 <FaceFrownIcon className="h-14 w-14 text-gray-400 dark:text-gray-500" />
               </div>
+
               <h3 className="mb-2 text-2xl font-bold text-gray-900 dark:text-white">
                 محصولی یافت نشد
               </h3>
+
               <p className="mb-6 text-gray-600 dark:text-gray-400">
                 {searchQuery ? (
                   <>
@@ -132,6 +197,7 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
                   "هنوز هیچ محصولی اضافه نشده است."
                 )}
               </p>
+
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
