@@ -1,37 +1,32 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
 export interface AuthenticatedRequest extends NextRequest {
   userId?: number;
   isAdmin?: boolean;
+  username?: string;
 }
 
-/**
- * Middleware to check authentication on API routes
- * Usage:
- *   const req = await requireAuth(request);
- *   if (!req) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
- */
 export async function requireAuth(
   request: NextRequest,
   requireAdmin: boolean = false,
 ): Promise<AuthenticatedRequest | null> {
-  // Get user info from headers set by middleware
   const userId = request.headers.get("x-session-user-id");
   const isAdmin = request.headers.get("x-session-is-admin") === "true";
+  const username = request.headers.get("x-session-username") || undefined;
 
   if (!userId) {
-    console.warn("❌ Unauthorized request: missing user id");
+    console.warn("❌ Unauthorized: missing user id");
     return null;
   }
 
   if (requireAdmin && !isAdmin) {
-    console.warn(`❌ Unauthorized request: user ${userId} is not admin`);
+    console.warn(`❌ Forbidden: user ${userId} is not admin`);
     return null;
   }
 
-  // Attach auth info to request
   (request as AuthenticatedRequest).userId = Number(userId);
   (request as AuthenticatedRequest).isAdmin = isAdmin;
+  (request as AuthenticatedRequest).username = username;
 
   return request as AuthenticatedRequest;
 }

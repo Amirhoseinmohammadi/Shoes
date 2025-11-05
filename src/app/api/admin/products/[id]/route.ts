@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { requireAuth } from "@/lib/auth-guard";
 
 const prisma = new PrismaClient();
 
 export async function GET(
-  req: Request,
+  req: NextRequest,
   { params }: { params: { id: string } },
 ) {
   try {
@@ -38,12 +39,44 @@ export async function GET(
 }
 
 export async function PUT(
-  req: Request,
+  req: NextRequest,
   { params }: { params: { id: string } },
 ) {
   try {
+    const authReq = await requireAuth(req, true);
+    if (!authReq) {
+      return NextResponse.json(
+        { error: "Unauthorized - admin access required" },
+        { status: 401 },
+      );
+    }
+
     const id = params.id;
     const data = await req.json();
+
+    console.log(`✅ Admin ${authReq.userId} updating product ${id}`);
+
+    if (!data.name || !data.brand || !data.price || !data.variants) {
+      return NextResponse.json(
+        { error: "تمام فیلدهای ضروری را پر کنید" },
+        { status: 400 },
+      );
+    }
+
+    if (!Array.isArray(data.variants) || data.variants.length === 0) {
+      return NextResponse.json(
+        { error: "حداقل یک واریانت الزامی است" },
+        { status: 400 },
+      );
+    }
+
+    const existingProduct = await prisma.product.findUnique({
+      where: { id: Number(id) },
+    });
+
+    if (!existingProduct) {
+      return NextResponse.json({ error: "محصول یافت نشد" }, { status: 404 });
+    }
 
     const updatedProduct = await prisma.$transaction(async (tx) => {
       await tx.variant.deleteMany({
@@ -53,17 +86,20 @@ export async function PUT(
       const product = await tx.product.update({
         where: { id: Number(id) },
         data: {
-          name: data.name,
-          brand: data.brand,
-          description: data.description,
+          name: data.name.trim(),
+          brand: data.brand.trim(),
+          description: data.description?.trim() || "",
           price: Number(data.price),
+          category: data.category || null,
           variants: {
             create: data.variants.map((variant: any) => ({
-              color: variant.color,
+              color: variant.color.trim(),
               images: {
-                create: variant.images.map((image: any) => ({
-                  url: image.url,
-                })),
+                create: variant.images
+                  .filter((img: any) => img.url)
+                  .map((image: any) => ({
+                    url: image.url,
+                  })),
               },
               sizes: {
                 create: [{ size: "38", stock: 1 }],
@@ -84,26 +120,68 @@ export async function PUT(
       return product;
     });
 
-    return NextResponse.json(updatedProduct);
-  } catch (error) {
+    console.log(`✅ محصول ${id} با موفقیت بروزرسانی شد`);
+
+    return NextResponse.json({
+      success: true,
+      message: "محصول با موفقیت بروزرسانی شد",
+      product: updatedProduct,
+    });
+  } catch (error: any) {
     console.error("خطا در ویرایش محصول:", error);
-    return NextResponse.json({ error: "خطا در ویرایش محصول" }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "خطا در ویرایش محصول",
+        message: error.message || "خطای نامشخص",
+      },
+      { status: 500 },
+    );
   }
 }
 
 export async function DELETE(
-  req: Request,
+  req: NextRequest,
   { params }: { params: { id: string } },
 ) {
   try {
+    const authReq = await requireAuth(req, true);
+    if (!authReq) {
+      return NextResponse.json(
+        { error: "Unauthorized - admin access required" },
+        { status: 401 },
+      );
+    }
+
     const id = params.id;
+
+    console.log(`✅ Admin ${authReq.userId} deleting product ${id}`);
+
+    const existingProduct = await prisma.product.findUnique({
+      where: { id: Number(id) },
+    });
+
+    if (!existingProduct) {
+      return NextResponse.json({ error: "محصول یافت نشد" }, { status: 404 });
+    }
 
     await prisma.product.delete({
       where: { id: Number(id) },
     });
-    return NextResponse.json({ success: true });
-  } catch (error) {
+
+    console.log(`✅ محصول ${id} با موفقیت حذف شد`);
+
+    return NextResponse.json({
+      success: true,
+      message: "محصول با موفقیت حذف شد",
+    });
+  } catch (error: any) {
     console.error("خطا در حذف محصول:", error);
-    return NextResponse.json({ error: "خطا در حذف محصول" }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "خطا در حذف محصول",
+        message: error.message || "خطای نامشخص",
+      },
+      { status: 500 },
+    );
   }
 }

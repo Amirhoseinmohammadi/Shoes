@@ -3,7 +3,6 @@ import { clearSessionCookie } from "@/lib/session";
 
 export async function POST(request: NextRequest) {
   try {
-    // ✅ Clear the session cookie
     await clearSessionCookie();
 
     return NextResponse.json({

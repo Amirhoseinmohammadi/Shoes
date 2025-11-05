@@ -20,7 +20,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "initData required" }, { status: 400 });
     }
 
-    // ✅ NEW: Verify Telegram signature
     const isValid = validateInitData(
       initData,
       process.env.TELEGRAM_BOT_TOKEN || "",
@@ -37,7 +36,6 @@ export async function POST(request: NextRequest) {
     const params = new URLSearchParams(initData);
     const authDate = params.get("auth_date");
 
-    // ✅ NEW: Check if initData is expired
     if (isInitDataExpired(authDate)) {
       return NextResponse.json(
         { error: "Telegram data expired" },
@@ -56,11 +54,9 @@ export async function POST(request: NextRequest) {
 
     const user: TelegramUser = JSON.parse(userData);
 
-    // ✅ NEW: Check if user is admin
     const isAdmin =
       user.id.toString() === process.env.NEXT_PUBLIC_ADMIN_USER_ID;
 
-    // ✅ NEW: Create server-side session
     await setSessionCookie({
       userId: user.id,
       firstName: user.first_name,

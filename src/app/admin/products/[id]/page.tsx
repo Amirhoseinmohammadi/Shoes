@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import { useTelegram } from "@/hooks/useTelegram";
 
 interface VariantForm {
   id?: number;
   color: string;
   images: File[];
-  previewUrls: string[];
+  previewUrls: string[]; // urls from server or object URLs for local previews
 }
 
 interface ProductForm {
@@ -20,9 +21,50 @@ interface ProductForm {
   stock: string;
 }
 
+function LoadingSkeleton() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 pt-20 dark:from-gray-900 dark:to-gray-800">
+      <div className="mx-auto max-w-4xl">
+        <div className="rounded-2xl bg-white p-8 text-center shadow-lg dark:bg-gray-800">
+          <div className="flex flex-col items-center justify-center">
+            <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600 dark:border-gray-700 dark:border-t-blue-500"></div>
+            <p className="text-gray-600 dark:text-gray-400">
+              در حال بررسی دسترسی...
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AccessDeniedPage() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 p-4 dark:from-gray-900 dark:to-gray-800">
+      <div className="rounded-2xl bg-white p-8 text-center shadow-2xl dark:bg-gray-800">
+        <div className="mb-4 text-6xl">🚫</div>
+        <h1 className="mb-4 text-2xl font-bold text-gray-800 dark:text-white">
+          دسترسی غیرمجاز
+        </h1>
+        <p className="mb-6 text-gray-600 dark:text-gray-400">
+          فقط کاربران ادمین می‌توانند محصولات را ویرایش کنند.
+        </p>
+        <Link
+          href="/"
+          className="inline-block rounded-lg bg-blue-600 px-6 py-2 text-white transition-all hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
+        >
+          بازگشت به صفحه اصلی
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default function EditProductPage() {
+  const { user: telegramUser, loading: authLoading, isAdmin } = useTelegram();
   const router = useRouter();
   const { id } = useParams();
+
   const [form, setForm] = useState<ProductForm>({
     name: "",
     brand: "",
@@ -31,6 +73,7 @@ export default function EditProductPage() {
     category: "",
     stock: "",
   });
+
   const [variants, setVariants] = useState<VariantForm[]>([
     { color: "", images: [], previewUrls: [] },
   ]);
@@ -38,6 +81,15 @@ export default function EditProductPage() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Redirect non-admin as soon as we know auth state
+  useEffect(() => {
+    if (!authLoading && !isAdmin) {
+      // don't force-redirect while still showing skeleton — show AccessDenied instead
+      // If you prefer redirect: router.replace('/')
+      console.warn("❌ Non-admin user tried to access edit product page");
+    }
+  }, [authLoading, isAdmin, router]);
 
   useEffect(() => {
     async function fetchProduct() {
@@ -48,39 +100,33 @@ export default function EditProductPage() {
       }
 
       try {
-        console.log("در حال دریافت محصول با ID:", id);
-
         const res = await fetch(`/api/admin/products/${id}`);
-
         if (!res.ok) {
-          if (res.status === 404) {
-            throw new Error("محصول یافت نشد");
-          }
+          if (res.status === 404) throw new Error("محصول یافت نشد");
           throw new Error(`خطای HTTP! وضعیت: ${res.status}`);
         }
 
         const data = await res.json();
-        console.log("داده‌های دریافت شده:", data);
-
         setForm({
           name: data.name || "",
           brand: data.brand || "",
           description: data.description || "",
-          price: data.price ? data.price.toString() : "",
+          price: data.price != null ? String(data.price) : "",
           category: data.category || "",
-          stock: data.stock ? data.stock.toString() : "0",
+          stock: data.stock != null ? String(data.stock) : "0",
         });
 
-        if (data.variants && data.variants.length > 0) {
-          console.log("Variants found:", data.variants);
+        if (
+          data.variants &&
+          Array.isArray(data.variants) &&
+          data.variants.length > 0
+        ) {
           setVariants(
-            data.variants.map((variant: any) => ({
-              id: variant.id,
-              color: variant.color || "",
+            data.variants.map((v: any) => ({
+              id: v.id,
+              color: v.color || "",
               images: [],
-              previewUrls: variant.images
-                ? variant.images.map((img: any) => img.url)
-                : [],
+              previewUrls: v.images ? v.images.map((img: any) => img.url) : [],
             })),
           );
         } else {
@@ -97,14 +143,12 @@ export default function EditProductPage() {
     fetchProduct();
   }, [id]);
 
-  const addVariant = () => {
+  const addVariant = () =>
     setVariants([...variants, { color: "", images: [], previewUrls: [] }]);
-  };
 
   const removeVariant = (index: number) => {
-    if (variants.length > 1) {
-      setVariants(variants.filter((_, i) => i !== index));
-    }
+    if (variants.length <= 1) return;
+    setVariants(variants.filter((_, i) => i !== index));
   };
 
   const updateVariant = (
@@ -112,9 +156,9 @@ export default function EditProductPage() {
     field: keyof VariantForm,
     value: any,
   ) => {
-    const updated = [...variants];
-    updated[index] = { ...updated[index], [field]: value };
-    setVariants(updated);
+    const copy = [...variants];
+    copy[index] = { ...copy[index], [field]: value };
+    setVariants(copy);
   };
 
   const handleVariantImageUpload = async (
@@ -131,13 +175,11 @@ export default function EditProductPage() {
 
     try {
       for (const file of files) {
-        // اعتبارسنجی نوع فایل
         if (!file.type.startsWith("image/")) {
           setError("لطفاً فقط فایل‌های تصویری آپلود کنید");
           continue;
         }
 
-        // اعتبارسنجی سایز فایل
         if (file.size > 5 * 1024 * 1024) {
           setError("حجم فایل نباید بیشتر از ۵ مگابایت باشد");
           continue;
@@ -152,13 +194,10 @@ export default function EditProductPage() {
           body: formData,
         });
 
-        if (!res.ok) {
-          throw new Error(`خطا در آپلود: ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`خطا در آپلود: ${res.status}`);
 
         const result = await res.json();
-
-        if (result.success) {
+        if (result.success && result.imageUrl) {
           uploadedUrls.push(result.imageUrl);
         } else {
           setError(result.message || "خطا در آپلود عکس");
@@ -166,28 +205,28 @@ export default function EditProductPage() {
       }
 
       if (uploadedUrls.length > 0) {
-        const updated = [...variants];
-        updated[variantIndex].previewUrls = [
-          ...updated[variantIndex].previewUrls,
+        const copy = [...variants];
+        copy[variantIndex].previewUrls = [
+          ...copy[variantIndex].previewUrls,
           ...uploadedUrls,
         ];
-        setVariants(updated);
+        setVariants(copy);
       }
     } catch (err: any) {
       console.error("خطا در آپلود عکس:", err);
       setError("خطا در آپلود عکس‌ها. لطفاً دوباره تلاش کنید.");
     } finally {
       setUploading(null);
-      e.target.value = "";
+      if (e.target) e.target.value = ""; // reset file input
     }
   };
 
   const removeImage = (variantIndex: number, imageIndex: number) => {
-    const updated = [...variants];
-    updated[variantIndex].previewUrls = updated[
-      variantIndex
-    ].previewUrls.filter((_, i) => i !== imageIndex);
-    setVariants(updated);
+    const copy = [...variants];
+    copy[variantIndex].previewUrls = copy[variantIndex].previewUrls.filter(
+      (_, i) => i !== imageIndex,
+    );
+    setVariants(copy);
   };
 
   const validateForm = (): boolean => {
@@ -217,10 +256,7 @@ export default function EditProductPage() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setSaving(true);
     setError(null);
@@ -237,8 +273,6 @@ export default function EditProductPage() {
         })),
       };
 
-      console.log("داده‌های ارسالی:", productData);
-
       const res = await fetch(`/api/admin/products/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -250,9 +284,6 @@ export default function EditProductPage() {
         const errorData = await res.json();
         throw new Error(errorData.message || "خطا در ویرایش محصول");
       }
-
-      const result = await res.json();
-      console.log("محصول ویرایش شد:", result);
 
       router.push("/admin/products");
       router.refresh();
@@ -298,60 +329,8 @@ export default function EditProductPage() {
     "کفش مردانه",
   ];
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 pt-20 dark:from-gray-900 dark:to-gray-800">
-        <div className="mx-auto max-w-4xl">
-          <div className="rounded-2xl bg-white p-8 text-center shadow-lg dark:bg-gray-800">
-            <div className="flex flex-col items-center justify-center">
-              <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600 dark:border-gray-700 dark:border-t-blue-500"></div>
-              <p className="text-gray-600 dark:text-gray-400">
-                در حال بارگذاری محصول...
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error && !loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 pt-20 dark:from-gray-900 dark:to-gray-800">
-        <div className="mx-auto max-w-4xl">
-          <div className="mb-6">
-            <Link
-              href="/admin/products"
-              className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-            >
-              ← بازگشت به مدیریت محصولات
-            </Link>
-          </div>
-          <div className="rounded-2xl bg-white p-8 text-center shadow-lg dark:bg-gray-800">
-            <div className="mb-4 text-6xl">😔</div>
-            <h3 className="mb-4 text-xl font-semibold text-gray-800 dark:text-white">
-              خطا
-            </h3>
-            <p className="mb-6 text-gray-600 dark:text-gray-400">{error}</p>
-            <div className="flex flex-wrap justify-center gap-3">
-              <button
-                onClick={() => window.location.reload()}
-                className="rounded-lg bg-blue-600 px-6 py-2 text-white transition-colors hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
-              >
-                تلاش مجدد
-              </button>
-              <Link
-                href="/admin/products"
-                className="rounded-lg bg-gray-600 px-6 py-2 text-white transition-colors hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-800"
-              >
-                بازگشت
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (authLoading || loading) return <LoadingSkeleton />;
+  if (!isAdmin) return <AccessDeniedPage />;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 pt-20 dark:from-gray-900 dark:to-gray-800">
@@ -377,11 +356,12 @@ export default function EditProductPage() {
           )}
 
           <form onSubmit={handleSave} className="flex flex-col gap-8">
-            {/* اطلاعات اصلی محصول */}
+            {/* main info */}
             <div className="rounded-xl border border-gray-200 p-6 dark:border-gray-700">
               <h2 className="mb-6 border-b pb-2 text-xl font-semibold text-gray-700 dark:text-gray-300">
                 📋 اطلاعات اصلی محصول
               </h2>
+
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -484,7 +464,7 @@ export default function EditProductPage() {
               </div>
             </div>
 
-            {/* واریانت‌ها */}
+            {/* variants */}
             <div className="rounded-xl border border-gray-200 p-6 dark:border-gray-700">
               <div className="mb-6 flex items-center justify-between border-b pb-2 dark:border-gray-600">
                 <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300">
@@ -495,8 +475,7 @@ export default function EditProductPage() {
                   onClick={addVariant}
                   className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-white transition-colors hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
                 >
-                  <span>+</span>
-                  افزودن رنگ
+                  <span>+</span> افزودن رنگ
                 </button>
               </div>
 
@@ -516,8 +495,7 @@ export default function EditProductPage() {
                           onClick={() => removeVariant(variantIndex)}
                           className="flex items-center gap-2 rounded-lg bg-red-100 px-3 py-1 text-red-600 transition-colors hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
                         >
-                          <span>🗑️</span>
-                          حذف
+                          <span>🗑️</span> حذف
                         </button>
                       )}
                     </div>
@@ -543,11 +521,7 @@ export default function EditProductPage() {
                           عکس‌های این رنگ *
                         </label>
                         <label
-                          className={`flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
-                            uploading === variantIndex
-                              ? "border-blue-400 bg-blue-50 dark:bg-blue-900/20"
-                              : "border-gray-300 bg-gray-50 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-gray-600"
-                          }`}
+                          className={`flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors ${uploading === variantIndex ? "border-blue-400 bg-blue-50 dark:bg-blue-900/20" : "border-gray-300 bg-gray-50 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-gray-600"}`}
                         >
                           <div className="flex flex-col items-center justify-center">
                             {uploading === variantIndex ? (
@@ -597,7 +571,6 @@ export default function EditProductPage() {
                       </div>
                     </div>
 
-                    {/* پیشنمایش عکس‌ها */}
                     {variant.previewUrls.length > 0 && (
                       <div className="mt-6">
                         <label className="mb-3 block text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -630,29 +603,22 @@ export default function EditProductPage() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-4 sm:flex-row">
+            {/* actions */}
+            <div className="flex flex-col gap-4 md:flex-row md:justify-between">
               <button
                 type="submit"
-                disabled={saving || uploading !== null}
-                className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:from-blue-700 hover:to-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={saving}
+                className="w-full rounded-lg bg-blue-600 px-6 py-3 text-white transition-all hover:bg-blue-700 disabled:opacity-50 md:w-auto"
               >
-                {saving ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                    در حال ذخیره...
-                  </span>
-                ) : (
-                  "💾 ذخیره تغییرات"
-                )}
+                {saving ? "در حال ذخیره..." : "✅ ذخیره تغییرات"}
               </button>
 
               <button
                 type="button"
                 onClick={handleDelete}
-                disabled={saving}
-                className="rounded-xl bg-gradient-to-r from-red-600 to-red-700 px-6 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:from-red-700 hover:to-red-800 disabled:cursor-not-allowed disabled:opacity-50 sm:px-8"
+                className="w-full rounded-lg bg-red-600 px-6 py-3 text-white hover:bg-red-700 md:w-auto"
               >
-                🗑️ حذف محصول
+                🗑 حذف محصول
               </button>
             </div>
           </form>

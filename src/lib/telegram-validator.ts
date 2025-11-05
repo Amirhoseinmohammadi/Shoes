@@ -24,7 +24,7 @@ export const validateInitData = (
 
   const dataCheckString = Object.keys(data)
     .filter((key) => data[key] !== undefined)
-    .sort() // ⬅️ مهم: مرتب‌سازی الفبایی
+    .sort()
     .map((key) => `${key}=${data[key]}`)
     .join("\n");
 

@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   CubeIcon,
   ClipboardDocumentListIcon,
   UserGroupIcon,
 } from "@heroicons/react/24/outline";
 import { useState, useEffect } from "react";
+import { useTelegram } from "@/hooks/useTelegram";
 
 interface StatCard {
   value: string;
@@ -93,13 +95,49 @@ function LoadingSkeleton() {
   );
 }
 
+function AccessDeniedPage() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 p-4 dark:from-gray-900 dark:to-gray-800">
+      <div className="rounded-2xl bg-white p-8 text-center shadow-2xl dark:bg-gray-800">
+        <div className="mb-4 text-6xl">🚫</div>
+        <h1 className="mb-4 text-2xl font-bold text-gray-800 dark:text-white">
+          دسترسی غیرمجاز
+        </h1>
+        <p className="mb-6 text-gray-600 dark:text-gray-400">
+          شما دسترسی لازم برای مشاهده این صفحه را ندارید.
+          <br />
+          فقط کاربران ادمین می‌توانند به پنل مدیریت دسترسی داشته باشند.
+        </p>
+        <Link
+          href="/"
+          className="inline-block rounded-lg bg-blue-600 px-6 py-2 text-white transition-all hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
+        >
+          بازگشت به صفحه اصلی
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
+  // ✅ مرحله 1: بررسی احراز هویت
+  const { user: telegramUser, loading, isAdmin } = useTelegram();
+  const router = useRouter();
+
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
     activeProducts: "۰",
     newOrders: "۰",
     onlineUsers: "۰",
   });
+
+  // ✅ مرحله 2: بررسی دسترسی ادمین
+  useEffect(() => {
+    if (!loading && !isAdmin) {
+      console.warn("❌ Non-admin user tried to access admin panel");
+      // می‌تونیم redirect کنیم یا صفحه access denied نشان دهیم
+    }
+  }, [loading, isAdmin]);
 
   const mainCards = [
     {
@@ -181,8 +219,14 @@ export default function AdminPage() {
     loadData();
   }, []);
 
-  if (isLoading) {
+  // ✅ مرحله 3: اگر درحال لودینگ است
+  if (loading || isLoading) {
     return <LoadingSkeleton />;
+  }
+
+  // ✅ مرحله 4: اگر ادمین نیست - دسترسی غیرمجاز
+  if (!isAdmin) {
+    return <AccessDeniedPage />;
   }
 
   return (
@@ -196,6 +240,12 @@ export default function AdminPage() {
             به پنل مدیریت خوش آمدید. از اینجا می‌توانید تمام بخش‌های سایت را
             مدیریت کنید.
           </p>
+          {telegramUser && (
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              کاربر: {telegramUser.first_name} {telegramUser.last_name}
+              {telegramUser.username && ` (@${telegramUser.username})`}
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">

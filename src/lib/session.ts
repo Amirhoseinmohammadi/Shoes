@@ -1,7 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-// This must match the bot token from your .env
 const secret = new TextEncoder().encode(
   process.env.TELEGRAM_BOT_TOKEN || "your-bot-token-fallback",
 );
@@ -18,9 +17,6 @@ export interface SessionPayload {
   iat?: number;
 }
 
-/**
- * Create a signed JWT session token
- */
 export async function createSession(payload: SessionPayload): Promise<string> {
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
@@ -29,9 +25,6 @@ export async function createSession(payload: SessionPayload): Promise<string> {
     .sign(secret);
 }
 
-/**
- * Verify and decode the session token
- */
 export async function verifySession(
   token: string,
 ): Promise<SessionPayload | null> {
@@ -44,9 +37,6 @@ export async function verifySession(
   }
 }
 
-/**
- * Set secure HTTP-only cookie with session
- */
 export async function setSessionCookie(payload: SessionPayload): Promise<void> {
   const token = await createSession(payload);
   const cookieStore = await cookies();
@@ -55,14 +45,11 @@ export async function setSessionCookie(payload: SessionPayload): Promise<void> {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: SESSION_DURATION / 1000, // Convert to seconds
+    maxAge: SESSION_DURATION / 1000,
     path: "/",
   });
 }
 
-/**
- * Get session from cookie
- */
 export async function getSession(): Promise<SessionPayload | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -74,9 +61,6 @@ export async function getSession(): Promise<SessionPayload | null> {
   return await verifySession(token);
 }
 
-/**
- * Clear session cookie
- */
 export async function clearSessionCookie(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE_NAME);

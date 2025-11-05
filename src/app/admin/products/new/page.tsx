@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTelegram } from "@/hooks/useTelegram";
 
 interface VariantForm {
   color: string;
@@ -19,8 +20,50 @@ interface ProductForm {
   stock: string;
 }
 
+function LoadingSkeleton() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 pt-20 dark:from-gray-900 dark:to-gray-800">
+      <div className="mx-auto max-w-4xl">
+        <div className="rounded-2xl bg-white p-8 text-center shadow-lg dark:bg-gray-800">
+          <div className="flex flex-col items-center justify-center">
+            <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600 dark:border-gray-700 dark:border-t-blue-500"></div>
+            <p className="text-gray-600 dark:text-gray-400">
+              در حال بررسی دسترسی...
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AccessDeniedPage() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 p-4 dark:from-gray-900 dark:to-gray-800">
+      <div className="rounded-2xl bg-white p-8 text-center shadow-2xl dark:bg-gray-800">
+        <div className="mb-4 text-6xl">🚫</div>
+        <h1 className="mb-4 text-2xl font-bold text-gray-800 dark:text-white">
+          دسترسی غیرمجاز
+        </h1>
+        <p className="mb-6 text-gray-600 dark:text-gray-400">
+          فقط کاربران ادمین می‌توانند محصول جدید اضافه کنند.
+        </p>
+        <Link
+          href="/"
+          className="inline-block rounded-lg bg-blue-600 px-6 py-2 text-white transition-all hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
+        >
+          بازگشت به صفحه اصلی
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default function NewProductPage() {
+  // ✅ مرحله 1: بررسی احراز هویت
+  const { user: telegramUser, loading, isAdmin } = useTelegram();
   const router = useRouter();
+
   const [form, setForm] = useState<ProductForm>({
     name: "",
     brand: "",
@@ -32,9 +75,17 @@ export default function NewProductPage() {
   const [variants, setVariants] = useState<VariantForm[]>([
     { color: "", images: [], previewUrls: [] },
   ]);
-  const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState<number | null>(null); // برای مشخص کردن واریانت در حال آپلود
+  const [formLoading, setFormLoading] = useState(false);
+  const [uploading, setUploading] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // ✅ مرحله 2: بررسی دسترسی ادمین
+  useEffect(() => {
+    if (!loading && !isAdmin) {
+      console.warn("❌ Non-admin user tried to access new product page");
+      // صفحه access denied نمایش داده می‌شود
+    }
+  }, [loading, isAdmin]);
 
   const addVariant = () => {
     setVariants([...variants, { color: "", images: [], previewUrls: [] }]);
@@ -76,7 +127,7 @@ export default function NewProductPage() {
           continue;
         }
 
-        // اعتبارسنجی سایز فایل (مثلاً 5MB)
+        // اعتبارسنجی سایز فایل
         if (file.size > 5 * 1024 * 1024) {
           setError("حجم فایل نباید بیشتر از ۵ مگابایت باشد");
           continue;
@@ -117,7 +168,6 @@ export default function NewProductPage() {
       setError("خطا در آپلود عکس‌ها. لطفاً دوباره تلاش کنید.");
     } finally {
       setUploading(null);
-      // پاک کردن input file
       e.target.value = "";
     }
   };
@@ -167,7 +217,7 @@ export default function NewProductPage() {
       return;
     }
 
-    setLoading(true);
+    setFormLoading(true);
     setError(null);
 
     try {
@@ -197,12 +247,12 @@ export default function NewProductPage() {
       console.log("محصول ایجاد شد:", result);
 
       router.push("/admin/products");
-      router.refresh(); // برای به‌روزرسانی کش
+      router.refresh();
     } catch (err: any) {
       console.error("خطا:", err);
       setError(err.message || "خطا در افزودن محصول");
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   }
 
@@ -214,6 +264,16 @@ export default function NewProductPage() {
     "کفش زنانه",
     "کفش مردانه",
   ];
+
+  // ✅ مرحله 3: اگر درحال لودینگ است
+  if (loading) {
+    return <LoadingSkeleton />;
+  }
+
+  // ✅ مرحله 4: اگر ادمین نیست - دسترسی غیرمجاز
+  if (!isAdmin) {
+    return <AccessDeniedPage />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 pt-20 dark:from-gray-900 dark:to-gray-800">
@@ -495,10 +555,10 @@ export default function NewProductPage() {
 
             <button
               type="submit"
-              disabled={loading || uploading !== null}
+              disabled={formLoading || uploading !== null}
               className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:from-blue-700 hover:to-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading ? (
+              {formLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                   در حال افزودن محصول...

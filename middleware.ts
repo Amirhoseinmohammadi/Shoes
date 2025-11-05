@@ -7,107 +7,47 @@ const secret = new TextEncoder().encode(
 
 const SESSION_COOKIE_NAME = "telegram_session";
 
-// Routes that require authentication
-const PROTECTED_ROUTES = [
-  "/admin",
-  "/profile",
-  "/cart",
-  "/order",
-  "/api/admin",
-  "/api/cart",
-  "/api/orders",
-];
-
-// Routes that require admin role
-const ADMIN_ROUTES = ["/admin"];
-
-async function verifySessionToken(token: string) {
-  try {
-    const verified = await jwtVerify(token, secret);
-    return verified.payload;
-  } catch (error) {
-    console.error("❌ Session token verification failed:", error);
-    return null;
-  }
-}
-
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Check if route requires protection
-  const isProtected = PROTECTED_ROUTES.some((route) =>
-    pathname.startsWith(route),
-  );
-
-  if (!isProtected) {
+  if (!request.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.next();
   }
 
-  // Get session from cookie
-  const sessionToken = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  const publicEndpoints = [
+    "/api/validate-init",
+    "/api/telegram/bot",
+    "/api/products",
+    "/api/auth/logout",
+  ];
 
-  if (!sessionToken) {
-    console.warn(`⚠️ Access denied to ${pathname} - no session`);
-
-    // For API routes, return 401
-    if (pathname.startsWith("/api")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // For pages, redirect to home
-    return NextResponse.redirect(new URL("/", request.url));
+  if (publicEndpoints.some((ep) => request.nextUrl.pathname.startsWith(ep))) {
+    return NextResponse.next();
   }
 
-  // Verify session token
-  const session = await verifySessionToken(sessionToken);
+  try {
+    const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
 
-  if (!session) {
-    console.warn(`⚠️ Access denied to ${pathname} - invalid session`);
-
-    if (pathname.startsWith("/api")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!token) {
+      return NextResponse.next();
     }
 
-    return NextResponse.redirect(new URL("/", request.url));
+    const verified = await jwtVerify(token, secret);
+    const payload = verified.payload as any;
+
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-session-user-id", String(payload.userId));
+    requestHeaders.set("x-session-is-admin", String(payload.isAdmin || false));
+    requestHeaders.set("x-session-username", payload.username || "");
+
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
+  } catch (error) {
+    return NextResponse.next();
   }
-
-  // Check admin routes
-  if (ADMIN_ROUTES.some((route) => pathname.startsWith(route))) {
-    if (!session.isAdmin) {
-      console.warn(`⚠️ Admin access denied to ${pathname} - not admin`);
-
-      if (pathname.startsWith("/api")) {
-        return NextResponse.json(
-          { error: "Admin access required" },
-          { status: 403 },
-        );
-      }
-
-      return NextResponse.redirect(new URL("/access-denied", request.url));
-    }
-  }
-
-  // Pass session to request headers (accessible in route handlers)
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-session-user-id", session.userId.toString());
-  requestHeaders.set("x-session-is-admin", session.isAdmin.toString());
-
-  return NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  });
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public (public folder)
-     */
-    "/((?!_next/static|_next/image|favicon.ico|public).*)",
-  ],
+  matcher: ["/api/:path*", "/((?!_next/static|_next/image|favicon.ico).*)"],
 };
