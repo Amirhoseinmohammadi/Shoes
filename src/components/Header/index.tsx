@@ -8,41 +8,48 @@ import {
   BellIcon,
   UserIcon,
 } from "@heroicons/react/24/outline";
+import { useCallback, useMemo } from "react";
 
 export default function BottomNavigation() {
   const pathname = usePathname();
   const router = useRouter();
   const { cartItems } = useCart();
 
-  const navItems = [
-    { id: 0, href: "/", icon: HomeIcon, label: "خانه", badge: 0 },
-    {
-      id: 1,
-      href: "/cart",
-      icon: ShoppingCartIcon,
-      label: "سبد خرید",
-      badge: cartItems.length,
-    },
-    // ✅ Fixed: /order → /orders
-    { id: 2, href: "/orders", icon: BellIcon, label: "سفارشات", badge: 0 },
-    { id: 3, href: "/profile", icon: UserIcon, label: "پروفایل", badge: 0 },
-  ];
+  // ✅ Memoize nav items to prevent re-renders
+  const navItems = useMemo(
+    () => [
+      { id: 0, href: "/", icon: HomeIcon, label: "خانه", badge: 0 },
+      {
+        id: 1,
+        href: "/cart",
+        icon: ShoppingCartIcon,
+        label: "سبد خرید",
+        badge: cartItems.length,
+      },
+      { id: 2, href: "/orders", icon: BellIcon, label: "سفارشات", badge: 0 },
+      { id: 3, href: "/profile", icon: UserIcon, label: "پروفایل", badge: 0 },
+    ],
+    [cartItems.length],
+  );
 
-  const getActiveItem = () => {
+  const getActiveItem = useCallback(() => {
     const currentItem = navItems.find((item) =>
       item.href === "/admin"
         ? pathname.startsWith("/admin")
         : pathname === item.href,
     );
     return currentItem?.id || 0;
-  };
+  }, [pathname, navItems]);
 
   const activeId = getActiveItem();
 
-  // ✅ Simplified: router.push is SSR-safe
-  const navigate = (href: string) => {
-    router.push(href);
-  };
+  // ✅ Memoize navigate to prevent function recreation
+  const navigate = useCallback(
+    (href: string) => {
+      router.push(href);
+    },
+    [router],
+  );
 
   return (
     <div className="fixed right-0 bottom-0 left-0 z-50 rounded-t-3xl bg-gray-200 pt-4 shadow-[0_-6px_20px_rgba(0,0,0,0.2)] backdrop-blur-md dark:bg-gray-800">
