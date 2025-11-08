@@ -15,7 +15,7 @@ export default function BottomNavigation() {
   const router = useRouter();
   const { cartItems } = useCart();
 
-  // ✅ Memoize nav items to prevent re-renders
+  // ✅ تعریف آیتم‌های ناوبری
   const navItems = useMemo(
     () => [
       { id: 0, href: "/", icon: HomeIcon, label: "خانه", badge: 0 },
@@ -32,6 +32,7 @@ export default function BottomNavigation() {
     [cartItems.length],
   );
 
+  // ✅ تشخیص آیتم فعال
   const getActiveItem = useCallback(() => {
     const currentItem = navItems.find((item) =>
       item.href === "/admin"
@@ -43,12 +44,31 @@ export default function BottomNavigation() {
 
   const activeId = getActiveItem();
 
-  // ✅ Memoize navigate to prevent function recreation
+  // ✅ تابع ناوبری با تشخیص حالت تلگرام
   const navigate = useCallback(
     (href: string) => {
-      router.push(href);
+      console.log("🟠 Click detected:", href);
+      console.log("📍 Current pathname:", pathname);
+
+      try {
+        if (typeof window !== "undefined" && window.Telegram?.WebApp) {
+          console.log("📱 Telegram WebApp detected");
+          const url = `${window.location.origin}${href}`;
+          console.log("🌐 Navigating via Telegram.openLink:", url);
+
+          // از openLink استفاده می‌کنیم تا reload نشه
+          window.Telegram.WebApp.openLink(url, { try_instant_view: false });
+        } else {
+          console.log("💻 Normal browser detected");
+          router.push(href);
+        }
+
+        console.log("✅ Navigation executed successfully");
+      } catch (err) {
+        console.error("❌ Navigation error:", err);
+      }
     },
-    [router],
+    [router, pathname],
   );
 
   return (

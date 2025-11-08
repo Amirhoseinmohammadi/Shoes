@@ -17,28 +17,43 @@ export default function TelegramWebApp() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const tg = (window as any).Telegram?.WebApp;
-    if (!tg) {
-      setLoading(false);
-      return;
-    }
+    const initTelegram = async () => {
+      try {
+        const tg = (window as any).Telegram?.WebApp;
+        if (!tg) {
+          console.warn("⚠️ Telegram WebApp not found.");
+          setLoading(false);
+          return;
+        }
 
-    tg.ready();
-    tg.expand();
+        console.log("📲 Telegram WebApp detected:", tg.version);
+        tg.ready();
+        tg.expand();
+        tg.enableClosingConfirmation(false);
 
-    const initData = tg.initData;
-    if (initData) {
-      validateUser(initData);
-    } else {
-      setLoading(false);
-    }
+        const initData = tg?.initDataUnsafe || tg?.initData;
+        console.log("📦 initData received:", initData);
+
+        if (initData && Object.keys(initData).length > 0) {
+          await validateUser(tg.initData);
+        } else {
+          console.warn("⚠️ No initData found, skipping validation.");
+        }
+      } catch (error) {
+        console.error("❌ Telegram initialization error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initTelegram();
   }, []);
 
   const validateUser = async (initData: string) => {
     try {
       setLoading(true);
-
       const response = await apiClient.telegram.validateInit(initData);
+      console.log("✅ Telegram validation response:", response);
 
       if (response.valid && response.payload?.user) {
         setUser(response.payload.user);
@@ -47,10 +62,10 @@ export default function TelegramWebApp() {
           JSON.stringify(response.payload.user),
         );
       } else {
-        console.warn("Invalid initData", response);
+        console.warn("🚫 Invalid initData", response);
       }
     } catch (error) {
-      console.error("Error validating Telegram user:", error);
+      console.error("❌ Error validating Telegram user:", error);
     } finally {
       setLoading(false);
     }
@@ -60,6 +75,7 @@ export default function TelegramWebApp() {
     const tg = (window as any).Telegram?.WebApp;
     if (tg) {
       tg.sendData(JSON.stringify({ action: "checkout" }));
+      console.log("🛒 Checkout data sent to Telegram");
     }
   };
 
@@ -73,8 +89,7 @@ export default function TelegramWebApp() {
         <h1>🛍 فروشگاه تلگرام</h1>
 
         {loading && <p>در حال شناسایی کاربر...</p>}
-
-        {!loading && !user && <p>خطا در شناسایی کاربر تلگرام</p>}
+        {!loading && !user && <p>❌ خطا در شناسایی کاربر تلگرام</p>}
 
         {user && (
           <div>
