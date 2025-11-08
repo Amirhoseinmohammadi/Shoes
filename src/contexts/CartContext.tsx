@@ -55,17 +55,33 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const useCart = () => {
   const context = useContext(CartContext);
-  if (!context) throw new Error("useCart must be used within CartProvider");
+  if (!context) {
+    // ✅ Return default safe values instead of throwing
+    console.warn("⚠️ useCart called outside CartProvider");
+    return {
+      cartItems: [],
+      addItem: async () => false,
+      removeItem: async () => false,
+      updateItemQuantity: async () => false,
+      checkout: async () => false,
+      clearCart: () => {},
+      loading: false,
+      totalItems: 0,
+      totalPrice: 0,
+    };
+  }
   return context;
 };
 
 const getLocalCartKey = () => `guest-cart`;
+
 const loadLocalCart = (): CartItem[] => {
   if (typeof window === "undefined") return [];
   try {
     const stored = localStorage.getItem(getLocalCartKey());
     return stored ? JSON.parse(stored) : [];
-  } catch {
+  } catch (error) {
+    console.error("❌ Error loading cart from localStorage:", error);
     return [];
   }
 };
@@ -75,7 +91,7 @@ const saveLocalCart = (items: CartItem[]) => {
   try {
     localStorage.setItem(getLocalCartKey(), JSON.stringify(items));
   } catch (error) {
-    console.error("❌ خطا در ذخیره سبد خرید:", error);
+    console.error("❌ Error saving cart to localStorage:", error);
   }
 };
 
@@ -83,13 +99,36 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
+  const [initialized, setInitialized] = useState(false);
   const { user: telegramUser } = useTelegram();
+
+  // ✅ Initialize cart from localStorage
+  useEffect(() => {
+    try {
+      const savedCart = loadLocalCart();
+      setCartItems(savedCart);
+    } catch (error) {
+      console.error("❌ Cart initialization error:", error);
+      setCartItems([]);
+    } finally {
+      setInitialized(true);
+    }
+  }, []);
+
+  // ✅ Update userId when telegram user changes
   useEffect(() => {
     if (telegramUser?.id) {
       setUserId(telegramUser.id);
-      console.log("✅ UserID from Telegram:", telegramUser.id);
+      console.log("✅ Cart userId set:", telegramUser.id);
     }
   }, [telegramUser?.id]);
+
+  // ✅ Save cart whenever it changes
+  useEffect(() => {
+    if (initialized) {
+      saveLocalCart(cartItems);
+    }
+  }, [cartItems, initialized]);
 
   const totalItems = cartItems.reduce((sum, i) => sum + i.quantity, 0);
   const totalPrice = cartItems.reduce(
@@ -97,66 +136,77 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     0,
   );
 
-  useEffect(() => {
-    setCartItems(loadLocalCart());
-  }, []);
-
-  useEffect(() => {
-    saveLocalCart(cartItems);
-  }, [cartItems]);
-
   const addItem = async ({
     shoe,
     quantity,
     color,
     size,
   }: AddItemParams): Promise<boolean> => {
-    const newItem: CartItem = {
-      id: Date.now(),
-      productId: shoe.id,
-      name: shoe.name,
-      brand: shoe.brand,
-      price: shoe.price,
-      image: shoe.image,
-      quantity,
-      color,
-      size,
-    };
+    try {
+      const newItem: CartItem = {
+        id: Date.now(),
+        productId: shoe.id,
+        name: shoe.name,
+        brand: shoe.brand,
+        price: shoe.price,
+        image: shoe.image,
+        quantity,
+        color,
+        size,
+      };
 
-    setCartItems((prev) => {
-      const existing = prev.find(
-        (i) =>
-          i.productId === newItem.productId &&
-          i.color === newItem.color &&
-          i.size === newItem.size,
-      );
-      if (existing) {
-        return prev.map((i) =>
-          i.productId === newItem.productId
-            ? { ...i, quantity: i.quantity + quantity }
-            : i,
+      setCartItems((prev) => {
+        const existing = prev.find(
+          (i) =>
+            i.productId === newItem.productId &&
+            i.color === newItem.color &&
+            i.size === newItem.size,
         );
-      }
-      return [...prev, newItem];
-    });
 
-    return true;
+        if (existing) {
+          return prev.map((i) =>
+            i.productId === newItem.productId && i.color === newItem.color
+              ? { ...i, quantity: i.quantity + quantity }
+              : i,
+          );
+        }
+
+        return [...prev, newItem];
+      });
+
+      return true;
+    } catch (error) {
+      console.error("❌ Error adding item:", error);
+      return false;
+    }
   };
 
   const removeItem = async (cartItemId: number): Promise<boolean> => {
-    setCartItems((prev) => prev.filter((i) => i.id !== cartItemId));
-    return true;
+    try {
+      setCartItems((prev) => prev.filter((i) => i.id !== cartItemId));
+      return true;
+    } catch (error) {
+      console.error("❌ Error removing item:", error);
+      return false;
+    }
   };
 
   const updateItemQuantity = async (
     cartItemId: number,
     quantity: number,
   ): Promise<boolean> => {
-    if (quantity <= 0) return removeItem(cartItemId);
-    setCartItems((prev) =>
-      prev.map((i) => (i.id === cartItemId ? { ...i, quantity } : i)),
-    );
-    return true;
+    try {
+      if (quantity <= 0) return removeItem(cartItemId);
+
+      setCartItems((prev) =>
+        prev.map((i) => (i.id === cartItemId ? { ...i, quantity } : i)),
+      );
+
+      return true;
+    } catch (error) {
+      console.error("❌ Error updating quantity:", error);
+      return false;
+    }
   };
 
   const clearCart = useCallback(() => {
@@ -169,17 +219,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     phone: string;
   }): Promise<boolean> => {
     if (cartItems.length === 0) {
-      console.error("❌ سبد خرید خالی است");
+      console.error("❌ Cart is empty");
       return false;
     }
 
     if (!userId) {
-      console.error("❌ userId نامشخص است");
+      console.error("❌ userId is not set - user not logged in");
       return false;
     }
 
     if (!customer.name?.trim() || !customer.phone?.trim()) {
-      console.error("❌ نام و شماره تماس الزامی است");
+      console.error("❌ Name and phone are required");
       return false;
     }
 
@@ -209,6 +259,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
             : null,
       };
 
+      console.log("📤 Submitting order...", orderData);
+
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -216,6 +268,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       });
 
       const responseData = await res.json();
+      console.log("📥 Order response:", responseData);
 
       if (!res.ok) {
         throw new Error(responseData.message || "خطا در ثبت سفارش");
@@ -223,28 +276,25 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
       clearCart();
       return true;
-    } catch (e: any) {
-      console.error("❌ Checkout error:", e.message);
+    } catch (error: any) {
+      console.error("❌ Checkout error:", error.message);
       return false;
     } finally {
       setLoading(false);
     }
   };
-  return (
-    <CartContext.Provider
-      value={{
-        cartItems,
-        addItem,
-        removeItem,
-        updateItemQuantity,
-        checkout,
-        clearCart,
-        loading,
-        totalItems,
-        totalPrice,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
-  );
+
+  const value: CartContextType = {
+    cartItems,
+    addItem,
+    removeItem,
+    updateItemQuantity,
+    checkout,
+    clearCart,
+    loading,
+    totalItems,
+    totalPrice,
+  };
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };

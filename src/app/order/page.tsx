@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTelegram } from "@/hooks/useTelegram";
 
 interface Product {
   id: number;
@@ -29,7 +30,6 @@ interface Order {
   items: OrderItem[];
 }
 
-// تبدیل وضعیت سفارش به label، رنگ و آیکون
 const getStatusInfo = (status: string) => {
   const statusMap: Record<
     string,
@@ -68,35 +68,77 @@ const getStatusInfo = (status: string) => {
 };
 
 const OrdersPage = () => {
+  const {
+    user: telegramUser,
+    loading: authLoading,
+    isTelegram,
+  } = useTelegram();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // شبیه‌سازی auth (حالا true هست، می‌تونی به دلخواه تغییر بدی)
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
-
-  // fetch سفارشات
+  // ✅ Fetch orders when user is loaded
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (authLoading) return; // Still loading auth
+
+    if (!telegramUser?.id) {
+      console.warn("⚠️ No telegram user, skipping orders fetch");
+      setLoading(false);
+      setError(null);
+      return;
+    }
 
     const fetchOrders = async () => {
       try {
         setLoading(true);
-        const res = await fetch("/api/orders"); // مسیر API سفارشات
-        if (!res.ok) throw new Error("خطا در دریافت سفارشات");
-        const data: Order[] = await res.json();
-        setOrders(data);
+        setError(null);
+
+        // ✅ Add telegramId as query parameter
+        const url = `/api/orders?telegramId=${telegramUser.id}`;
+        console.log("📤 Fetching orders from:", url);
+
+        const res = await fetch(url);
+        console.log("📥 Response status:", res.status);
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(
+            errorData.error || `HTTP ${res.status}: خطا در دریافت سفارشات`,
+          );
+        }
+
+        const data = await res.json();
+        console.log("✅ Orders fetched:", data);
+
+        setOrders(data.orders || []);
       } catch (err: any) {
+        console.error("❌ Error fetching orders:", err);
         setError(err.message || "خطا در دریافت سفارشات");
+        setOrders([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchOrders();
-  }, [isAuthenticated]);
+  }, [telegramUser?.id, authLoading]);
 
-  if (!isAuthenticated) {
+  // ✅ Loading auth
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent"></div>
+          <p className="text-gray-600 dark:text-gray-400">
+            در حال بررسی دسترسی...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Not logged in
+  if (!telegramUser) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
@@ -112,17 +154,21 @@ const OrdersPage = () => {
     );
   }
 
+  // ✅ Loading orders
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent"></div>
-          <p className="text-gray-600 dark:text-gray-400">در حال بارگذاری...</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            در حال بارگذاری سفارشات...
+          </p>
         </div>
       </div>
     );
   }
 
+  // ✅ Error
   if (error) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -139,6 +185,7 @@ const OrdersPage = () => {
     );
   }
 
+  // ✅ No orders
   if (!orders.length) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -161,6 +208,7 @@ const OrdersPage = () => {
     );
   }
 
+  // ✅ Show orders
   return (
     <div className="safe-area-bottom min-h-screen bg-gray-50 p-4 dark:bg-gray-900">
       <div className="mx-auto max-w-2xl">

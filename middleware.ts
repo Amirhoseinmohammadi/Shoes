@@ -17,6 +17,7 @@ export async function middleware(request: NextRequest) {
     "/api/telegram/bot",
     "/api/products",
     "/api/auth/logout",
+    "/api/orders", // ✅ اضافه شد!
   ];
 
   if (publicEndpoints.some((ep) => request.nextUrl.pathname.startsWith(ep))) {
