@@ -1,27 +1,20 @@
-"use client";
-
-import { ReactNode } from "react";
-import { ThemeProvider } from "next-themes";
-import { ToastProvider } from "@/contexts/ToastContext";
-import { CartProvider } from "@/contexts/CartContext";
-import PageTransition from "@/components/Common/PageTransition";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import type { Metadata } from "next";
+import RootLayoutClient from "./layout.client";
 import "@/styles/index.css";
 
-interface RootLayoutProps {
-  children: ReactNode;
-}
-import type { Metadata } from "next";
-
 export const metadata: Metadata = {
-  title: "Shoes Store",
-  description: "Online shoe store",
+  title: "فروشگاه کفش",
+  description: "فروشگاه آنلاین کفش با بهترین قیمت‌ها",
   icons: {
     icon: "/favicon.ico",
   },
 };
-export default function RootLayout({ children }: RootLayoutProps) {
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html suppressHydrationWarning lang="fa" dir="rtl">
       <head>
@@ -37,17 +30,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
         />
       </head>
       <body className="font-shabnam antialiased">
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <ToastProvider>
-            <CartProvider>
-              <Header />
-              <main className="min-h-screen">
-                <PageTransition>{children}</PageTransition>
-              </main>
-              <Footer />
-            </CartProvider>
-          </ToastProvider>
-        </ThemeProvider>
+        <RootLayoutClient>{children}</RootLayoutClient>
       </body>
     </html>
   );
