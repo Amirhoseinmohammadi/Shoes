@@ -1,36 +1,31 @@
 "use client";
 
-import { ReactNode, useMemo } from "react";
+import { ReactNode } from "react";
 import { ThemeProvider } from "next-themes";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { CartProvider } from "@/contexts/CartContext";
 import PageTransition from "@/components/Common/PageTransition";
-import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import BottomNavigation from "@/components/Header/index"; // ✅ اضافه شد
+import BottomNavigation from "@/components/Header";
 
 interface RootLayoutClientProps {
   children: ReactNode;
 }
 
 export default function RootLayoutClient({ children }: RootLayoutClientProps) {
-  // ✅ Memoize providers to prevent re-renders
-  const providers = useMemo(
-    () => (
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-        <ToastProvider>
-          <CartProvider>
-            <main className="min-h-screen">
+  return (
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+      <ToastProvider>
+        <CartProvider>
+          <div className="flex min-h-screen flex-col">
+            <main className="flex-1">
               <PageTransition>{children}</PageTransition>
             </main>
             <Footer />
-            <BottomNavigation /> {/* ✅ اضافه شد */}
-          </CartProvider>
-        </ToastProvider>
-      </ThemeProvider>
-    ),
-    [children],
+            <BottomNavigation />
+          </div>
+        </CartProvider>
+      </ToastProvider>
+    </ThemeProvider>
   );
-
-  return providers;
 }

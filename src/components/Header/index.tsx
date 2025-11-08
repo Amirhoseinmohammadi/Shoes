@@ -44,7 +44,6 @@ export default function BottomNavigation() {
 
   const activeId = getActiveItem();
 
-  // ✅ تابع ناوبری با تشخیص حالت تلگرام
   const navigate = useCallback(
     (href: string) => {
       console.log("🟠 Click detected:", href);
@@ -52,12 +51,11 @@ export default function BottomNavigation() {
 
       try {
         if (typeof window !== "undefined" && window.Telegram?.WebApp) {
-          console.log("📱 Telegram WebApp detected");
-          const url = `${window.location.origin}${href}`;
-          console.log("🌐 Navigating via Telegram.openLink:", url);
-
-          // از openLink استفاده می‌کنیم تا reload نشه
-          window.Telegram.WebApp.openLink(url, { try_instant_view: false });
+          console.log("📱 Telegram WebApp detected — navigating internally");
+          router.push(href);
+          (window.Telegram.WebApp as any).HapticFeedback?.impactOccurred(
+            "light",
+          );
         } else {
           console.log("💻 Normal browser detected");
           router.push(href);
