@@ -12,7 +12,15 @@ import "@/styles/index.css";
 interface RootLayoutProps {
   children: ReactNode;
 }
+import type { Metadata } from "next";
 
+export const metadata: Metadata = {
+  title: "Shoes Store",
+  description: "Online shoe store",
+  icons: {
+    icon: "/favicon.ico",
+  },
+};
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html suppressHydrationWarning lang="fa" dir="rtl">

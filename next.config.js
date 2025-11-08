@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
-  productionBrowserSourceMaps: true,
+  productionBrowserSourceMaps: false,
 
   images: {
     formats: ["image/webp", "image/avif"],
@@ -30,25 +30,31 @@ const nextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-          { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
+
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin-allow-popups",
+          },
+
           {
             key: "Cache-Control",
-            value: "s-maxage=60, stale-while-revalidate=120",
+            value: "public, max-age=3600, stale-while-revalidate=86400",
           },
-          {
-            key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
-          },
+        ],
+      },
+      {
+        source: "/js/telegram-web-app.js",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400" },
+          { key: "Access-Control-Allow-Origin", value: "*" },
         ],
       },
     ];
   },
+
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",
   },
-
-  productionBrowserSourceMaps: false,
 
   compress: true,
 };
