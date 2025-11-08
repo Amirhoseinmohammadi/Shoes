@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useMemo } from "react";
 import { ThemeProvider } from "next-themes";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { CartProvider } from "@/contexts/CartContext";
@@ -13,17 +13,23 @@ interface RootLayoutClientProps {
 }
 
 export default function RootLayoutClient({ children }: RootLayoutClientProps) {
-  return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-      <ToastProvider>
-        <CartProvider>
-          <Header />
-          <main className="min-h-screen">
-            <PageTransition>{children}</PageTransition>
-          </main>
-          <Footer />
-        </CartProvider>
-      </ToastProvider>
-    </ThemeProvider>
+  // ✅ Memoize providers to prevent re-renders
+  const providers = useMemo(
+    () => (
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+        <ToastProvider>
+          <CartProvider>
+            <Header />
+            <main className="min-h-screen">
+              <PageTransition>{children}</PageTransition>
+            </main>
+            <Footer />
+          </CartProvider>
+        </ToastProvider>
+      </ThemeProvider>
+    ),
+    [children],
   );
+
+  return providers;
 }

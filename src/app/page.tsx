@@ -10,7 +10,6 @@ export default function Home() {
   const { user: telegramUser, loading, isTelegram } = useTelegram();
   const [showWelcome, setShowWelcome] = useState(false);
 
-  // ✅ FIXED: Only show welcome when user is fully loaded
   useEffect(() => {
     if (!loading && telegramUser && telegramUser.id) {
       console.log("🎉 نمایش پیام خوش آمدگویی");
@@ -18,7 +17,7 @@ export default function Home() {
       const timer = setTimeout(() => setShowWelcome(false), 5000);
       return () => clearTimeout(timer);
     }
-  }, [telegramUser?.id, loading]); // ✅ Use telegramUser?.id as dependency
+  }, [telegramUser?.id, loading]);
 
   const TelegramStatus = () => {
     if (!isTelegram) {

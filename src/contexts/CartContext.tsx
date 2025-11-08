@@ -174,7 +174,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (!userId) {
-      console.error("❌ userId نامشخص است - کاربر لاگین نیست");
+      console.error("❌ userId نامشخص است");
       return false;
     }
 
@@ -183,10 +183,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
+    // ✅ Prevent double submissions
+    if (loading) {
+      console.warn("⏳ Checkout already in progress");
+      return false;
+    }
+
     setLoading(true);
     try {
-      console.log("📤 ارسال سفارش با userId:", userId);
-
       const orderData = {
         userId,
         items: cartItems.map((i) => ({
@@ -205,8 +209,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
             : null,
       };
 
-      console.log("📦 Order Payload:", orderData);
-
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -214,21 +216,15 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       });
 
       const responseData = await res.json();
-      console.log("📥 Server Response:", responseData);
 
       if (!res.ok) {
         throw new Error(responseData.message || "خطا در ثبت سفارش");
       }
 
-      console.log("✅ سفارش با موفقیت ثبت شد:", responseData.orderId);
       clearCart();
       return true;
     } catch (e: any) {
-      console.error("❌ خطا در checkout:", {
-        message: e.message,
-        userId,
-        itemsCount: cartItems.length,
-      });
+      console.error("❌ Checkout error:", e.message);
       return false;
     } finally {
       setLoading(false);
