@@ -29,13 +29,16 @@ const ProfilePage = () => {
   const { user: telegramUser, loading, isTelegram } = useTelegram();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!loading && !telegramUser && isTelegram) {
-      console.log("🔄 Redirecting to home - no Telegram user");
-      router.push("/");
-    }
-  }, [loading, telegramUser, isTelegram, router]);
-
+  if (!loading && isTelegram) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <p>وارد شوید...</p>
+          <Link href="/">بازگشت</Link>
+        </div>
+      </div>
+    );
+  }
   const handleLogout = () => {
     router.push("/");
   };

@@ -2,7 +2,6 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useCart } from "@/contexts/CartContext";
-
 import {
   HomeIcon,
   ShoppingCartIcon,
@@ -24,7 +23,8 @@ export default function BottomNavigation() {
       label: "سبد خرید",
       badge: cartItems.length,
     },
-    { id: 2, href: "/order", icon: BellIcon, label: "سفارشات", badge: 0 },
+    // ✅ Fixed: /order → /orders
+    { id: 2, href: "/orders", icon: BellIcon, label: "سفارشات", badge: 0 },
     { id: 3, href: "/profile", icon: UserIcon, label: "پروفایل", badge: 0 },
   ];
 
@@ -39,8 +39,8 @@ export default function BottomNavigation() {
 
   const activeId = getActiveItem();
 
+  // ✅ Simplified: router.push is SSR-safe
   const navigate = (href: string) => {
-    if (typeof window === "undefined") return;
     router.push(href);
   };
 
