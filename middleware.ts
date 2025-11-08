@@ -17,7 +17,7 @@ export async function middleware(request: NextRequest) {
     "/api/telegram/bot",
     "/api/products",
     "/api/auth/logout",
-    "/api/orders", // ✅ اضافه شد!
+    "/api/orders",
   ];
 
   if (publicEndpoints.some((ep) => request.nextUrl.pathname.startsWith(ep))) {
@@ -27,9 +27,7 @@ export async function middleware(request: NextRequest) {
   try {
     const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
 
-    if (!token) {
-      return NextResponse.next();
-    }
+    if (!token) return NextResponse.next();
 
     const verified = await jwtVerify(token, secret);
     const payload = verified.payload as any;
@@ -50,5 +48,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/:path*", "/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/api/:path*"],
 };
