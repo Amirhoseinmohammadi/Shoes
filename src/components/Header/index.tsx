@@ -43,8 +43,7 @@ export default function BottomNavigation() {
   const navigate = useCallback(
     (href: string) => {
       try {
-        router.push(href); // SPA navigation
-        router.refresh(); // force fetch & remount
+        router.push(href); // SPA navigation - بدون refresh!
         (window.Telegram?.WebApp as any)?.HapticFeedback?.impactOccurred(
           "light",
         );
@@ -87,7 +86,7 @@ export default function BottomNavigation() {
                   </span>
                 )}
               </div>
-ss            </button>
+            </button>
           );
         })}
       </div>

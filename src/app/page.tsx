@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Hero from "@/components/Hero";
 import Products from "@/components/Products";
 import ThemeToggler from "@/components/Header/ThemeToggler";
@@ -10,12 +10,20 @@ export default function Home() {
   const { user: telegramUser, loading, isTelegram } = useTelegram();
   const [showWelcome, setShowWelcome] = useState(false);
 
+  // استفاده از ref تا welcome message فقط یک بار نمایش داده شود
+  const hasShownWelcome = useRef(false);
+
   useEffect(() => {
     if (!loading && telegramUser && telegramUser.id) {
-      console.log("🎉 نمایش پیام خوش آمدگویی");
-      setShowWelcome(true);
-      const timer = setTimeout(() => setShowWelcome(false), 5000);
-      return () => clearTimeout(timer);
+      // فقط اگر قبلاً نشان نداده باشیم
+      if (!hasShownWelcome.current) {
+        console.log("🎉 نمایش پیام خوش آمدگویی");
+        setShowWelcome(true);
+        hasShownWelcome.current = true;
+
+        const timer = setTimeout(() => setShowWelcome(false), 5000);
+        return () => clearTimeout(timer);
+      }
     }
   }, [telegramUser?.id, loading]);
 
