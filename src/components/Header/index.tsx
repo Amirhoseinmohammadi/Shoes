@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCart } from "@/contexts/CartContext";
 import {
   HomeIcon,
@@ -8,11 +9,10 @@ import {
   BellIcon,
   UserIcon,
 } from "@heroicons/react/24/outline";
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 
 export default function BottomNavigation() {
   const pathname = usePathname();
-  const router = useRouter();
   const { cartItems } = useCart();
 
   const navItems = useMemo(
@@ -37,22 +37,8 @@ export default function BottomNavigation() {
         ? pathname.startsWith("/admin")
         : pathname === item.href,
     );
-    return current?.id || 0;
+    return current?.id ?? 0;
   }, [pathname, navItems]);
-
-  const navigate = useCallback(
-    (href: string) => {
-      try {
-        router.push(href); // SPA navigation - بدون refresh!
-        (window.Telegram?.WebApp as any)?.HapticFeedback?.impactOccurred(
-          "light",
-        );
-      } catch (err) {
-        console.error("Navigation error:", err);
-      }
-    },
-    [router],
-  );
 
   return (
     <div className="fixed right-0 bottom-0 left-0 z-50 rounded-t-3xl bg-gray-200 pt-5 pb-3 shadow-[0_-6px_20px_rgba(0,0,0,0.2)] backdrop-blur-md dark:bg-gray-800">
@@ -62,9 +48,14 @@ export default function BottomNavigation() {
           const isActive = item.id === activeId;
 
           return (
-            <button
+            <Link
               key={item.id}
-              onClick={() => navigate(item.href)}
+              href={item.href}
+              onClick={() =>
+                (
+                  window.Telegram?.WebApp as any
+                )?.HapticFeedback?.impactOccurred("light")
+              }
               className={`relative flex flex-col items-center transition-all duration-300 ${
                 isActive
                   ? "text-cyan-600 dark:text-cyan-400"
@@ -86,7 +77,7 @@ export default function BottomNavigation() {
                   </span>
                 )}
               </div>
-            </button>
+            </Link>
           );
         })}
       </div>
