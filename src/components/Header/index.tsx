@@ -32,11 +32,11 @@ export default function BottomNavigation() {
   );
 
   const activeId = useMemo(() => {
-    const current = navItems.find((item) =>
-      item.href === "/admin"
-        ? pathname.startsWith("/admin")
-        : pathname === item.href,
-    );
+    const current = navItems.find((item) => {
+      if (item.href === "/admin") return pathname.startsWith("/admin");
+      if (item.href === "/") return pathname === "/";
+      return pathname === item.href;
+    });
     return current?.id ?? 0;
   }, [pathname, navItems]);
 
@@ -52,6 +52,8 @@ export default function BottomNavigation() {
               key={item.id}
               href={item.href}
               prefetch={false}
+              replace
+              scroll={false}
               onClick={() =>
                 (
                   window.Telegram?.WebApp as any
