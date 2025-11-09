@@ -51,6 +51,7 @@ export default function BottomNavigation() {
             <Link
               key={item.id}
               href={item.href}
+              prefetch={false}
               onClick={() =>
                 (
                   window.Telegram?.WebApp as any

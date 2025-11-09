@@ -49,6 +49,7 @@ interface CartContextType {
   loading: boolean;
   totalItems: number;
   totalPrice: number;
+  telegramUser: any | null;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -56,7 +57,6 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {
-    // ✅ Return default safe values instead of throwing
     console.warn("⚠️ useCart called outside CartProvider");
     return {
       cartItems: [],
@@ -68,20 +68,21 @@ export const useCart = () => {
       loading: false,
       totalItems: 0,
       totalPrice: 0,
+      telegramUser: null,
     };
   }
   return context;
 };
 
-const getLocalCartKey = () => `guest-cart`;
+const CART_KEY = "guest-cart";
+const TELEGRAM_USER_KEY = "telegram-user";
 
 const loadLocalCart = (): CartItem[] => {
   if (typeof window === "undefined") return [];
   try {
-    const stored = localStorage.getItem(getLocalCartKey());
+    const stored = localStorage.getItem(CART_KEY);
     return stored ? JSON.parse(stored) : [];
-  } catch (error) {
-    console.error("❌ Error loading cart from localStorage:", error);
+  } catch {
     return [];
   }
 };
@@ -89,46 +90,63 @@ const loadLocalCart = (): CartItem[] => {
 const saveLocalCart = (items: CartItem[]) => {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(getLocalCartKey(), JSON.stringify(items));
-  } catch (error) {
-    console.error("❌ Error saving cart to localStorage:", error);
+    localStorage.setItem(CART_KEY, JSON.stringify(items));
+  } catch {}
+};
+
+const loadLocalTelegramUser = () => {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem(TELEGRAM_USER_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
   }
+};
+
+const saveLocalTelegramUser = (user: any) => {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(TELEGRAM_USER_KEY, JSON.stringify(user));
+  } catch {}
 };
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [userId, setUserId] = useState<number | null>(null);
   const [initialized, setInitialized] = useState(false);
-  const { user: telegramUser } = useTelegram();
+  const [telegramUser, setTelegramUser] = useState<any>(
+    loadLocalTelegramUser(),
+  );
 
-  // ✅ Initialize cart from localStorage
+  const { user: telegramUserFromHook } = useTelegram();
+
+  // Load cart from localStorage
   useEffect(() => {
-    try {
-      const savedCart = loadLocalCart();
-      setCartItems(savedCart);
-    } catch (error) {
-      console.error("❌ Cart initialization error:", error);
-      setCartItems([]);
-    } finally {
-      setInitialized(true);
-    }
+    const savedCart = loadLocalCart();
+    setCartItems(savedCart);
+    setInitialized(true);
   }, []);
 
-  // ✅ Update userId when telegram user changes
+  // Save cart on change
   useEffect(() => {
-    if (telegramUser?.id) {
-      setUserId(telegramUser.id);
-      console.log("✅ Cart userId set:", telegramUser.id);
-    }
-  }, [telegramUser?.id]);
-
-  // ✅ Save cart whenever it changes
-  useEffect(() => {
-    if (initialized) {
-      saveLocalCart(cartItems);
-    }
+    if (initialized) saveLocalCart(cartItems);
   }, [cartItems, initialized]);
+
+  // Set telegram user only once and save to localStorage
+  useEffect(() => {
+    if (!telegramUser && telegramUserFromHook) {
+      const userData = {
+        id: Number(telegramUserFromHook.id),
+        username: telegramUserFromHook.username,
+        first_name: telegramUserFromHook.first_name,
+        last_name: telegramUserFromHook.last_name,
+        photo_url: telegramUserFromHook.photo_url,
+      };
+      setTelegramUser(userData);
+      saveLocalTelegramUser(userData);
+    }
+  }, [telegramUserFromHook, telegramUser]);
 
   const totalItems = cartItems.reduce((sum, i) => sum + i.quantity, 0);
   const totalPrice = cartItems.reduce(
@@ -136,12 +154,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     0,
   );
 
-  const addItem = async ({
-    shoe,
-    quantity,
-    color,
-    size,
-  }: AddItemParams): Promise<boolean> => {
+  const addItem = async ({ shoe, quantity, color, size }: AddItemParams) => {
     try {
       const newItem: CartItem = {
         id: Date.now(),
@@ -154,7 +167,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         color,
         size,
       };
-
       setCartItems((prev) => {
         const existing = prev.find(
           (i) =>
@@ -162,87 +174,59 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
             i.color === newItem.color &&
             i.size === newItem.size,
         );
-
         if (existing) {
           return prev.map((i) =>
-            i.productId === newItem.productId && i.color === newItem.color
+            i.productId === newItem.productId &&
+            i.color === newItem.color &&
+            i.size === newItem.size
               ? { ...i, quantity: i.quantity + quantity }
               : i,
           );
         }
-
         return [...prev, newItem];
       });
-
       return true;
-    } catch (error) {
-      console.error("❌ Error adding item:", error);
+    } catch {
       return false;
     }
   };
 
-  const removeItem = async (cartItemId: number): Promise<boolean> => {
+  const removeItem = async (cartItemId: number) => {
     try {
       setCartItems((prev) => prev.filter((i) => i.id !== cartItemId));
       return true;
-    } catch (error) {
-      console.error("❌ Error removing item:", error);
+    } catch {
       return false;
     }
   };
 
-  const updateItemQuantity = async (
-    cartItemId: number,
-    quantity: number,
-  ): Promise<boolean> => {
+  const updateItemQuantity = async (cartItemId: number, quantity: number) => {
+    if (quantity <= 0) return removeItem(cartItemId);
     try {
-      if (quantity <= 0) return removeItem(cartItemId);
-
       setCartItems((prev) =>
         prev.map((i) => (i.id === cartItemId ? { ...i, quantity } : i)),
       );
-
       return true;
-    } catch (error) {
-      console.error("❌ Error updating quantity:", error);
+    } catch {
       return false;
     }
   };
 
   const clearCart = useCallback(() => {
     setCartItems([]);
-    localStorage.removeItem(getLocalCartKey());
+    localStorage.removeItem(CART_KEY);
   }, []);
 
-  const checkout = async (customer: {
-    name: string;
-    phone: string;
-  }): Promise<boolean> => {
-    if (cartItems.length === 0) {
-      console.error("❌ Cart is empty");
-      return false;
-    }
-
-    if (!userId) {
-      console.error("❌ userId is not set - user not logged in");
-      return false;
-    }
-
-    if (!customer.name?.trim() || !customer.phone?.trim()) {
-      console.error("❌ Name and phone are required");
-      return false;
-    }
-
-    // ✅ Prevent double submissions
-    if (loading) {
-      console.warn("⏳ Checkout already in progress");
-      return false;
-    }
+  const checkout = async (customer: { name: string; phone: string }) => {
+    if (!telegramUser) return false;
+    if (cartItems.length === 0) return false;
+    if (!customer.name?.trim() || !customer.phone?.trim()) return false;
+    if (loading) return false;
 
     setLoading(true);
     try {
       const orderData = {
-        userId,
+        userId: telegramUser.id,
         items: cartItems.map((i) => ({
           productId: i.productId,
           quantity: i.quantity,
@@ -253,48 +237,40 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         customerName: customer.name.trim(),
         customerPhone: customer.phone.trim(),
         totalPrice,
-        telegramData:
-          typeof window !== "undefined"
-            ? (window as any).Telegram?.WebApp?.initDataUnsafe?.user
-            : null,
+        telegramData: telegramUser,
       };
-
-      console.log("📤 Submitting order...", orderData);
-
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderData),
       });
-
-      const responseData = await res.json();
-      console.log("📥 Order response:", responseData);
-
-      if (!res.ok) {
-        throw new Error(responseData.message || "خطا در ثبت سفارش");
-      }
-
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "خطا در ثبت سفارش");
       clearCart();
       return true;
-    } catch (error: any) {
-      console.error("❌ Checkout error:", error.message);
+    } catch {
       return false;
     } finally {
       setLoading(false);
     }
   };
 
-  const value: CartContextType = {
-    cartItems,
-    addItem,
-    removeItem,
-    updateItemQuantity,
-    checkout,
-    clearCart,
-    loading,
-    totalItems,
-    totalPrice,
-  };
-
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return (
+    <CartContext.Provider
+      value={{
+        cartItems,
+        addItem,
+        removeItem,
+        updateItemQuantity,
+        checkout,
+        clearCart,
+        loading,
+        totalItems,
+        totalPrice,
+        telegramUser,
+      }}
+    >
+      {children}
+    </CartContext.Provider>
+  );
 };

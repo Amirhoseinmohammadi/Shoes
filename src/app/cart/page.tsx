@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/contexts/ToastContext";
-import { useTelegram } from "@/hooks/useTelegram";
 import Image from "next/image";
 import Link from "next/link";
 import CheckoutModal from "@/components/CheckoutModal";
@@ -58,7 +57,6 @@ const CartItemCard = ({ item, loading, onUpdateQuantity, onRemove }: any) => {
 
   return (
     <div className="rounded-2xl bg-white p-4 shadow-sm transition hover:shadow-md dark:bg-gray-800 dark:hover:shadow-lg">
-      {/* تصویر و مشخصات */}
       <div className="mb-4 flex gap-4">
         <div className="flex-shrink-0">
           {item.image ? (
@@ -70,21 +68,7 @@ const CartItemCard = ({ item, loading, onUpdateQuantity, onRemove }: any) => {
               className="rounded-xl object-cover"
             />
           ) : (
-            <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-gray-200 dark:bg-gray-700">
-              <svg
-                className="h-8 w-8 text-gray-400 dark:text-gray-500"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
+            <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-gray-200 dark:bg-gray-700" />
           )}
         </div>
 
@@ -100,28 +84,6 @@ const CartItemCard = ({ item, loading, onUpdateQuantity, onRemove }: any) => {
           <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
             قیمت واحد: {(item.price || 0).toLocaleString()} تومان
           </p>
-
-          <div className="mt-2 flex flex-wrap gap-2">
-            {item.size && (
-              <span className="rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                سایز: {item.size}
-              </span>
-            )}
-            {item.color && (
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-gray-600 dark:text-gray-400">
-                  رنگ:
-                </span>
-                <div
-                  className="h-4 w-4 rounded-full border border-gray-300 dark:border-gray-600"
-                  style={{ backgroundColor: displayColor }}
-                />
-                <span className="text-xs text-gray-600 dark:text-gray-400">
-                  {item.color}
-                </span>
-              </div>
-            )}
-          </div>
         </div>
 
         <div className="text-right">
@@ -135,7 +97,6 @@ const CartItemCard = ({ item, loading, onUpdateQuantity, onRemove }: any) => {
         </div>
       </div>
 
-      {/* کنترل تعداد */}
       <div className="flex items-center justify-between border-t border-gray-200 pt-3 dark:border-gray-700">
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-700 dark:text-gray-300">
@@ -167,9 +128,6 @@ const CartItemCard = ({ item, loading, onUpdateQuantity, onRemove }: any) => {
               +
             </button>
           </div>
-          <span className="text-xs text-gray-600 dark:text-gray-400">
-            ({item.quantity} جفت)
-          </span>
         </div>
 
         <button
@@ -177,13 +135,7 @@ const CartItemCard = ({ item, loading, onUpdateQuantity, onRemove }: any) => {
           disabled={loading}
           className="rounded-lg p-2 text-red-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
         >
-          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fillRule="evenodd"
-              d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-              clipRule="evenodd"
-            />
-          </svg>
+          حذف
         </button>
       </div>
     </div>
@@ -191,11 +143,15 @@ const CartItemCard = ({ item, loading, onUpdateQuantity, onRemove }: any) => {
 };
 
 const CartPage = () => {
-  const { cartItems, removeItem, updateItemQuantity, checkout, loading } =
-    useCart();
+  const {
+    cartItems,
+    removeItem,
+    updateItemQuantity,
+    checkout,
+    loading,
+    telegramUser,
+  } = useCart();
   const { showToast } = useToast();
-  const { user: telegramUser, sendData, isTelegram } = useTelegram();
-
   const [modalOpen, setModalOpen] = useState(false);
 
   const handleRemove = async (itemId: number) => {
@@ -230,11 +186,12 @@ const CartPage = () => {
   };
 
   const handleConfirmOrder = async (customer: CheckoutCustomer) => {
+    const telegramDiscount = telegramUser ? 1000 : 0;
     const finalAmount = calculateFinalAmount(
       cartItems,
       2500,
       2000,
-      isTelegram ? 1000 : 0,
+      telegramDiscount,
     );
 
     const success = await checkout(customer);
@@ -245,15 +202,6 @@ const CartPage = () => {
         type: "success",
       });
 
-      if (isTelegram) {
-        sendData({
-          action: "order_created",
-          items: cartItems.length,
-          total: finalAmount,
-          success: true,
-        });
-      }
-
       setModalOpen(false);
     } else {
       showToast({
@@ -263,7 +211,6 @@ const CartPage = () => {
     }
   };
 
-  // نمایش در صورت خالی بودن سبد
   if (cartItems.length === 0) {
     return (
       <div className="safe-area-bottom flex min-h-screen items-center justify-center bg-gray-200 dark:bg-gray-900">
@@ -288,7 +235,7 @@ const CartPage = () => {
   const total = calculateTotal(cartItems);
   const discount = 2500;
   const tax = 2000;
-  const telegramDiscount = isTelegram ? 1000 : 0;
+  const telegramDiscount = telegramUser ? 1000 : 0;
   const finalAmount = calculateFinalAmount(
     cartItems,
     discount,
@@ -322,7 +269,7 @@ const CartPage = () => {
               <span>تخفیف</span>
               <span>-{discount.toLocaleString()} تومان</span>
             </div>
-            {isTelegram && (
+            {telegramUser && (
               <div className="flex justify-between text-green-600 dark:text-green-400">
                 <span>تخفیف تلگرام</span>
                 <span>-{telegramDiscount.toLocaleString()} تومان</span>
@@ -362,13 +309,7 @@ const CartPage = () => {
         onConfirm={handleConfirmOrder}
         cartItems={cartItems}
         totalPrice={finalAmount}
-        telegramUser={{
-          id: Number(telegramUser?.id),
-          username: telegramUser?.username,
-          first_name: telegramUser?.first_name,
-          last_name: telegramUser?.last_name,
-          photo_url: telegramUser?.photo_url,
-        }}
+        telegramUser={telegramUser}
       />
     </div>
   );
