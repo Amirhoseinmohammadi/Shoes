@@ -2,6 +2,9 @@
 const nextConfig = {
   output: "standalone",
   productionBrowserSourceMaps: false,
+  compress: true,
+  swcMinify: true,
+  poweredByHeader: false,
 
   images: {
     formats: ["image/webp", "image/avif"],
@@ -12,11 +15,43 @@ const nextConfig = {
         hostname: "**",
       },
     ],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 
   experimental: {
     optimizeCss: true,
-    optimizePackageImports: ["@heroicons/react", "framer-motion"],
+    optimizePackageImports: [
+      "@heroicons/react",
+      "framer-motion",
+      "lucide-react",
+    ],
+    scrollRestoration: true,
+    esmExternals: true,
+  },
+
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.optimization.splitChunks.cacheGroups = {
+        ...config.optimization.splitChunks.cacheGroups,
+        vendor: {
+          test: /[\\/]node_modules[\\/]/,
+          name: "vendors",
+          priority: 10,
+          maxSize: 244000,
+          reuseExistingChunk: true,
+        },
+        common: {
+          minChunks: 2,
+          priority: 5,
+          reuseExistingChunk: true,
+          name: "common",
+        },
+      };
+    }
+    return config;
   },
 
   typescript: { ignoreBuildErrors: true },
@@ -25,20 +60,64 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: "/(.*)",
+        source: "/static/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        source: "/images/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+          { key: "Content-Security-Policy", value: "default-src 'self'" },
+        ],
+      },
+      {
+        source: "/api/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "private, max-age=0, must-revalidate",
+          },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+        ],
+      },
+      {
+        source: "/(_next/static|_next/image)/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        source: "/:path*",
         headers: [
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-XSS-Protection", value: "1; mode=block" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-
+          {
+            key: "Permissions-Policy",
+            value: "geolocation=(), microphone=(), camera=()",
+          },
           {
             key: "Cross-Origin-Opener-Policy",
             value: "same-origin-allow-popups",
           },
-
+          { key: "Cross-Origin-Resource-Policy", value: "cross-origin" },
+          { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
+          { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
           {
-            key: "Cache-Control",
-            value: "public, max-age=3600, stale-while-revalidate=86400",
+            key: "Strict-Transport-Security",
+            value: "max-age=31536000; includeSubDomains",
           },
         ],
       },
@@ -47,16 +126,43 @@ const nextConfig = {
         headers: [
           { key: "Cache-Control", value: "public, max-age=86400" },
           { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Content-Type", value: "application/javascript" },
         ],
       },
     ];
+  },
+
+  async redirects() {
+    return [
+      {
+        source: "/home",
+        destination: "/",
+        permanent: true,
+      },
+    ];
+  },
+
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: "/api/:path*",
+          destination: `${process.env.API_URL || "http://localhost:3000"}/api/:path*`,
+        },
+      ],
+    };
   },
 
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",
   },
 
-  compress: true,
+  reactStrictMode: true,
+
+  i18n: {
+    locales: ["fa"],
+    defaultLocale: "fa",
+  },
 };
 
 module.exports = nextConfig;
