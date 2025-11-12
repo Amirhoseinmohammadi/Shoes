@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import RootLayoutClient from "./layout.client";
 import "@/styles/index.css";
-import Script from "next/script";
+import TelegramScript from "@/components/TelegramScript";
 
 // ✅ SEO Metadata
 export const metadata: Metadata = {
@@ -124,13 +124,7 @@ export default function RootLayout({
 
         <RootLayoutClient>{children}</RootLayoutClient>
 
-        <Script
-          src="https://telegram.org/js/telegram-web-app.js"
-          strategy="lazyOnload"
-          onLoad={() => {
-            console.log("✅ Telegram WebApp loaded");
-          }}
-        />
+        <TelegramScript />
       </body>
     </html>
   );
