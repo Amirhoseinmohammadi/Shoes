@@ -10,7 +10,7 @@ const Footer = lazy(() => import("@/components/Footer"));
 const BottomNavigation = lazy(() => import("@/components/Header"));
 
 const NavigationSkeleton = () => (
-  <div className="fixed right-0 bottom-0 left-0 h-20 animate-pulse bg-gray-200 dark:bg-gray-800" />
+  <div className="fixed right-0 bottom-0 left-0 z-50 h-24 animate-pulse bg-gray-200 dark:bg-gray-800" />
 );
 
 const FooterSkeleton = () => (
@@ -32,7 +32,7 @@ export default function RootLayoutClient({ children }: RootLayoutClientProps) {
       <ToastProvider>
         <CartProvider>
           <div className="flex min-h-screen flex-col bg-white dark:bg-gray-900">
-            <main id="main-content" className="w-full flex-1">
+            <main id="main-content" className="w-full flex-1 pb-24">
               <PageTransition>{children}</PageTransition>
             </main>
 
@@ -40,9 +40,11 @@ export default function RootLayoutClient({ children }: RootLayoutClientProps) {
               <Footer />
             </Suspense>
 
-            <Suspense fallback={<NavigationSkeleton />}>
-              <BottomNavigation />
-            </Suspense>
+            <div className="fixed right-0 bottom-0 left-0 z-50 w-full">
+              <Suspense fallback={<NavigationSkeleton />}>
+                <BottomNavigation />
+              </Suspense>
+            </div>
           </div>
         </CartProvider>
       </ToastProvider>

@@ -11,7 +11,6 @@ export const metadata: Metadata = {
   authors: [{ name: "Iran Steps Team" }],
   creator: "Iran Steps",
   keywords: ["کفش", "کفش ورزشی", "کفش اصل", "خرید آنلاین", "فروشگاه"],
-
   openGraph: {
     type: "website",
     locale: "fa_IR",
@@ -28,28 +27,23 @@ export const metadata: Metadata = {
       },
     ],
   },
-
   twitter: {
     card: "summary_large_image",
     title: "فروشگاه کفش",
     description: "فروشگاه آنلاین کفش با بهترین قیمت‌ها",
     images: ["/og-image.png"],
   },
-
   icons: {
     icon: "/favicon.ico",
     apple: "/apple-touch-icon.png",
     shortcut: "/favicon.ico",
   },
-
   manifest: "/site.webmanifest",
 };
-
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+
   viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
@@ -81,7 +75,6 @@ export default function RootLayout({
           type="font/woff2"
           crossOrigin="anonymous"
         />
-
         <link rel="dns-prefetch" href="https://api.telegram.org" />
         <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
         <link
@@ -89,21 +82,18 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net"
           crossOrigin="anonymous"
         />
-
         <link
           href="https://cdn.jsdelivr.net/gh/rastikerdar/shabnam-font@v5.0.1/dist/font-face.css"
           rel="stylesheet"
           media="print"
           onLoad="this.media='all'"
         />
-
         <noscript>
           <link
             href="https://cdn.jsdelivr.net/gh/rastikerdar/shabnam-font@v5.0.1/dist/font-face.css"
             rel="stylesheet"
           />
         </noscript>
-
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -116,14 +106,11 @@ export default function RootLayout({
           }}
         />
       </head>
-
       <body className="font-shabnam bg-white antialiased transition-colors dark:bg-gray-900">
         <a href="#main-content" className="sr-only focus:not-sr-only">
           رفتن به محتوای اصلی
         </a>
-
         <RootLayoutClient>{children}</RootLayoutClient>
-
         <TelegramScript />
       </body>
     </html>

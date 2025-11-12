@@ -2,9 +2,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Theme Variables */
 @theme {
-  /* Breakpoints */
   --breakpoint-xs: 450px;
   --breakpoint-sm: 575px;
   --breakpoint-md: 768px;
@@ -12,7 +10,6 @@
   --breakpoint-xl: 1200px;
   --breakpoint-2xl: 1400px;
 
-  /* Colors */
   --color-white: #ffffff;
   --color-black: #121723;
   --color-dark: #1d2430;
@@ -24,7 +21,6 @@
   --color-stroke-stroke: #e3e8ef;
   --color-stroke-dark: #353943;
 
-  /* Gray Scale */
   --color-gray-50: #f9fafb;
   --color-gray-100: #f3f4f6;
   --color-gray-200: #e5e7eb;
@@ -37,7 +33,6 @@
   --color-gray-900: #111827;
   --color-gray-950: #030712;
 
-  /* Shadows */
   --shadow-sign-up: 0 5px 10px rgba(4, 10, 34, 0.2);
   --shadow-one: 0 2px 3px rgba(7, 7, 77, 0.05);
   --shadow-two: 0 5px 10px rgba(6, 8, 15, 0.1);
@@ -56,6 +51,7 @@
       transform: translateY(-10px) rotate(-2deg);
     }
   }
+
   .animate-floating {
     animation: floating 3s ease-in-out infinite;
   }
@@ -79,36 +75,34 @@
   ::backdrop,
   ::file-selector-button {
     border-color: var(--color-gray-200, currentColor);
+    box-sizing: border-box;
   }
 
   html {
     scroll-behavior: smooth;
   }
 
-  body {
-    padding-top: env(safe-area-inset-top);
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
-    padding-bottom: env(safe-area-inset-bottom);
-    box-sizing: border-box;
-    margin: 0;
-  }
-}
-
-@layer base {
   html,
   body,
   #__next {
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
     margin: 0;
     min-height: 100vh;
-    box-sizing: border-box;
   }
 
   body {
     font-family: "Shabnam", sans-serif;
-    scroll-behavior: smooth;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+      env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background-color: var(--color-white);
+    color: var(--color-body-color);
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
+  }
+
+  .dark body {
+    background-color: var(--color-dark);
+    color: var(--color-body-color-dark);
   }
 }
 
