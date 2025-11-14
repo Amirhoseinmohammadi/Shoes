@@ -210,7 +210,7 @@ export default function Home() {
           </div>
         }
       >
-        {!loading && <Products telegramUser={telegramUser} />}
+        <Products telegramUser={telegramUser} />
       </Suspense>
 
       <WelcomeToast show={showWelcome} userName={telegramUser?.first_name} />
