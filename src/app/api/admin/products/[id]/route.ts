@@ -6,12 +6,10 @@ const prisma = new PrismaClient();
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  context: { params: { id: string } },
 ) {
   try {
-    const id = params.id;
-
-    console.log("دریافت محصول با ID:", id);
+    const id = context.params.id;
 
     const product = await prisma.product.findUnique({
       where: { id: Number(id) },
@@ -24,8 +22,6 @@ export async function GET(
         },
       },
     });
-
-    console.log("محصول یافت شد:", product);
 
     if (!product) {
       return NextResponse.json({ error: "محصول یافت نشد" }, { status: 404 });
@@ -40,7 +36,7 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  context: { params: { id: string } },
 ) {
   try {
     const authReq = await requireAuth(req, true);
@@ -51,10 +47,8 @@ export async function PUT(
       );
     }
 
-    const id = params.id;
+    const id = context.params.id;
     const data = await req.json();
-
-    console.log(`✅ Admin ${authReq.userId} updating product ${id}`);
 
     if (!data.name || !data.brand || !data.price || !data.variants) {
       return NextResponse.json(
@@ -83,7 +77,7 @@ export async function PUT(
         where: { productId: Number(id) },
       });
 
-      const product = await tx.product.update({
+      return await tx.product.update({
         where: { id: Number(id) },
         data: {
           name: data.name.trim(),
@@ -116,11 +110,7 @@ export async function PUT(
           },
         },
       });
-
-      return product;
     });
-
-    console.log(`✅ محصول ${id} با موفقیت بروزرسانی شد`);
 
     return NextResponse.json({
       success: true,
@@ -130,10 +120,7 @@ export async function PUT(
   } catch (error: any) {
     console.error("خطا در ویرایش محصول:", error);
     return NextResponse.json(
-      {
-        error: "خطا در ویرایش محصول",
-        message: error.message || "خطای نامشخص",
-      },
+      { error: "خطا در ویرایش محصول", message: error.message },
       { status: 500 },
     );
   }
@@ -141,7 +128,7 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  context: { params: { id: string } },
 ) {
   try {
     const authReq = await requireAuth(req, true);
@@ -152,9 +139,7 @@ export async function DELETE(
       );
     }
 
-    const id = params.id;
-
-    console.log(`✅ Admin ${authReq.userId} deleting product ${id}`);
+    const id = context.params.id;
 
     const existingProduct = await prisma.product.findUnique({
       where: { id: Number(id) },
@@ -168,8 +153,6 @@ export async function DELETE(
       where: { id: Number(id) },
     });
 
-    console.log(`✅ محصول ${id} با موفقیت حذف شد`);
-
     return NextResponse.json({
       success: true,
       message: "محصول با موفقیت حذف شد",
@@ -177,10 +160,7 @@ export async function DELETE(
   } catch (error: any) {
     console.error("خطا در حذف محصول:", error);
     return NextResponse.json(
-      {
-        error: "خطا در حذف محصول",
-        message: error.message || "خطای نامشخص",
-      },
+      { error: "خطا در حذف محصول", message: error.message },
       { status: 500 },
     );
   }
