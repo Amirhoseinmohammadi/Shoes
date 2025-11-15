@@ -1,7 +1,7 @@
 const API_BASE = process.env.NEXT_PUBLIC_APP_URL || "";
 
 class ApiClient {
-  private getBase() {
+  public getBase() {
     return (
       API_BASE ||
       (typeof window !== "undefined"
@@ -10,7 +10,8 @@ class ApiClient {
     );
   }
 
-  private async request(
+  // ✅ FIX 2: Changed to public to resolve the "Property 'request' is private" error.
+  public async request(
     endpoint: string,
     options: RequestInit = {},
   ): Promise<any> {
@@ -24,6 +25,7 @@ class ApiClient {
         : false;
 
     const headers = {
+      // NOTE: Using 'Content-Type': 'application/json' if NOT FormData.
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...(options.headers || {}),
     };
@@ -31,7 +33,7 @@ class ApiClient {
     const config: RequestInit = {
       ...options,
       headers,
-
+      // Ensure credentials is explicitly included by default
       credentials: (options.credentials as RequestCredentials) ?? "include",
     };
 
@@ -72,12 +74,15 @@ class ApiClient {
         return await response.json();
       }
 
+      // Return text if content type is not JSON (e.g., HTML, plain text)
       return await response.text();
     } catch (error) {
       console.error("❌ apiClient request failed:", endpoint, error);
       throw error;
     }
   }
+
+  // --- Endpoints remain the same, relying on the now public request method ---
 
   auth = {
     login: (email: string, password: string) =>

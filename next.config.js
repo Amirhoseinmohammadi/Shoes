@@ -3,7 +3,6 @@ const nextConfig = {
   output: "standalone",
   productionBrowserSourceMaps: false,
   compress: true,
-  swcMinify: true,
   poweredByHeader: false,
 
   images: {
