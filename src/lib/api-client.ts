@@ -10,7 +10,6 @@ class ApiClient {
     );
   }
 
-  // ✅ FIX 2: Changed to public to resolve the "Property 'request' is private" error.
   public async request(
     endpoint: string,
     options: RequestInit = {},

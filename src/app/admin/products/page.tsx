@@ -14,7 +14,6 @@ interface Product {
   category?: string;
   price?: number;
   stock?: number;
-  image?: string;
 }
 
 const defaultConfig = {
@@ -25,13 +24,13 @@ const defaultConfig = {
 export default function AdminProductsPage() {
   const { user, loading: authLoading, isAdmin } = useTelegram();
 
-  // ✅ استفاده از API path درست (Admin endpoint)
+  // استفاده از API path درست (Admin endpoint)
   const {
     data: products,
     error,
     isLoading,
     mutate,
-  } = useSWR(
+  } = useSWR<Product[]>(
     "/api/admin/products",
     () =>
       apiClient.request("/api/admin/products", {
@@ -88,10 +87,11 @@ export default function AdminProductsPage() {
     return matchesSearch && matchesCategory;
   });
 
-  const categories = [
+  // Type Casting برای اطمینان از خروجی string[]
+  const categories: string[] = [
     "all",
     ...new Set(products?.map((p: Product) => p.category).filter(Boolean)),
-  ];
+  ] as string[];
 
   if (isLoading) {
     return (
@@ -287,7 +287,8 @@ export default function AdminProductsPage() {
             onChange={(e) => setSelectedCategory(e.target.value)}
             className="rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:ring-blue-800"
           >
-            {categories.map((category) => (
+            {/* 🟢 خطای Type در اینجا با تعیین صریح Type متغیر category حل شد */}
+            {categories.map((category: string) => (
               <option key={category} value={category}>
                 {category === "all" ? "همه دسته‌بندی‌ها" : category}
               </option>
