@@ -122,7 +122,7 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
                   <>
                     هیچ محصولی با نام{" "}
                     <span className="font-semibold text-cyan-600 dark:text-cyan-400">
-                      "{searchQuery}"
+                      &quot;{searchQuery}&quot;
                     </span>{" "}
                     یافت نشد.
                   </>
@@ -130,6 +130,7 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
                   "هنوز هیچ محصولی اضافه نشده است."
                 )}
               </p>
+
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}

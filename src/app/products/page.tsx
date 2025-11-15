@@ -49,7 +49,6 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
     );
   }
 
-  // ✅ NEW: Show loading skeleton while fetching products
   if (isLoading) {
     return (
       <section className="min-h-screen bg-gray-100 py-12 dark:bg-gray-900">
@@ -189,7 +188,7 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
                   <>
                     هیچ محصولی با نام{" "}
                     <span className="font-semibold text-cyan-600 dark:text-cyan-400">
-                      "{searchQuery}"
+                      &quot;{searchQuery}&quot;
                     </span>{" "}
                     یافت نشد.
                   </>
