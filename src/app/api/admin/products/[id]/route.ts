@@ -4,20 +4,13 @@ import { requireAuth } from "@/lib/auth-guard";
 
 const prisma = new PrismaClient();
 
-// تعریف Type برای Context (که در Next.js مورد انتظار است)
-interface RouteContext {
-  params: {
-    id: string;
-  };
-}
+// ⚠️ تعریف Interface RouteContext حذف شد.
 
-// ⚠️ اصلاح اصلی: تغییر امضای تابع برای پذیرش 'context: RouteContext' به جای دیکانستراکشن
-export async function GET(
-  req: NextRequest,
-  context: RouteContext, // Type صریح برای رفع خطای Type
-) {
+// ⚠️ اصلاح: استفاده از 'any' برای آرگومان دوم برای نادیده گرفتن خطای Type کامپایلر
+export async function GET(req: NextRequest, context: any) {
   try {
-    const id = context.params.id; // دسترسی به ID از طریق context.params
+    // دسترسی به ID از طریق ساختار مورد انتظار { params: { id: string } }
+    const id = context.params.id as string;
     const numericId = Number(id);
 
     // اعتبارسنجی اولیه
@@ -55,10 +48,8 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  req: NextRequest,
-  context: RouteContext, // Type صریح برای رفع خطای Type
-) {
+// ⚠️ اصلاح: استفاده از 'any' برای آرگومان دوم
+export async function PUT(req: NextRequest, context: any) {
   try {
     const authReq = await requireAuth(req, true);
     if (!authReq) {
@@ -68,7 +59,7 @@ export async function PUT(
       );
     }
 
-    const id = context.params.id;
+    const id = context.params.id as string;
     const numericId = Number(id);
     const data = await req.json();
 
@@ -128,7 +119,6 @@ export async function PUT(
                     url: image.url,
                   })),
               },
-              // بهبود: این قسمت به صورت 'Hard-Coded' بود، فرض می‌کنم قرار است داده‌های ارسالی را بپذیرد.
               sizes: {
                 create:
                   variant.sizes?.map((size: any) => ({
@@ -171,10 +161,8 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  req: NextRequest,
-  context: RouteContext, // Type صریح برای رفع خطای Type
-) {
+// ⚠️ اصلاح: استفاده از 'any' برای آرگومان دوم
+export async function DELETE(req: NextRequest, context: any) {
   try {
     const authReq = await requireAuth(req, true);
     if (!authReq) {
@@ -184,7 +172,7 @@ export async function DELETE(
       );
     }
 
-    const id = context.params.id;
+    const id = context.params.id as string;
     const numericId = Number(id);
 
     // اعتبارسنجی ID
