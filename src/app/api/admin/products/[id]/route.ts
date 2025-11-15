@@ -4,12 +4,20 @@ import { requireAuth } from "@/lib/auth-guard";
 
 const prisma = new PrismaClient();
 
+// تعریف ساختار دقیق Context برای Route داینامیک
+interface RouteContext {
+  params: {
+    id: string; // پارامتر داینامیک [id]
+  };
+}
+
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  context: RouteContext, // استفاده از RouteContext
 ) {
   try {
-    const id = Number(params.id);
+    // دسترسی به ID از طریق context.params.id
+    const id = Number(context.params.id);
 
     const product = await prisma.product.findUnique({
       where: { id },
@@ -36,7 +44,7 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  context: RouteContext, // استفاده از RouteContext
 ) {
   try {
     const authReq = await requireAuth(req, true);
@@ -47,7 +55,8 @@ export async function PUT(
       );
     }
 
-    const id = Number(params.id);
+    // دسترسی به ID از طریق context.params.id
+    const id = Number(context.params.id);
     const data = await req.json();
 
     if (!data.name || !data.brand || !data.price || !data.variants) {
@@ -63,6 +72,7 @@ export async function PUT(
     }
 
     const updatedProduct = await prisma.$transaction(async (tx) => {
+      // حذف تمامی variants قدیمی مرتبط
       await tx.variant.deleteMany({ where: { productId: id } });
 
       return tx.product.update({
@@ -72,6 +82,7 @@ export async function PUT(
           brand: data.brand.trim(),
           description: data.description || "",
           price: Number(data.price),
+          // ایجاد مجدد variants
           variants: {
             create: data.variants.map((variant: any) => ({
               color: variant.color,
@@ -117,7 +128,7 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  context: RouteContext, // استفاده از RouteContext
 ) {
   try {
     const authReq = await requireAuth(req, true);
@@ -128,7 +139,7 @@ export async function DELETE(
       );
     }
 
-    const id = Number(params.id);
+    const id = Number(context.params.id);
 
     const existingProduct = await prisma.product.findUnique({ where: { id } });
     if (!existingProduct) {

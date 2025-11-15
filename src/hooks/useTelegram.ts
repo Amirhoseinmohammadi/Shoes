@@ -48,6 +48,7 @@ export function useTelegram() {
     }
   }, []);
 
+  // تابع validateAndSetUser با useCallback تعریف شده تا هویت ثابتی داشته باشد.
   const validateAndSetUser = useCallback(async (tgUser: TelegramUser) => {
     if (!tgUser?.id) return;
 
@@ -55,6 +56,7 @@ export function useTelegram() {
       const now = Date.now();
       const cacheAge = now - userCache.validatedAt;
 
+      // ۱. بررسی کش ۱۰ دقیقه‌ای
       if (userCache.data && cacheAge < 10 * 60 * 1000) {
         console.log("✅ Using cached user:", userCache.data.id);
         if (mountedRef.current) {
@@ -73,6 +75,7 @@ export function useTelegram() {
 
       console.log("📤 Validating with server...");
 
+      // ۲. اعتبارسنجی سرور
       const response = await fetch("/api/validate-init", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -117,7 +120,7 @@ export function useTelegram() {
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, []);
+  }, []); // آرایه وابستگی خالی برای useCallback (درست است)
 
   useEffect(() => {
     if (initializingRef.current) return;
@@ -148,6 +151,7 @@ export function useTelegram() {
 
       if (tgUser?.id) {
         console.log("👤 User found:", tgUser.id);
+        // اینجا تابع validateAndSetUser فراخوانی می‌شود
         validateAndSetUser(tgUser);
       } else {
         console.error("❌ No user ID found");
@@ -157,7 +161,7 @@ export function useTelegram() {
       console.error("❌ Telegram init error:", error);
       setLoading(false);
     }
-  }, []);
+  }, [validateAndSetUser]); // ✅ اصلاح: اضافه کردن تابع به وابستگی‌ها
 
   useEffect(() => {
     return () => {
