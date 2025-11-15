@@ -54,8 +54,8 @@ const nextConfig = {
     return config;
   },
 
-  typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: false },
+  eslint: { ignoreDuringBuilds: false },
 
   async headers() {
     return [
@@ -108,12 +108,8 @@ const nextConfig = {
             key: "Permissions-Policy",
             value: "geolocation=(), microphone=(), camera=()",
           },
-          {
-            key: "Cross-Origin-Opener-Policy",
-            value: "same-origin-allow-popups",
-          },
+
           { key: "Cross-Origin-Resource-Policy", value: "cross-origin" },
-          { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
           { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
           {
             key: "Strict-Transport-Security",
@@ -142,27 +138,11 @@ const nextConfig = {
     ];
   },
 
-  async rewrites() {
-    return {
-      beforeFiles: [
-        {
-          source: "/api/:path*",
-          destination: `${process.env.API_URL || "http://localhost:3000"}/api/:path*`,
-        },
-      ],
-    };
-  },
-
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",
   },
 
   reactStrictMode: true,
-
-  i18n: {
-    locales: ["fa"],
-    defaultLocale: "fa",
-  },
 };
 
 module.exports = nextConfig;

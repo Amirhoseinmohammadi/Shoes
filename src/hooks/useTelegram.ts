@@ -13,18 +13,17 @@ export interface TelegramUser {
   isAdmin?: boolean;
 }
 
-// ✅ Global state برای جلوگیری از multiple validations
 const userCache = {
   data: null as TelegramUser | null,
   validatedAt: 0,
-  validating: false,
 };
 
 export function useTelegram() {
   const [user, setUser] = useState<TelegramUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [isTelegram, setIsTelegram] = useState(false);
-  const initializedRef = useRef(false);
+  const initializingRef = useRef(false);
+  const mountedRef = useRef(true);
 
   const sendData = useCallback((data: any) => {
     const tg = (window as any).Telegram?.WebApp;
@@ -32,44 +31,48 @@ export function useTelegram() {
     tg.sendData?.(JSON.stringify(data));
   }, []);
 
-  const logout = useCallback(() => {
-    setUser(null);
+  const logout = useCallback(async () => {
+    if (mountedRef.current) {
+      setUser(null);
+    }
     userCache.data = null;
     userCache.validatedAt = 0;
-    fetch("/api/auth/logout", { method: "POST" }).catch(console.error);
+
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.error("❌ Logout error:", err);
+    }
   }, []);
 
   const validateAndSetUser = useCallback(async (tgUser: TelegramUser) => {
     if (!tgUser?.id) return;
 
     try {
-      // ✅ Check if already validating
-      if (userCache.validating) {
-        console.log("⏳ Validation already in progress");
-        return;
-      }
-
-      // ✅ Check cache (valid for 10 minutes)
       const now = Date.now();
       const cacheAge = now - userCache.validatedAt;
+
       if (userCache.data && cacheAge < 10 * 60 * 1000) {
         console.log("✅ Using cached user:", userCache.data.id);
-        setUser(userCache.data);
-        setLoading(false);
+        if (mountedRef.current) {
+          setUser(userCache.data);
+          setLoading(false);
+        }
         return;
       }
-
-      userCache.validating = true;
 
       const tg = (window as any).Telegram?.WebApp;
       if (!tg?.initData) {
         console.error("❌ No initData available");
-        setLoading(false);
-        userCache.validating = false;
+        if (mountedRef.current) setLoading(false);
         return;
       }
 
       console.log("📤 Validating with server...");
+
       const response = await fetch("/api/validate-init", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -79,8 +82,10 @@ export function useTelegram() {
 
       if (!response.ok) {
         console.error("❌ Server validation failed:", response.status);
-        setLoading(false);
-        userCache.validating = false;
+        if (mountedRef.current) {
+          setUser(null);
+          setLoading(false);
+        }
         return;
       }
 
@@ -92,33 +97,34 @@ export function useTelegram() {
           isAdmin: result.user.isAdmin,
         };
 
-        // ✅ Cache user
         userCache.data = validatedUser;
         userCache.validatedAt = now;
 
-        setUser(validatedUser);
-        localStorage.setItem("telegramUser", JSON.stringify(validatedUser));
+        if (mountedRef.current) {
+          setUser(validatedUser);
+          try {
+            localStorage.setItem("telegramUser", JSON.stringify(validatedUser));
+          } catch {}
+        }
         console.log("✅ Auth successful:", validatedUser.id);
       } else {
         console.error("❌ Validation failed:", result.error);
-        setUser(null);
+        if (mountedRef.current) setUser(null);
       }
     } catch (error) {
       console.error("❌ Validation error:", error);
-      setUser(null);
+      if (mountedRef.current) setUser(null);
     } finally {
-      setLoading(false);
-      userCache.validating = false;
+      if (mountedRef.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    // ✅ Skip if already initialized
-    if (initializedRef.current) return;
+    if (initializingRef.current) return;
+    initializingRef.current = true;
 
     if (typeof window === "undefined") {
       setLoading(false);
-      initializedRef.current = true;
       return;
     }
 
@@ -128,7 +134,6 @@ export function useTelegram() {
       console.log("⚠️ Telegram WebApp not available");
       setIsTelegram(false);
       setLoading(false);
-      initializedRef.current = true;
       return;
     }
 
@@ -152,9 +157,13 @@ export function useTelegram() {
       console.error("❌ Telegram init error:", error);
       setLoading(false);
     }
+  }, []);
 
-    initializedRef.current = true;
-  }, [validateAndSetUser]);
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   return {
     user,

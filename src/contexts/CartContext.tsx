@@ -1,5 +1,7 @@
 "use client";
+
 import { useTelegram } from "@/hooks/useTelegram";
+import { useToast } from "./ToastContext";
 import {
   createContext,
   useContext,
@@ -7,6 +9,7 @@ import {
   ReactNode,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 
 export interface CartItem {
@@ -45,11 +48,11 @@ interface CartContextType {
     quantity: number,
   ) => Promise<boolean>;
   checkout: (customer: { name: string; phone: string }) => Promise<boolean>;
-  clearCart: () => void;
+  clearCart: () => Promise<void>;
   loading: boolean;
   totalItems: number;
   totalPrice: number;
-  telegramUser: any | null;
+  isAuthenticated: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -64,89 +67,59 @@ export const useCart = () => {
       removeItem: async () => false,
       updateItemQuantity: async () => false,
       checkout: async () => false,
-      clearCart: () => {},
+      clearCart: async () => {},
       loading: false,
       totalItems: 0,
       totalPrice: 0,
-      telegramUser: null,
+      isAuthenticated: false,
     };
   }
   return context;
-};
-
-const CART_KEY = "guest-cart";
-const TELEGRAM_USER_KEY = "telegram-user";
-
-const loadLocalCart = (): CartItem[] => {
-  if (typeof window === "undefined") return [];
-  try {
-    const stored = localStorage.getItem(CART_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveLocalCart = (items: CartItem[]) => {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(CART_KEY, JSON.stringify(items));
-  } catch {}
-};
-
-const loadLocalTelegramUser = () => {
-  if (typeof window === "undefined") return null;
-  try {
-    const stored = localStorage.getItem(TELEGRAM_USER_KEY);
-    return stored ? JSON.parse(stored) : null;
-  } catch {
-    return null;
-  }
-};
-
-const saveLocalTelegramUser = (user: any) => {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(TELEGRAM_USER_KEY, JSON.stringify(user));
-  } catch {}
 };
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
-  const [telegramUser, setTelegramUser] = useState<any>(
-    loadLocalTelegramUser(),
-  );
+  const { user: telegramUser, loading: authLoading } = useTelegram();
+  const { showToast } = useToast();
+  const mountedRef = useRef(true);
 
-  const { user: telegramUserFromHook } = useTelegram();
-
-  // Load cart from localStorage
+  // ✅ Initialize cart از API (نه localStorage)
   useEffect(() => {
-    const savedCart = loadLocalCart();
-    setCartItems(savedCart);
-    setInitialized(true);
-  }, []);
+    if (!telegramUser?.id || authLoading) return;
 
-  // Save cart on change
-  useEffect(() => {
-    if (initialized) saveLocalCart(cartItems);
-  }, [cartItems, initialized]);
+    const fetchCart = async () => {
+      try {
+        const res = await fetch("/api/cart", {
+          method: "GET",
+          credentials: "include",
+        });
 
-  // Set telegram user only once and save to localStorage
-  useEffect(() => {
-    if (!telegramUser && telegramUserFromHook) {
-      const userData = {
-        id: Number(telegramUserFromHook.id),
-        username: telegramUserFromHook.username,
-        first_name: telegramUserFromHook.first_name,
-        last_name: telegramUserFromHook.last_name,
-        photo_url: telegramUserFromHook.photo_url,
-      };
-      setTelegramUser(userData);
-      saveLocalTelegramUser(userData);
-    }
-  }, [telegramUserFromHook, telegramUser]);
+        if (!res.ok) {
+          console.warn("⚠️ Failed to fetch cart:", res.status);
+          if (mountedRef.current) setCartItems([]);
+          return;
+        }
+
+        const data = await res.json();
+        if (
+          mountedRef.current &&
+          data.success &&
+          Array.isArray(data.cartItems)
+        ) {
+          setCartItems(data.cartItems);
+        }
+      } catch (err) {
+        console.error("❌ Fetch cart error:", err);
+        if (mountedRef.current) setCartItems([]);
+      } finally {
+        if (mountedRef.current) setInitialized(true);
+      }
+    };
+
+    fetchCart();
+  }, [telegramUser?.id, authLoading]);
 
   const totalItems = cartItems.reduce((sum, i) => sum + i.quantity, 0);
   const totalPrice = cartItems.reduce(
@@ -154,106 +127,338 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     0,
   );
 
-  const addItem = async ({ shoe, quantity, color, size }: AddItemParams) => {
-    try {
-      const newItem: CartItem = {
-        id: Date.now(),
-        productId: shoe.id,
-        name: shoe.name,
-        brand: shoe.brand,
-        price: shoe.price,
-        image: shoe.image,
-        quantity,
-        color,
-        size,
-      };
-      setCartItems((prev) => {
-        const existing = prev.find(
-          (i) =>
-            i.productId === newItem.productId &&
-            i.color === newItem.color &&
-            i.size === newItem.size,
+  // ✅ Add item via API
+  const addItem = useCallback(
+    async ({
+      shoe,
+      quantity,
+      color,
+      size,
+    }: AddItemParams): Promise<boolean> => {
+      if (!telegramUser?.id) {
+        showToast({
+          type: "warning",
+          message: "لطفا ابتدا وارد شوید",
+          duration: 3000,
+        });
+        return false;
+      }
+
+      // ✅ Client-side validation
+      if (quantity <= 0 || quantity > 100) {
+        showToast({
+          type: "error",
+          message: "تعداد نامعتبر است (1-100)",
+          duration: 3000,
+        });
+        return false;
+      }
+
+      if (!shoe?.id || shoe.id <= 0) {
+        showToast({
+          type: "error",
+          message: "محصول نامعتبر است",
+          duration: 3000,
+        });
+        return false;
+      }
+
+      setLoading(true);
+      try {
+        const res = await fetch("/api/cart", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            productId: shoe.id,
+            quantity,
+            color: color || null,
+            size: size || null,
+          }),
+          credentials: "include",
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showToast({
+            type: "error",
+            message: data.error || "خطا در افزودن به سبد خرید",
+            duration: 3000,
+          });
+          return false;
+        }
+
+        if (mountedRef.current && data.cartItem) {
+          setCartItems((prev) => {
+            const existing = prev.find(
+              (i) =>
+                i.productId === shoe.id &&
+                i.color === (color || null) &&
+                i.size === (size || null),
+            );
+            if (existing) {
+              return prev.map((i) =>
+                i.id === existing.id
+                  ? { ...i, quantity: existing.quantity + quantity }
+                  : i,
+              );
+            }
+            return [...prev, data.cartItem];
+          });
+        }
+
+        showToast({
+          type: "success",
+          message: `${shoe.name} اضافه شد`,
+          duration: 2000,
+        });
+
+        return true;
+      } catch (err) {
+        console.error("❌ Add item error:", err);
+        showToast({
+          type: "error",
+          message: "خطا در اتصال",
+          duration: 3000,
+        });
+        return false;
+      } finally {
+        if (mountedRef.current) setLoading(false);
+      }
+    },
+    [telegramUser?.id, showToast],
+  );
+
+  // ✅ Remove item via API
+  const removeItem = useCallback(
+    async (cartItemId: number): Promise<boolean> => {
+      if (!telegramUser?.id) return false;
+
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `/api/cart?id=${encodeURIComponent(String(cartItemId))}`,
+          {
+            method: "DELETE",
+            credentials: "include",
+          },
         );
-        if (existing) {
-          return prev.map((i) =>
-            i.productId === newItem.productId &&
-            i.color === newItem.color &&
-            i.size === newItem.size
-              ? { ...i, quantity: i.quantity + quantity }
-              : i,
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showToast({
+            type: "error",
+            message: data.error || "خطا در حذف",
+            duration: 3000,
+          });
+          return false;
+        }
+
+        if (mountedRef.current) {
+          setCartItems((prev) => prev.filter((i) => i.id !== cartItemId));
+        }
+
+        showToast({
+          type: "success",
+          message: "حذف شد",
+          duration: 2000,
+        });
+
+        return true;
+      } catch (err) {
+        console.error("❌ Remove item error:", err);
+        showToast({
+          type: "error",
+          message: "خطا در اتصال",
+          duration: 3000,
+        });
+        return false;
+      } finally {
+        if (mountedRef.current) setLoading(false);
+      }
+    },
+    [telegramUser?.id, showToast],
+  );
+
+  // ✅ Update quantity via API
+  const updateItemQuantity = useCallback(
+    async (cartItemId: number, quantity: number): Promise<boolean> => {
+      if (!telegramUser?.id) return false;
+
+      // ✅ quantity = 0 means delete
+      if (quantity <= 0) {
+        return removeItem(cartItemId);
+      }
+
+      if (quantity > 100) {
+        showToast({
+          type: "error",
+          message: "حداکثر تعداد 100 است",
+          duration: 3000,
+        });
+        return false;
+      }
+
+      setLoading(true);
+      try {
+        const res = await fetch("/api/cart", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            cartItemId,
+            quantity,
+          }),
+          credentials: "include",
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showToast({
+            type: "error",
+            message: data.error || "خطا در بروزرسانی",
+            duration: 3000,
+          });
+          return false;
+        }
+
+        if (mountedRef.current && data.cartItem) {
+          setCartItems((prev) =>
+            prev.map((i) =>
+              i.id === cartItemId
+                ? { ...i, quantity: data.cartItem.quantity }
+                : i,
+            ),
           );
         }
-        return [...prev, newItem];
-      });
-      return true;
-    } catch {
-      return false;
+
+        return true;
+      } catch (err) {
+        console.error("❌ Update quantity error:", err);
+        showToast({
+          type: "error",
+          message: "خطا در اتصال",
+          duration: 3000,
+        });
+        return false;
+      } finally {
+        if (mountedRef.current) setLoading(false);
+      }
+    },
+    [telegramUser?.id, removeItem, showToast],
+  );
+
+  // ✅ Clear cart via API
+  const clearCart = useCallback(async (): Promise<void> => {
+    if (!telegramUser?.id) {
+      if (mountedRef.current) setCartItems([]);
+      return;
     }
-  };
 
-  const removeItem = async (cartItemId: number) => {
     try {
-      setCartItems((prev) => prev.filter((i) => i.id !== cartItemId));
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const updateItemQuantity = async (cartItemId: number, quantity: number) => {
-    if (quantity <= 0) return removeItem(cartItemId);
-    try {
-      setCartItems((prev) =>
-        prev.map((i) => (i.id === cartItemId ? { ...i, quantity } : i)),
-      );
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const clearCart = useCallback(() => {
-    setCartItems([]);
-    localStorage.removeItem(CART_KEY);
-  }, []);
-
-  const checkout = async (customer: { name: string; phone: string }) => {
-    if (!telegramUser) return false;
-    if (cartItems.length === 0) return false;
-    if (!customer.name?.trim() || !customer.phone?.trim()) return false;
-    if (loading) return false;
-
-    setLoading(true);
-    try {
-      const orderData = {
-        userId: telegramUser.id,
-        items: cartItems.map((i) => ({
-          productId: i.productId,
-          quantity: i.quantity,
-          color: i.color || null,
-          size: i.size || null,
-          price: i.price,
-        })),
-        customerName: customer.name.trim(),
-        customerPhone: customer.phone.trim(),
-        totalPrice,
-        telegramData: telegramUser,
-      };
-      const res = await fetch("/api/orders", {
+      await fetch("/api/cart/clear", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData),
+        body: JSON.stringify({}),
+        credentials: "include",
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "خطا در ثبت سفارش");
-      clearCart();
-      return true;
-    } catch {
-      return false;
-    } finally {
-      setLoading(false);
+
+      if (mountedRef.current) setCartItems([]);
+    } catch (err) {
+      console.error("❌ Clear cart error:", err);
     }
-  };
+  }, [telegramUser?.id]);
+
+  // ✅ Checkout via API
+  const checkout = useCallback(
+    async (customer: { name: string; phone: string }): Promise<boolean> => {
+      if (!telegramUser?.id) {
+        showToast({
+          type: "warning",
+          message: "لطفا وارد شوید",
+          duration: 3000,
+        });
+        return false;
+      }
+
+      if (cartItems.length === 0) {
+        showToast({
+          type: "warning",
+          message: "سبد خرید خالی است",
+          duration: 3000,
+        });
+        return false;
+      }
+
+      if (!customer.name?.trim() || !customer.phone?.trim()) {
+        showToast({
+          type: "error",
+          message: "نام و تلفن الزامی است",
+          duration: 3000,
+        });
+        return false;
+      }
+
+      setLoading(true);
+      try {
+        const res = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: cartItems.map((i) => ({
+              productId: i.productId,
+              quantity: i.quantity,
+              color: i.color || null,
+              size: i.size || null,
+            })),
+            customerName: customer.name.trim(),
+            customerPhone: customer.phone.trim(),
+          }),
+          credentials: "include",
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showToast({
+            type: "error",
+            message: data.error || "خطا در ثبت سفارش",
+            duration: 3000,
+          });
+          return false;
+        }
+
+        await clearCart();
+
+        showToast({
+          type: "success",
+          message: `سفارش ثبت شد - کد: ${data.trackingCode}`,
+          duration: 4000,
+        });
+
+        return true;
+      } catch (err) {
+        console.error("❌ Checkout error:", err);
+        showToast({
+          type: "error",
+          message: "خطا در ثبت سفارش",
+          duration: 3000,
+        });
+        return false;
+      } finally {
+        if (mountedRef.current) setLoading(false);
+      }
+    },
+    [telegramUser?.id, cartItems, clearCart, showToast],
+  );
+
+  // ✅ Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   return (
     <CartContext.Provider
@@ -267,7 +472,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         loading,
         totalItems,
         totalPrice,
-        telegramUser,
+        isAuthenticated: !!telegramUser?.id,
       }}
     >
       {children}
