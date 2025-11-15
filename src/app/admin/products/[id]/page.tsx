@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useTelegram } from "@/hooks/useTelegram";
 
 interface VariantForm {
@@ -85,8 +86,6 @@ export default function EditProductPage() {
   // Redirect non-admin as soon as we know auth state
   useEffect(() => {
     if (!authLoading && !isAdmin) {
-      // don't force-redirect while still showing skeleton — show AccessDenied instead
-      // If you prefer redirect: router.replace('/')
       console.warn("❌ Non-admin user tried to access edit product page");
     }
   }, [authLoading, isAdmin, router]);
@@ -100,7 +99,9 @@ export default function EditProductPage() {
       }
 
       try {
-        const res = await fetch(`/api/admin/products/${id}`);
+        const res = await fetch(`/api/admin/products/${id}`, {
+          credentials: "include",
+        });
         if (!res.ok) {
           if (res.status === 404) throw new Error("محصول یافت نشد");
           throw new Error(`خطای HTTP! وضعیت: ${res.status}`);
@@ -188,19 +189,30 @@ export default function EditProductPage() {
         const formData = new FormData();
         formData.append("image", file);
 
-        const res = await fetch("/api/admin/upload", {
-          method: "POST",
-          credentials: "include",
-          body: formData,
-        });
+        try {
+          const res = await fetch("/api/admin/upload", {
+            method: "POST",
+            credentials: "include",
+            body: formData,
+          });
 
-        if (!res.ok) throw new Error(`خطا در آپلود: ${res.status}`);
+          if (!res.ok) {
+            throw new Error(`خطا در آپلود: ${res.status}`);
+          }
 
-        const result = await res.json();
-        if (result.success && result.imageUrl) {
-          uploadedUrls.push(result.imageUrl);
-        } else {
-          setError(result.message || "خطا در آپلود عکس");
+          const result = await res.json();
+
+          if (result.success && result.imageUrl) {
+            // ✅ imageUrl میتواند:
+            // 1. Cloud URL باشد (اگر cloud storage استفاده کنید)
+            // 2. Base64 (فعلاً - لکن بعداً بهتر شود)
+            uploadedUrls.push(result.imageUrl);
+          } else {
+            setError(result.message || "خطا در آپلود عکس");
+          }
+        } catch (uploadErr: any) {
+          console.error("خطا در آپلود این فایل:", uploadErr);
+          setError(`خطا در آپلود ${file.name}`);
         }
       }
 
@@ -263,12 +275,15 @@ export default function EditProductPage() {
 
     try {
       const productData = {
-        ...form,
+        name: form.name.trim(),
+        brand: form.brand.trim(),
+        description: form.description.trim(),
         price: Number(form.price),
+        category: form.category || null,
         stock: Number(form.stock) || 0,
         variants: variants.map((variant) => ({
           id: variant.id,
-          color: variant.color,
+          color: variant.color.trim(),
           images: variant.previewUrls.map((url) => ({ url })),
         })),
       };
@@ -282,13 +297,15 @@ export default function EditProductPage() {
 
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.message || "خطا در ویرایش محصول");
+        throw new Error(
+          errorData.error || errorData.message || "خطا در ویرایش محصول",
+        );
       }
 
       router.push("/admin/products");
       router.refresh();
     } catch (err: any) {
-      console.error(err);
+      console.error("خطا در ویرایش:", err);
       setError(err.message || "خطا در ویرایش محصول");
     } finally {
       setSaving(false);
@@ -301,6 +318,9 @@ export default function EditProductPage() {
     )
       return;
 
+    setSaving(true);
+    setError(null);
+
     try {
       const res = await fetch(`/api/admin/products/${id}`, {
         method: "DELETE",
@@ -309,14 +329,18 @@ export default function EditProductPage() {
 
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.message || "خطا در حذف محصول");
+        throw new Error(
+          errorData.error || errorData.message || "خطا در حذف محصول",
+        );
       }
 
       router.push("/admin/products");
       router.refresh();
     } catch (err: any) {
-      console.error(err);
+      console.error("خطا در حذف:", err);
       setError(err.message || "خطا در حذف محصول");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -579,10 +603,14 @@ export default function EditProductPage() {
                         <div className="flex flex-wrap gap-3">
                           {variant.previewUrls.map((url, imgIndex) => (
                             <div key={imgIndex} className="group relative">
-                              <img
+                              {/* ✅ Image component استفاده کن */}
+                              <Image
                                 src={url}
                                 alt={`عکس ${imgIndex + 1}`}
-                                className="h-24 w-24 rounded-lg border-2 border-gray-200 object-cover transition-colors group-hover:border-gray-400 dark:border-gray-600 dark:group-hover:border-gray-500"
+                                width={96}
+                                height={96}
+                                className="rounded-lg border-2 border-gray-200 object-cover transition-colors group-hover:border-gray-400 dark:border-gray-600 dark:group-hover:border-gray-500"
+                                quality={75}
                               />
                               <button
                                 type="button"
@@ -616,7 +644,8 @@ export default function EditProductPage() {
               <button
                 type="button"
                 onClick={handleDelete}
-                className="w-full rounded-lg bg-red-600 px-6 py-3 text-white hover:bg-red-700 md:w-auto"
+                disabled={saving}
+                className="w-full rounded-lg bg-red-600 px-6 py-3 text-white hover:bg-red-700 disabled:opacity-50 md:w-auto"
               >
                 🗑 حذف محصول
               </button>

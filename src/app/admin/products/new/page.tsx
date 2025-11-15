@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { useTelegram } from "@/hooks/useTelegram";
 
@@ -529,10 +530,13 @@ export default function NewProductPage() {
                         <div className="flex flex-wrap gap-3">
                           {variant.previewUrls.map((url, imgIndex) => (
                             <div key={imgIndex} className="group relative">
-                              <img
+                              <Image
                                 src={url}
                                 alt={`عکس ${imgIndex + 1}`}
-                                className="h-24 w-24 rounded-lg border-2 border-gray-200 object-cover transition-colors group-hover:border-gray-400 dark:border-gray-600 dark:group-hover:border-gray-500"
+                                width={96}
+                                height={96}
+                                className="rounded-lg border-2 border-gray-200 object-cover transition-colors group-hover:border-gray-400 dark:border-gray-600 dark:group-hover:border-gray-500"
+                                quality={75}
                               />
                               <button
                                 type="button"

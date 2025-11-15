@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useTelegram } from "@/hooks/useTelegram";
-import { useApi } from "@/hooks/useApi";
+import useSWR from "swr";
+import { apiClient } from "@/lib/api-client";
 import { useState } from "react";
 
 interface Product {
@@ -15,9 +17,30 @@ interface Product {
   image?: string;
 }
 
+const defaultConfig = {
+  revalidateOnFocus: false,
+  dedupingInterval: 60000,
+};
+
 export default function AdminProductsPage() {
   const { user, loading: authLoading, isAdmin } = useTelegram();
-  const { data: products, error, isLoading } = useApi.useProducts();
+
+  // ✅ استفاده از API path درست (Admin endpoint)
+  const {
+    data: products,
+    error,
+    isLoading,
+    mutate,
+  } = useSWR(
+    "/api/admin/products",
+    () =>
+      apiClient.request("/api/admin/products", {
+        method: "GET",
+        credentials: "include",
+      }),
+    defaultConfig,
+  );
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
 
@@ -148,11 +171,12 @@ export default function AdminProductsPage() {
               خطا در بارگذاری محصولات
             </h3>
             <p className="mb-4 text-gray-600 dark:text-gray-400">
-              {error.message || "مشکلی در دریافت اطلاعات محصولات پیش آمده است."}
+              {error?.message ||
+                "مشکلی در دریافت اطلاعات محصولات پیش آمده است."}
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               <button
-                onClick={() => window.location.reload()}
+                onClick={() => mutate()}
                 className="rounded-lg bg-blue-600 px-6 py-2 text-white transition-colors hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
               >
                 تلاش مجدد
@@ -312,12 +336,12 @@ export default function AdminProductsPage() {
                 <span>فیلترها:</span>
                 {searchTerm && (
                   <span className="rounded-full bg-blue-100 px-3 py-1 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                    جستجو: {searchTerm}
+                    {`جستجو: "${searchTerm}"`}
                   </span>
                 )}
                 {selectedCategory !== "all" && (
                   <span className="rounded-full bg-green-100 px-3 py-1 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                    دسته: {selectedCategory}
+                    {`دسته: "${selectedCategory}"`}
                   </span>
                 )}
                 <button
@@ -341,11 +365,14 @@ export default function AdminProductsPage() {
                   {/* تصویر محصول */}
                   <div className="mb-4 aspect-square overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-700">
                     {product.image ? (
-                      <img
+                      <Image
                         src={product.image}
                         alt={product.name}
+                        width={300}
+                        height={300}
                         className="h-full w-full object-cover transition-transform group-hover:scale-110"
                         loading="lazy"
+                        quality={75}
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center text-gray-400 dark:text-gray-500">

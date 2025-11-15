@@ -54,8 +54,13 @@ const nextConfig = {
     return config;
   },
 
+  // ✅ Build errors فقط (warnings نه)
   typescript: { ignoreBuildErrors: false },
-  eslint: { ignoreDuringBuilds: false },
+  eslint: {
+    ignoreDuringBuilds: false,
+    // ✅ اگر خیلی مشکل پیدا شد, این استفاده کن (temporary):
+    // ignoreDuringBuilds: true,
+  },
 
   async headers() {
     return [
@@ -108,7 +113,6 @@ const nextConfig = {
             key: "Permissions-Policy",
             value: "geolocation=(), microphone=(), camera=()",
           },
-
           { key: "Cross-Origin-Resource-Policy", value: "cross-origin" },
           { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
           {
