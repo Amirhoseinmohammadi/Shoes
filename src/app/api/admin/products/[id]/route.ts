@@ -4,17 +4,34 @@ import { requireAuth } from "@/lib/auth-guard";
 
 const prisma = new PrismaClient();
 
+// تعریف Type برای Context (که در Next.js مورد انتظار است)
+interface RouteContext {
+  params: {
+    id: string;
+  };
+}
+
+// ⚠️ اصلاح اصلی: تغییر امضای تابع برای پذیرش 'context: RouteContext' به جای دیکانستراکشن
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  context: RouteContext, // Type صریح برای رفع خطای Type
 ) {
   try {
-    const id = params.id;
+    const id = context.params.id; // دسترسی به ID از طریق context.params
+    const numericId = Number(id);
+
+    // اعتبارسنجی اولیه
+    if (isNaN(numericId) || numericId <= 0) {
+      return NextResponse.json(
+        { error: "شناسه محصول نامعتبر است" },
+        { status: 400 },
+      );
+    }
 
     console.log("دریافت محصول با ID:", id);
 
     const product = await prisma.product.findUnique({
-      where: { id: Number(id) },
+      where: { id: numericId },
       include: {
         variants: {
           include: {
@@ -25,7 +42,7 @@ export async function GET(
       },
     });
 
-    console.log("محصول یافت شد:", product);
+    console.log("محصول یافت شد:", product ? "بله" : "خیر");
 
     if (!product) {
       return NextResponse.json({ error: "محصول یافت نشد" }, { status: 404 });
@@ -33,14 +50,14 @@ export async function GET(
 
     return NextResponse.json(product);
   } catch (error) {
-    console.error("خطا در دریافت محصول:", error);
+    console.error("❌ خطا در دریافت محصول:", error);
     return NextResponse.json({ error: "خطا در دریافت محصول" }, { status: 500 });
   }
 }
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  context: RouteContext, // Type صریح برای رفع خطای Type
 ) {
   try {
     const authReq = await requireAuth(req, true);
@@ -51,8 +68,17 @@ export async function PUT(
       );
     }
 
-    const id = params.id;
+    const id = context.params.id;
+    const numericId = Number(id);
     const data = await req.json();
+
+    // اعتبارسنجی ID
+    if (isNaN(numericId) || numericId <= 0) {
+      return NextResponse.json(
+        { error: "شناسه محصول نامعتبر است" },
+        { status: 400 },
+      );
+    }
 
     console.log(`✅ Admin ${authReq.userId} updating product ${id}`);
 
@@ -71,7 +97,7 @@ export async function PUT(
     }
 
     const existingProduct = await prisma.product.findUnique({
-      where: { id: Number(id) },
+      where: { id: numericId },
     });
 
     if (!existingProduct) {
@@ -79,12 +105,13 @@ export async function PUT(
     }
 
     const updatedProduct = await prisma.$transaction(async (tx) => {
+      // حذف واریانت‌های قدیمی
       await tx.variant.deleteMany({
-        where: { productId: Number(id) },
+        where: { productId: numericId },
       });
 
       const product = await tx.product.update({
-        where: { id: Number(id) },
+        where: { id: numericId },
         data: {
           name: data.name.trim(),
           brand: data.brand.trim(),
@@ -101,8 +128,13 @@ export async function PUT(
                     url: image.url,
                   })),
               },
+              // بهبود: این قسمت به صورت 'Hard-Coded' بود، فرض می‌کنم قرار است داده‌های ارسالی را بپذیرد.
               sizes: {
-                create: [{ size: "38", stock: 1 }],
+                create:
+                  variant.sizes?.map((size: any) => ({
+                    size: size.size,
+                    stock: size.stock,
+                  })) ?? [],
               },
             })),
           },
@@ -128,7 +160,7 @@ export async function PUT(
       product: updatedProduct,
     });
   } catch (error: any) {
-    console.error("خطا در ویرایش محصول:", error);
+    console.error("❌ خطا در ویرایش محصول:", error);
     return NextResponse.json(
       {
         error: "خطا در ویرایش محصول",
@@ -141,7 +173,7 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  context: RouteContext, // Type صریح برای رفع خطای Type
 ) {
   try {
     const authReq = await requireAuth(req, true);
@@ -152,12 +184,21 @@ export async function DELETE(
       );
     }
 
-    const id = params.id;
+    const id = context.params.id;
+    const numericId = Number(id);
+
+    // اعتبارسنجی ID
+    if (isNaN(numericId) || numericId <= 0) {
+      return NextResponse.json(
+        { error: "شناسه محصول نامعتبر است" },
+        { status: 400 },
+      );
+    }
 
     console.log(`✅ Admin ${authReq.userId} deleting product ${id}`);
 
     const existingProduct = await prisma.product.findUnique({
-      where: { id: Number(id) },
+      where: { id: numericId },
     });
 
     if (!existingProduct) {
@@ -165,7 +206,7 @@ export async function DELETE(
     }
 
     await prisma.product.delete({
-      where: { id: Number(id) },
+      where: { id: numericId },
     });
 
     console.log(`✅ محصول ${id} با موفقیت حذف شد`);
@@ -175,7 +216,7 @@ export async function DELETE(
       message: "محصول با موفقیت حذف شد",
     });
   } catch (error: any) {
-    console.error("خطا در حذف محصول:", error);
+    console.error("❌ خطا در حذف محصول:", error);
     return NextResponse.json(
       {
         error: "خطا در حذف محصول",
