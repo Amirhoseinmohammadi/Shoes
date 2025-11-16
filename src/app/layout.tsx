@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import RootLayoutClient from "./layout.client";
 import "@/styles/index.css";
 import TelegramScript from "@/components/TelegramScript";
+import { ReactEventHandler } from "react";
 
 // ✅ SEO Metadata
 export const metadata: Metadata = {
@@ -40,10 +41,10 @@ export const metadata: Metadata = {
   },
   manifest: "/site.webmanifest",
 };
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-
   viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
@@ -54,6 +55,11 @@ export const viewport: Viewport = {
 export async function generateStaticParams() {
   return [{ locale: "fa" }];
 }
+
+const handleLinkLoad: ReactEventHandler<HTMLLinkElement> = (e) => {
+  const linkElement = e.target as HTMLLinkElement;
+  linkElement.media = "all";
+};
 
 export default function RootLayout({
   children,
@@ -86,7 +92,7 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/gh/rastikerdar/shabnam-font@v5.0.1/dist/font-face.css"
           rel="stylesheet"
           media="print"
-          onLoad="this.media='all'"
+          onLoad={handleLinkLoad}
         />
         <noscript>
           <link
