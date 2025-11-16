@@ -2,9 +2,9 @@ import type { Metadata, Viewport } from "next";
 import RootLayoutClient from "./layout.client";
 import "@/styles/index.css";
 import TelegramScript from "@/components/TelegramScript";
-import { ReactEventHandler } from "react";
+import FontLoader from "@/components/FontLoader.client";
 
-// ✅ SEO Metadata
+// ✅ SEO Metadata (بدون تغییر)
 export const metadata: Metadata = {
   title: "فروشگاه کفش - Iran Steps",
   description: "فروشگاه آنلاین کفش با بهترین قیمت‌ها و کیفیت تضمین‌شده",
@@ -56,10 +56,11 @@ export async function generateStaticParams() {
   return [{ locale: "fa" }];
 }
 
-const handleLinkLoad: ReactEventHandler<HTMLLinkElement> = (e) => {
-  const linkElement = e.target as HTMLLinkElement;
-  linkElement.media = "all";
-};
+// ❌ حذف شد: تابع handleLinkLoad دیگر در سرور مورد نیاز نیست.
+// const handleLinkLoad: ReactEventHandler<HTMLLinkElement> = (e) => { ... };
+
+const SHABNAM_FONT_CSS_URL =
+  "https://cdn.jsdelivr.net/gh/rastikerdar/shabnam-font@v5.0.1/dist/font-face.css";
 
 export default function RootLayout({
   children,
@@ -88,17 +89,11 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net"
           crossOrigin="anonymous"
         />
-        <link
-          href="https://cdn.jsdelivr.net/gh/rastikerdar/shabnam-font@v5.0.1/dist/font-face.css"
-          rel="stylesheet"
-          media="print"
-          onLoad={handleLinkLoad}
-        />
+
+        <FontLoader />
+
         <noscript>
-          <link
-            href="https://cdn.jsdelivr.net/gh/rastikerdar/shabnam-font@v5.0.1/dist/font-face.css"
-            rel="stylesheet"
-          />
+          <link href={SHABNAM_FONT_CSS_URL} rel="stylesheet" />
         </noscript>
         <script
           dangerouslySetInnerHTML={{
