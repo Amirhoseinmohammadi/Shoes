@@ -9,6 +9,11 @@ import Link from "next/link";
 import { Shoe } from "@/types/shoe";
 import { ShoppingCartIcon, EyeIcon } from "@heroicons/react/24/outline";
 
+interface AugmentedShoe extends Shoe {
+  color?: string;
+  images?: { url: string }[];
+}
+
 const colorMap: Record<string, string> = {
   سفید: "#FFFFFF",
   مشکی: "#000000",
@@ -18,7 +23,7 @@ const colorMap: Record<string, string> = {
 };
 
 interface SingleShoeProps {
-  shoe: Shoe;
+  shoe: AugmentedShoe;
   telegramUser?: any;
 }
 
@@ -112,33 +117,39 @@ export default memo(function SingleShoe({
   const [selectedVariant, setSelectedVariant] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const variants = useMemo(() => shoe?.variants || [], [shoe?.variants]);
+  const currentShoe = shoe as AugmentedShoe;
+
+  const variants = useMemo(
+    () => currentShoe?.variants || [],
+    [currentShoe?.variants],
+  );
   const hasVariants = variants.length > 0;
   const variantObj = hasVariants ? variants[selectedVariant] : null;
-  const selectedColor = variantObj?.color || shoe?.color || "نامشخص";
+
+  const selectedColor = variantObj?.color || currentShoe?.color || "نامشخص";
 
   const images = useMemo(
     () =>
       variantObj?.images?.map((img) => img.url) ||
-      shoe?.images?.map((img) => img.url) ||
+      currentShoe?.images?.map((img) => img.url) ||
       [],
-    [variantObj?.images, shoe?.images],
+    [variantObj?.images, currentShoe?.images],
   );
 
   const selectedImageUrl = images[0] || "/images/default-shoe.png";
-  const isCurrentPage = id?.toString() === shoe?.id?.toString();
+  const isCurrentPage = id?.toString() === currentShoe?.id?.toString();
 
   const handleAddToCart = async () => {
-    if (!shoe) return;
+    if (!currentShoe) return;
     setLoading(true);
 
     try {
       const success = await addItem({
         shoe: {
-          ...shoe,
+          ...currentShoe,
           image: selectedImageUrl,
-          name: shoe.name || "محصول بدون نام",
-          price: shoe.price || 0,
+          name: currentShoe.name || "محصول بدون نام",
+          price: currentShoe.price || 0,
         },
         quantity: 1,
         color: selectedColor,
@@ -146,7 +157,7 @@ export default memo(function SingleShoe({
 
       showToast({
         message: success
-          ? `${shoe.name || "محصول"} به سبد خرید اضافه شد ✅`
+          ? `${currentShoe.name || "محصول"} به سبد خرید اضافه شد ✅`
           : "خطا در افزودن به سبد خرید ❌",
         type: success ? "success" : "error",
       });
@@ -160,7 +171,7 @@ export default memo(function SingleShoe({
     }
   };
 
-  if (!shoe?.id) {
+  if (!currentShoe?.id) {
     return <ProductNotFound />;
   }
 
@@ -168,12 +179,12 @@ export default memo(function SingleShoe({
     <article
       className="group relative overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl dark:bg-gray-800 dark:hover:shadow-gray-700/50"
       role="region"
-      aria-label={`محصول: ${shoe.name}`}
+      aria-label={`محصول: ${currentShoe.name}`}
     >
       <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-700 dark:to-gray-600">
         <Image
           src={selectedImageUrl}
-          alt={shoe.name || "تصویر محصول"}
+          alt={currentShoe.name || "تصویر محصول"}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
           className="object-cover transition-transform duration-500 group-hover:scale-110"
@@ -183,9 +194,9 @@ export default memo(function SingleShoe({
 
         {!isCurrentPage && (
           <Link
-            href={`/products/${shoe.id}`}
+            href={`/products/${currentShoe.id}`}
             className="absolute inset-0 flex items-center justify-center bg-black/0 transition-all duration-300 group-hover:bg-black/30 dark:group-hover:bg-black/50"
-            aria-label={`مشاهده جزئیات ${shoe.name}`}
+            aria-label={`مشاهده جزئیات ${currentShoe.name}`}
           >
             <div className="scale-0 transition-transform duration-300 group-hover:scale-100">
               <div className="rounded-full bg-cyan-500 p-3 text-white shadow-lg hover:bg-cyan-600 dark:bg-cyan-600 dark:hover:bg-cyan-700">
@@ -197,9 +208,8 @@ export default memo(function SingleShoe({
       </div>
 
       <div className="flex flex-col gap-3 p-4">
-        {/* ✅ Product Title */}
         <h3 className="line-clamp-2 text-sm font-bold text-gray-900 transition-colors group-hover:text-cyan-600 dark:text-white dark:group-hover:text-cyan-400">
-          {shoe.name || "محصول بدون نام"}
+          {currentShoe.name || "محصول بدون نام"}
         </h3>
 
         {hasVariants && variants.length > 1 && (
@@ -222,7 +232,7 @@ export default memo(function SingleShoe({
 
         <div className="flex items-baseline gap-1">
           <span className="text-lg font-bold text-gray-900 dark:text-white">
-            {(shoe.price || 0).toLocaleString()}
+            {(currentShoe.price || 0).toLocaleString()}
           </span>
           <span className="text-xs text-gray-500 dark:text-gray-400">
             تومان
@@ -231,7 +241,7 @@ export default memo(function SingleShoe({
 
         <div className="flex gap-2 pt-2">
           <AddToCartButton loading={loading} onClick={handleAddToCart} />
-          {!isCurrentPage && <ViewButton shoeId={shoe.id} />}
+          {!isCurrentPage && <ViewButton shoeId={currentShoe.id} />}
         </div>
       </div>
 

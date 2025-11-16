@@ -13,9 +13,10 @@ import {
   useMemo,
 } from "react";
 
+// ✅ اصلاح: first_name را اختیاری کردیم تا با Type خروجی useTelegram سازگار باشد.
 interface TelegramUserType {
   id: number;
-  first_name: string;
+  first_name?: string; // تغییر از: first_name: string;
   last_name?: string;
   username?: string;
   language_code?: string;
@@ -474,7 +475,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       totalItems,
       totalPrice,
       isAuthenticated: !!telegramUser?.id,
-      telegramUser: telegramUser || null,
+      telegramUser: telegramUser as TelegramUserType | null,
     }),
     [
       cartItems,
