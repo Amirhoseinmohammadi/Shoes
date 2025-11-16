@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useCart } from "@/contexts/CartContext";
+import { useCart } from "@/context/CartContext";
 import { useToast } from "@/contexts/ToastContext";
 import Image from "next/image";
 import Link from "next/link";
@@ -188,7 +188,7 @@ const CartPage = () => {
   const handleConfirmOrder = async (customer: CheckoutCustomer) => {
     const telegramDiscount = telegramUser ? 1000 : 0;
     const finalAmount = calculateFinalAmount(
-      cartItems,
+      cartItems as CartItemType[],
       2500,
       2000,
       telegramDiscount,
@@ -232,12 +232,12 @@ const CartPage = () => {
     );
   }
 
-  const total = calculateTotal(cartItems);
+  const total = calculateTotal(cartItems as CartItemType[]);
   const discount = 2500;
   const tax = 2000;
   const telegramDiscount = telegramUser ? 1000 : 0;
   const finalAmount = calculateFinalAmount(
-    cartItems,
+    cartItems as CartItemType[],
     discount,
     tax,
     telegramDiscount,

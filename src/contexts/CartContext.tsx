@@ -10,7 +10,16 @@ import {
   useEffect,
   useCallback,
   useRef,
+  useMemo,
 } from "react";
+
+interface TelegramUserType {
+  id: number;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+  language_code?: string;
+}
 
 export interface CartItem {
   id: number;
@@ -53,6 +62,7 @@ interface CartContextType {
   totalItems: number;
   totalPrice: number;
   isAuthenticated: boolean;
+  telegramUser: TelegramUserType | null;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -72,6 +82,7 @@ export const useCart = () => {
       totalItems: 0,
       totalPrice: 0,
       isAuthenticated: false,
+      telegramUser: null,
     };
   }
   return context;
@@ -85,7 +96,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const { showToast } = useToast();
   const mountedRef = useRef(true);
 
-  // ✅ Initialize cart از API (نه localStorage)
   useEffect(() => {
     if (!telegramUser?.id || authLoading) return;
 
@@ -127,7 +137,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     0,
   );
 
-  // ✅ Add item via API
   const addItem = useCallback(
     async ({
       shoe,
@@ -144,7 +153,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         return false;
       }
 
-      // ✅ Client-side validation
       if (quantity <= 0 || quantity > 100) {
         showToast({
           type: "error",
@@ -229,7 +237,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     [telegramUser?.id, showToast],
   );
 
-  // ✅ Remove item via API
   const removeItem = useCallback(
     async (cartItemId: number): Promise<boolean> => {
       if (!telegramUser?.id) return false;
@@ -281,12 +288,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     [telegramUser?.id, showToast],
   );
 
-  // ✅ Update quantity via API
   const updateItemQuantity = useCallback(
     async (cartItemId: number, quantity: number): Promise<boolean> => {
       if (!telegramUser?.id) return false;
 
-      // ✅ quantity = 0 means delete
       if (quantity <= 0) {
         return removeItem(cartItemId);
       }
@@ -349,7 +354,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     [telegramUser?.id, removeItem, showToast],
   );
 
-  // ✅ Clear cart via API
   const clearCart = useCallback(async (): Promise<void> => {
     if (!telegramUser?.id) {
       if (mountedRef.current) setCartItems([]);
@@ -370,7 +374,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [telegramUser?.id]);
 
-  // ✅ Checkout via API
   const checkout = useCallback(
     async (customer: { name: string; phone: string }): Promise<boolean> => {
       if (!telegramUser?.id) {
@@ -453,29 +456,42 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     [telegramUser?.id, cartItems, clearCart, showToast],
   );
 
-  // ✅ Cleanup on unmount
   useEffect(() => {
     return () => {
       mountedRef.current = false;
     };
   }, []);
 
+  const contextValue = useMemo(
+    () => ({
+      cartItems,
+      addItem,
+      removeItem,
+      updateItemQuantity,
+      checkout,
+      clearCart,
+      loading: loading || authLoading,
+      totalItems,
+      totalPrice,
+      isAuthenticated: !!telegramUser?.id,
+      telegramUser: telegramUser || null,
+    }),
+    [
+      cartItems,
+      addItem,
+      removeItem,
+      updateItemQuantity,
+      checkout,
+      clearCart,
+      loading,
+      authLoading,
+      totalItems,
+      totalPrice,
+      telegramUser,
+    ],
+  );
+
   return (
-    <CartContext.Provider
-      value={{
-        cartItems,
-        addItem,
-        removeItem,
-        updateItemQuantity,
-        checkout,
-        clearCart,
-        loading,
-        totalItems,
-        totalPrice,
-        isAuthenticated: !!telegramUser?.id,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
+    <CartContext.Provider value={contextValue}>{children}</CartContext.Provider>
   );
 };
