@@ -341,8 +341,6 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// --- DELETE: حذف از سبد خرید ---
-
 export async function DELETE(req: NextRequest) {
   try {
     const userId = await requireSessionAuth(req);
