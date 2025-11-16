@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
             },
           },
         },
-        // 💡 شامل مدل Size برای دسترسی به stock
+        // 💡 شامل مدل Size برای دسترسی به stock و نام سایز
         size: true,
       },
       orderBy: { createdAt: "desc" },
@@ -79,7 +79,6 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    // 💡 فرض می‌کنیم اندازه با sizeId ارسال می‌شود. اگر فقط size (رشته) است، باید در منطق زیر تغییراتی داد.
     const { productId, quantity, color, sizeId } = body;
 
     if (!productId || typeof productId !== "number" || productId <= 0) {
@@ -123,14 +122,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. بررسی موجودی بر اساس Size
+    // 2. بررسی موجودی بر اساس Size (اگر sizeId ارسال شده باشد)
     let currentStock: number;
-    let sizeName: string | null = null;
 
     if (sizeId) {
       const sizeData = await prisma.size.findUnique({
         where: { id: sizeId },
-        select: { stock: true, size: true },
+        select: { stock: true },
       });
 
       if (!sizeData) {
@@ -140,9 +138,8 @@ export async function POST(req: NextRequest) {
         );
       }
       currentStock = sizeData.stock;
-      sizeName = sizeData.size; // ذخیره نام سایز برای CartItem
     } else {
-      // اگر محصولی بدون سایز به سبد اضافه شود (فرض: همیشه موجود است)
+      // برای محصولات بدون سایز، فرض موجودی زیاد
       currentStock = 100000;
     }
 
@@ -163,7 +160,7 @@ export async function POST(req: NextRequest) {
           userId,
           productId,
           color: color || null,
-          sizeId: sizeId || null, // 💡 جستجو بر اساس sizeId
+          sizeId: sizeId || null,
         },
         // برای چک موجودی در صورت وجود آیتم، باید Size را Include کنیم
         include: {
@@ -176,7 +173,7 @@ export async function POST(req: NextRequest) {
       if (existing) {
         const newQuantity = existing.quantity + quantity;
 
-        const stockToCheck = existing.size?.stock ?? 100000; // استفاده از موجودی واقعی آیتم موجود
+        const stockToCheck = existing.size?.stock ?? 100000;
 
         if (newQuantity > stockToCheck) {
           throw new Error(
@@ -209,8 +206,8 @@ export async function POST(req: NextRequest) {
           productId,
           quantity,
           color: color || null,
-          sizeId: sizeId || null, // 💡 ذخیره sizeId
-          size: sizeName || null, // 💡 ذخیره نام سایز
+          sizeId: sizeId || null,
+          // 🛑 خط size: sizeName || null, حذف شد تا Type Error رفع شود.
         },
         include: {
           product: {
@@ -340,6 +337,8 @@ export async function PATCH(req: NextRequest) {
     );
   }
 }
+
+// --- DELETE: حذف از سبد خرید ---
 
 export async function DELETE(req: NextRequest) {
   try {
