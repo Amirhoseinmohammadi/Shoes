@@ -24,6 +24,8 @@ async function requireSessionAuth(req: NextRequest): Promise<number | null> {
   return userId;
 }
 
+// --- GET: دریافت سبد خرید ---
+
 export async function GET(req: NextRequest) {
   try {
     const userId = await requireSessionAuth(req);
@@ -47,6 +49,8 @@ export async function GET(req: NextRequest) {
             },
           },
         },
+        // 💡 شامل مدل Size برای دسترسی به stock
+        size: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -61,6 +65,8 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// --- POST: افزودن به سبد خرید ---
+
 export async function POST(req: NextRequest) {
   try {
     const userId = await requireSessionAuth(req);
@@ -73,7 +79,8 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { productId, quantity, color, size } = body;
+    // 💡 فرض می‌کنیم اندازه با sizeId ارسال می‌شود. اگر فقط size (رشته) است، باید در منطق زیر تغییراتی داد.
+    const { productId, quantity, color, sizeId } = body;
 
     if (!productId || typeof productId !== "number" || productId <= 0) {
       return NextResponse.json(
@@ -96,9 +103,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 1. کوئری محصول: حذف 'stock' برای رفع خطای کامپایل
     const product = await prisma.product.findUnique({
       where: { id: productId },
-      select: { id: true, isActive: true, stock: true, price: true },
+      select: { id: true, isActive: true, price: true, name: true }, // 'stock' حذف شد
     });
 
     if (!product) {
@@ -115,10 +123,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (product.stock < quantity) {
+    // 2. بررسی موجودی بر اساس Size
+    let currentStock: number;
+    let sizeName: string | null = null;
+
+    if (sizeId) {
+      const sizeData = await prisma.size.findUnique({
+        where: { id: sizeId },
+        select: { stock: true, size: true },
+      });
+
+      if (!sizeData) {
+        return NextResponse.json(
+          { error: "سایز نامعتبر است", success: false },
+          { status: 400 },
+        );
+      }
+      currentStock = sizeData.stock;
+      sizeName = sizeData.size; // ذخیره نام سایز برای CartItem
+    } else {
+      // اگر محصولی بدون سایز به سبد اضافه شود (فرض: همیشه موجود است)
+      currentStock = 100000;
+    }
+
+    if (currentStock < quantity) {
       return NextResponse.json(
         {
-          error: `موجودی ناکافی (موجودی: ${product.stock})`,
+          error: `موجودی ناکافی (موجودی: ${currentStock})`,
           success: false,
         },
         { status: 400 },
@@ -126,20 +157,31 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
+      // پیدا کردن آیتم قبلی در سبد
       const existing = await tx.cartItem.findFirst({
         where: {
           userId,
           productId,
           color: color || null,
-          size: size || null,
+          sizeId: sizeId || null, // 💡 جستجو بر اساس sizeId
+        },
+        // برای چک موجودی در صورت وجود آیتم، باید Size را Include کنیم
+        include: {
+          size: {
+            select: { stock: true },
+          },
         },
       });
 
       if (existing) {
         const newQuantity = existing.quantity + quantity;
 
-        if (newQuantity > product.stock) {
-          throw new Error(`موجودی کافی نیست برای تعداد ${newQuantity}`);
+        const stockToCheck = existing.size?.stock ?? 100000; // استفاده از موجودی واقعی آیتم موجود
+
+        if (newQuantity > stockToCheck) {
+          throw new Error(
+            `موجودی کافی نیست برای تعداد ${newQuantity} (${product.name})`,
+          );
         }
 
         return await tx.cartItem.update({
@@ -155,17 +197,20 @@ export async function POST(req: NextRequest) {
                 },
               },
             },
+            size: true,
           },
         });
       }
 
+      // افزودن آیتم جدید
       return await tx.cartItem.create({
         data: {
           userId,
           productId,
           quantity,
           color: color || null,
-          size: size || null,
+          sizeId: sizeId || null, // 💡 ذخیره sizeId
+          size: sizeName || null, // 💡 ذخیره نام سایز
         },
         include: {
           product: {
@@ -177,6 +222,7 @@ export async function POST(req: NextRequest) {
               },
             },
           },
+          size: true,
         },
       });
     });
@@ -193,6 +239,8 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// --- PATCH: به‌روزرسانی سبد خرید ---
 
 export async function PATCH(req: NextRequest) {
   try {
@@ -225,10 +273,11 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
+    // 1. کوئری: شامل مدل Size برای دسترسی به موجودی
     const existingItem = await prisma.cartItem.findFirst({
       where: { id: cartItemId, userId },
       include: {
-        product: {
+        size: {
           select: { stock: true },
         },
       },
@@ -249,10 +298,13 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
-    if (quantity > existingItem.product.stock) {
+    // 2. بررسی موجودی: استفاده از موجودی مدل Size
+    const currentStock = existingItem.size?.stock ?? 100000;
+
+    if (quantity > currentStock) {
       return NextResponse.json(
         {
-          error: `موجودی ناکافی (موجودی: ${existingItem.product.stock})`,
+          error: `موجودی ناکافی (موجودی: ${currentStock})`,
           success: false,
         },
         { status: 400 },
@@ -272,6 +324,7 @@ export async function PATCH(req: NextRequest) {
             },
           },
         },
+        size: true,
       },
     });
 
@@ -287,6 +340,8 @@ export async function PATCH(req: NextRequest) {
     );
   }
 }
+
+// --- DELETE: حذف از سبد خرید ---
 
 export async function DELETE(req: NextRequest) {
   try {

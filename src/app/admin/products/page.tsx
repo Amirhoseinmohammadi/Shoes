@@ -25,7 +25,6 @@ const defaultConfig = {
 export default function AdminProductsPage() {
   const { user, loading: authLoading, isAdmin } = useTelegram();
 
-  // استفاده از API path درست (Admin endpoint)
   const {
     data: products,
     error,
@@ -88,7 +87,6 @@ export default function AdminProductsPage() {
     return matchesSearch && matchesCategory;
   });
 
-  // Type Casting برای اطمینان از خروجی string[]
   const categories: string[] = [
     "all",
     ...new Set(products?.map((p: Product) => p.category).filter(Boolean)),
@@ -148,7 +146,6 @@ export default function AdminProductsPage() {
     );
   }
 
-  // حالت خطا
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 p-4 pt-20 dark:from-gray-900 dark:to-gray-800">
@@ -198,7 +195,6 @@ export default function AdminProductsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 pt-20 dark:from-gray-900 dark:to-gray-800">
       <div className="mx-auto max-w-7xl">
-        {/* هدر */}
         <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
@@ -224,7 +220,6 @@ export default function AdminProductsPage() {
           </Link>
         </div>
 
-        {/* آمار سریع */}
         <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-4">
           <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-lg dark:border-gray-700 dark:bg-gray-800">
             <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
@@ -261,7 +256,6 @@ export default function AdminProductsPage() {
           </div>
         </div>
 
-        {/* فیلتر و جستجو */}
         <div className="mb-6 flex flex-col gap-4 md:flex-row">
           <div className="relative flex-1">
             <input
@@ -288,7 +282,6 @@ export default function AdminProductsPage() {
             onChange={(e) => setSelectedCategory(e.target.value)}
             className="rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 shadow-sm transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:ring-blue-800"
           >
-            {/* 🟢 خطای Type در اینجا با تعیین صریح Type متغیر category حل شد */}
             {categories.map((category: string) => (
               <option key={category} value={category}>
                 {category === "all" ? "همه دسته‌بندی‌ها" : category}
@@ -297,7 +290,6 @@ export default function AdminProductsPage() {
           </select>
         </div>
 
-        {/* لیست محصولات */}
         {!filteredProducts || filteredProducts.length === 0 ? (
           <div className="rounded-2xl bg-white p-12 text-center shadow-lg dark:bg-gray-800">
             <div className="mb-4 text-6xl">📦</div>
@@ -332,7 +324,6 @@ export default function AdminProductsPage() {
           </div>
         ) : (
           <>
-            {/* اطلاعات فیلتر */}
             {(searchTerm || selectedCategory !== "all") && (
               <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <span>فیلترها:</span>
@@ -364,7 +355,6 @@ export default function AdminProductsPage() {
                   key={product.id}
                   className="group rounded-2xl border border-gray-100 bg-white p-6 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl dark:border-gray-700 dark:bg-gray-800 dark:hover:shadow-gray-700/50"
                 >
-                  {/* تصویر محصول */}
                   <div className="mb-4 aspect-square overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-700">
                     {product.image ? (
                       <Image
@@ -383,7 +373,6 @@ export default function AdminProductsPage() {
                     )}
                   </div>
 
-                  {/* اطلاعات محصول */}
                   <div className="mb-4">
                     <h3 className="mb-2 line-clamp-2 text-lg font-semibold text-gray-800 dark:text-white">
                       {product.name}
@@ -415,7 +404,6 @@ export default function AdminProductsPage() {
                     </div>
                   </div>
 
-                  {/* دسته‌بندی و اقدامات */}
                   <div className="flex items-center justify-between">
                     <span className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-400">
                       {product.category || "بدون دسته"}
