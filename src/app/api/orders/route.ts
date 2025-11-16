@@ -39,10 +39,9 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // ✅ صرفاً سفارشات خودش رو ببینه
     const orders = await prisma.order.findMany({
       where: {
-        telegramId: userId,
+        userId: userId,
       },
       include: {
         items: {
@@ -60,7 +59,7 @@ export async function GET(req: NextRequest) {
         },
       },
       orderBy: { createdAt: "desc" },
-      take: 50, // ✅ Limit results
+      take: 50,
     });
 
     return NextResponse.json({ success: true, orders });
@@ -150,6 +149,7 @@ export async function POST(req: NextRequest) {
     }
 
     const productIds = items.map((i) => i.productId);
+
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
       select: {
@@ -158,7 +158,6 @@ export async function POST(req: NextRequest) {
         price: true,
         brand: true,
         isActive: true,
-        stock: true,
       },
     });
 
@@ -184,17 +183,6 @@ export async function POST(req: NextRequest) {
       if (!product.isActive) {
         return NextResponse.json(
           { success: false, error: `محصول ${product.name} غیرفعال است` },
-          { status: 400 },
-        );
-      }
-
-      const quantity = item.quantity || 1;
-      if (product.stock < quantity) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `موجودی ${product.name} کافی نیست (موجودی: ${product.stock})`,
-          },
           { status: 400 },
         );
       }
@@ -232,7 +220,7 @@ export async function POST(req: NextRequest) {
           total: calculatedTotal,
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
-          telegramId: userId,
+          userId: userId,
           items: { create: itemsWithPrice },
         },
         include: {
