@@ -53,12 +53,9 @@ const nextConfig = {
     return config;
   },
 
-  // ✅ Build errors فقط (warnings نه)
   typescript: { ignoreBuildErrors: false },
   eslint: {
     ignoreDuringBuilds: false,
-    // ✅ اگر خیلی مشکل پیدا شد, این استفاده کن (temporary):
-    // ignoreDuringBuilds: true,
   },
 
   async headers() {

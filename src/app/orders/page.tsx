@@ -77,12 +77,14 @@ const OrdersPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ Fetch orders when user is loaded
   useEffect(() => {
-    if (authLoading) return; // Still loading auth
+    if (authLoading) {
+      console.log("⏳ Auth still loading...");
+      return;
+    }
 
     if (!telegramUser?.id) {
-      console.warn("⚠️ No telegram user, skipping orders fetch");
+      console.warn("⚠️ No telegram user authenticated");
       setLoading(false);
       setError(null);
       return;
@@ -93,22 +95,29 @@ const OrdersPage = () => {
         setLoading(true);
         setError(null);
 
-        // ✅ Add telegramId as query parameter
-        const url = `/api/orders?telegramId=${telegramUser.id}`;
-        console.log("📤 Fetching orders from:", url);
+        console.log("📤 Fetching orders for user:", telegramUser.id);
 
-        const res = await fetch(url);
+        const res = await fetch("/api/orders", {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
         console.log("📥 Response status:", res.status);
 
         if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(
-            errorData.error || `HTTP ${res.status}: خطا در دریافت سفارشات`,
-          );
+          const errorData = await res.json().catch(() => ({}));
+          const errorMsg =
+            errorData.error ||
+            `HTTP ${res.status}: ${res.statusText || "خطا در درخواست"}`;
+          console.error("❌ Fetch orders error:", errorMsg);
+          throw new Error(errorMsg);
         }
 
         const data = await res.json();
-        console.log("✅ Orders fetched:", data);
+        console.log("✅ Orders fetched:", data.orders?.length || 0);
 
         setOrders(data.orders || []);
       } catch (err: any) {
@@ -123,7 +132,6 @@ const OrdersPage = () => {
     fetchOrders();
   }, [telegramUser?.id, authLoading]);
 
-  // ✅ Loading auth
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -137,12 +145,13 @@ const OrdersPage = () => {
     );
   }
 
-  // ✅ Not logged in
-  if (!telegramUser) {
+  if (!telegramUser?.id) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
-          <p className="mb-4 text-red-500">لطفاً وارد سیستم شوید</p>
+          <p className="mb-4 text-red-500">
+            لطفاً از طریق تلگرام وارد سیستم شوید
+          </p>
           <Link
             href="/"
             className="rounded-full bg-cyan-500 px-6 py-2 text-white transition hover:bg-cyan-600"
@@ -154,7 +163,6 @@ const OrdersPage = () => {
     );
   }
 
-  // ✅ Loading orders
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -168,7 +176,6 @@ const OrdersPage = () => {
     );
   }
 
-  // ✅ Error
   if (error) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -185,7 +192,6 @@ const OrdersPage = () => {
     );
   }
 
-  // ✅ No orders
   if (!orders.length) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -208,7 +214,6 @@ const OrdersPage = () => {
     );
   }
 
-  // ✅ Show orders
   return (
     <div className="safe-area-bottom min-h-screen bg-gray-50 p-4 dark:bg-gray-900">
       <div className="mx-auto max-w-2xl">
@@ -224,7 +229,7 @@ const OrdersPage = () => {
                 key={order.id}
                 className="rounded-2xl bg-white p-6 shadow-sm transition hover:shadow-md dark:bg-gray-800 dark:hover:shadow-lg"
               >
-                {/* هدر سفارش */}
+                {/* Order Header */}
                 <div className="mb-4 flex items-center justify-between">
                   <div>
                     <h2 className="font-bold text-gray-900 dark:text-white">
@@ -243,7 +248,7 @@ const OrdersPage = () => {
                   </span>
                 </div>
 
-                {/* تاریخ سفارش */}
+                {/* Order Date */}
                 <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
                   {new Date(order.createdAt).toLocaleDateString("fa-IR", {
                     year: "numeric",
@@ -257,7 +262,7 @@ const OrdersPage = () => {
                   })}
                 </p>
 
-                {/* محصولات */}
+                {/* Order Items */}
                 <div className="mb-4">
                   <h3 className="mb-3 font-semibold text-gray-900 dark:text-white">
                     محصولات:

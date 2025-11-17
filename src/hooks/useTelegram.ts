@@ -48,120 +48,146 @@ export function useTelegram() {
     }
   }, []);
 
-  // تابع validateAndSetUser با useCallback تعریف شده تا هویت ثابتی داشته باشد.
-  const validateAndSetUser = useCallback(async (tgUser: TelegramUser) => {
-    if (!tgUser?.id) return;
-
-    try {
-      const now = Date.now();
-      const cacheAge = now - userCache.validatedAt;
-
-      // ۱. بررسی کش ۱۰ دقیقه‌ای
-      if (userCache.data && cacheAge < 10 * 60 * 1000) {
-        console.log("✅ Using cached user:", userCache.data.id);
-        if (mountedRef.current) {
-          setUser(userCache.data);
-          setLoading(false);
-        }
-        return;
-      }
-
-      const tg = (window as any).Telegram?.WebApp;
-      if (!tg?.initData) {
-        console.error("❌ No initData available");
-        if (mountedRef.current) setLoading(false);
-        return;
-      }
-
-      console.log("📤 Validating with server...");
-
-      // ۲. اعتبارسنجی سرور
-      const response = await fetch("/api/validate-init", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData: tg.initData }),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        console.error("❌ Server validation failed:", response.status);
-        if (mountedRef.current) {
-          setUser(null);
-          setLoading(false);
-        }
-        return;
-      }
-
-      const result = await response.json();
-
-      if (result.success && result.user) {
-        const validatedUser: TelegramUser = {
-          ...tgUser,
-          isAdmin: result.user.isAdmin,
-        };
-
-        userCache.data = validatedUser;
-        userCache.validatedAt = now;
-
-        if (mountedRef.current) {
-          setUser(validatedUser);
-          try {
-            localStorage.setItem("telegramUser", JSON.stringify(validatedUser));
-          } catch {}
-        }
-        console.log("✅ Auth successful:", validatedUser.id);
-      } else {
-        console.error("❌ Validation failed:", result.error);
-        if (mountedRef.current) setUser(null);
-      }
-    } catch (error) {
-      console.error("❌ Validation error:", error);
-      if (mountedRef.current) setUser(null);
-    } finally {
-      if (mountedRef.current) setLoading(false);
-    }
-  }, []); // آرایه وابستگی خالی برای useCallback (درست است)
-
   useEffect(() => {
     if (initializingRef.current) return;
     initializingRef.current = true;
 
     if (typeof window === "undefined") {
-      setLoading(false);
-      return;
-    }
-
-    const tg = (window as any).Telegram?.WebApp;
-
-    if (!tg) {
-      console.log("⚠️ Telegram WebApp not available");
-      setIsTelegram(false);
-      setLoading(false);
-      return;
-    }
-
-    console.log("✅ Telegram WebApp found");
-    setIsTelegram(true);
-
-    try {
-      tg.ready?.();
-      tg.expand?.();
-
-      const tgUser: TelegramUser = tg.initDataUnsafe?.user;
-
-      if (tgUser?.id) {
-        console.log("👤 User found:", tgUser.id);
-        // اینجا تابع validateAndSetUser فراخوانی می‌شود
-        validateAndSetUser(tgUser);
-      } else {
-        console.error("❌ No user ID found");
+      if (mountedRef.current) {
         setLoading(false);
       }
-    } catch (error) {
-      console.error("❌ Telegram init error:", error);
-      setLoading(false);
+      return;
     }
-  }, [validateAndSetUser]); // ✅ اصلاح: اضافه کردن تابع به وابستگی‌ها
+
+    const initTelegram = async () => {
+      try {
+        const tg = (window as any).Telegram?.WebApp;
+
+        if (!tg) {
+          console.log("⚠️ Telegram WebApp not available");
+          if (mountedRef.current) {
+            setIsTelegram(false);
+            setLoading(false);
+          }
+          return;
+        }
+
+        console.log("✅ Telegram WebApp found");
+        if (mountedRef.current) {
+          setIsTelegram(true);
+        }
+
+        try {
+          tg.ready?.();
+          tg.expand?.();
+        } catch (e) {
+          console.warn("⚠️ Could not call Telegram methods:", e);
+        }
+
+        const tgUser: TelegramUser = tg.initDataUnsafe?.user;
+
+        if (!tgUser?.id) {
+          console.error("❌ No user ID found in Telegram data");
+          if (mountedRef.current) {
+            setUser(null);
+            setLoading(false);
+          }
+          return;
+        }
+
+        console.log("👤 User found in Telegram:", tgUser.id);
+
+        const now = Date.now();
+        const cacheAge = now - userCache.validatedAt;
+
+        if (userCache.data && cacheAge < 5 * 60 * 1000) {
+          console.log("✅ Using cached user:", userCache.data.id);
+          if (mountedRef.current) {
+            setUser(userCache.data);
+            setLoading(false);
+          }
+          return;
+        }
+
+        if (!tg.initData) {
+          console.error("❌ No initData available");
+          if (mountedRef.current) {
+            setUser(null);
+            setLoading(false);
+          }
+          return;
+        }
+
+        console.log("📤 Validating with server...");
+
+        const response = await fetch("/api/validate-init", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ initData: tg.initData }),
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          console.error("❌ Server validation failed:", response.status);
+          if (mountedRef.current) {
+            setUser(null);
+            setLoading(false);
+          }
+          return;
+        }
+
+        const result = await response.json();
+
+        if (result.success && result.user) {
+          const validatedUser: TelegramUser = {
+            ...tgUser,
+            isAdmin: result.user.isAdmin,
+          };
+
+          userCache.data = validatedUser;
+          userCache.validatedAt = now;
+
+          if (mountedRef.current) {
+            setUser(validatedUser);
+            console.log("✅ Auth successful:", validatedUser.id);
+          }
+
+          try {
+            localStorage.setItem("telegramUser", JSON.stringify(validatedUser));
+          } catch (e) {
+            console.warn("⚠️ Could not save to localStorage:", e);
+          }
+        } else {
+          console.error("❌ Validation failed:", result.error);
+          if (mountedRef.current) {
+            setUser(null);
+          }
+        }
+      } catch (error) {
+        console.error("❌ Telegram init error:", error);
+        if (mountedRef.current) {
+          setUser(null);
+        }
+      } finally {
+        if (mountedRef.current) {
+          setLoading(false);
+        }
+      }
+    };
+
+    let attempts = 0;
+    const checkInterval = setInterval(() => {
+      attempts++;
+      if ((window as any).Telegram?.WebApp || attempts >= 50) {
+        clearInterval(checkInterval);
+        initTelegram();
+      }
+    }, 100);
+
+    return () => {
+      clearInterval(checkInterval);
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -175,7 +201,7 @@ export function useTelegram() {
     sendData,
     isTelegram,
     logout,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user?.id,
     isAdmin: user?.isAdmin || false,
   };
 }

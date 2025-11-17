@@ -13,10 +13,9 @@ import {
   useMemo,
 } from "react";
 
-// ✅ اصلاح: first_name را اختیاری کردیم تا با Type خروجی useTelegram سازگار باشد.
 interface TelegramUserType {
   id: number;
-  first_name?: string; // تغییر از: first_name: string;
+  first_name?: string;
   last_name?: string;
   username?: string;
   language_code?: string;
@@ -93,23 +92,45 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
-  const { user: telegramUser, loading: authLoading } = useTelegram();
+  const {
+    user: telegramUser,
+    loading: authLoading,
+    isAuthenticated,
+  } = useTelegram();
   const { showToast } = useToast();
   const mountedRef = useRef(true);
+  const fetchControllerRef = useRef<AbortController | null>(null);
 
+  // ✅ Fetch cart when user is authenticated
   useEffect(() => {
-    if (!telegramUser?.id || authLoading) return;
+    if (!isAuthenticated || authLoading) {
+      console.log("⏳ Waiting for auth...", { authLoading, isAuthenticated });
+      return;
+    }
+
+    // Cancel previous request if exists
+    if (fetchControllerRef.current) {
+      fetchControllerRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    fetchControllerRef.current = controller;
 
     const fetchCart = async () => {
       try {
+        console.log("📦 Fetching cart for authenticated user");
         const res = await fetch("/api/cart", {
           method: "GET",
           credentials: "include",
+          signal: controller.signal,
         });
 
         if (!res.ok) {
           console.warn("⚠️ Failed to fetch cart:", res.status);
-          if (mountedRef.current) setCartItems([]);
+          if (mountedRef.current) {
+            setCartItems([]);
+            setInitialized(true);
+          }
           return;
         }
 
@@ -119,22 +140,35 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           data.success &&
           Array.isArray(data.cartItems)
         ) {
+          console.log("✅ Cart loaded with", data.cartItems.length, "items");
           setCartItems(data.cartItems);
         }
-      } catch (err) {
-        console.error("❌ Fetch cart error:", err);
-        if (mountedRef.current) setCartItems([]);
+      } catch (err: any) {
+        if (err.name === "AbortError") {
+          console.log("↪️ Cart fetch cancelled");
+        } else {
+          console.error("❌ Fetch cart error:", err);
+        }
+        if (mountedRef.current) {
+          setCartItems([]);
+        }
       } finally {
-        if (mountedRef.current) setInitialized(true);
+        if (mountedRef.current) {
+          setInitialized(true);
+        }
       }
     };
 
     fetchCart();
-  }, [telegramUser?.id, authLoading]);
+
+    return () => {
+      controller.abort();
+    };
+  }, [isAuthenticated, authLoading]);
 
   const totalItems = cartItems.reduce((sum, i) => sum + i.quantity, 0);
   const totalPrice = cartItems.reduce(
-    (sum, i) => sum + i.price * i.quantity,
+    (sum, i) => sum + (i.price || 0) * (i.quantity || 0),
     0,
   );
 
@@ -174,6 +208,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
       setLoading(true);
       try {
+        console.log("📝 Adding to cart:", {
+          productId: shoe.id,
+          quantity,
+          color,
+        });
+
         const res = await fetch("/api/cart", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -181,12 +221,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
             productId: shoe.id,
             quantity,
             color: color || null,
-            size: size || null,
+            sizeId: null,
           }),
           credentials: "include",
         });
 
         const data = await res.json();
+        console.log("Response:", {
+          status: res.status,
+          success: data.success,
+          error: data.error,
+        });
 
         if (!res.ok) {
           showToast({
@@ -198,17 +243,16 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         }
 
         if (mountedRef.current && data.cartItem) {
+          console.log("✅ Item added to cart");
           setCartItems((prev) => {
             const existing = prev.find(
               (i) =>
-                i.productId === shoe.id &&
-                i.color === (color || null) &&
-                i.size === (size || null),
+                i.productId === shoe.id && i.color === (color || undefined),
             );
             if (existing) {
               return prev.map((i) =>
                 i.id === existing.id
-                  ? { ...i, quantity: existing.quantity + quantity }
+                  ? { ...i, quantity: i.quantity + quantity }
                   : i,
               );
             }
@@ -218,7 +262,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
         showToast({
           type: "success",
-          message: `${shoe.name} اضافه شد`,
+          message: `${shoe.name} اضافه شد ✅`,
           duration: 2000,
         });
 
@@ -232,7 +276,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         });
         return false;
       } finally {
-        if (mountedRef.current) setLoading(false);
+        if (mountedRef.current) {
+          setLoading(false);
+        }
       }
     },
     [telegramUser?.id, showToast],
@@ -283,7 +329,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         });
         return false;
       } finally {
-        if (mountedRef.current) setLoading(false);
+        if (mountedRef.current) {
+          setLoading(false);
+        }
       }
     },
     [telegramUser?.id, showToast],
@@ -349,7 +397,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         });
         return false;
       } finally {
-        if (mountedRef.current) setLoading(false);
+        if (mountedRef.current) {
+          setLoading(false);
+        }
       }
     },
     [telegramUser?.id, removeItem, showToast],
@@ -357,7 +407,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const clearCart = useCallback(async (): Promise<void> => {
     if (!telegramUser?.id) {
-      if (mountedRef.current) setCartItems([]);
+      if (mountedRef.current) {
+        setCartItems([]);
+      }
       return;
     }
 
@@ -369,7 +421,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         credentials: "include",
       });
 
-      if (mountedRef.current) setCartItems([]);
+      if (mountedRef.current) {
+        setCartItems([]);
+      }
     } catch (err) {
       console.error("❌ Clear cart error:", err);
     }
@@ -451,7 +505,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         });
         return false;
       } finally {
-        if (mountedRef.current) setLoading(false);
+        if (mountedRef.current) {
+          setLoading(false);
+        }
       }
     },
     [telegramUser?.id, cartItems, clearCart, showToast],

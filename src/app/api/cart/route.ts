@@ -24,8 +24,6 @@ async function requireSessionAuth(req: NextRequest): Promise<number | null> {
   return userId;
 }
 
-// --- GET: دریافت سبد خرید ---
-
 export async function GET(req: NextRequest) {
   try {
     const userId = await requireSessionAuth(req);
@@ -49,7 +47,6 @@ export async function GET(req: NextRequest) {
             },
           },
         },
-        // 💡 شامل مدل Size برای دسترسی به stock و نام سایز
         size: true,
       },
       orderBy: { createdAt: "desc" },
@@ -64,8 +61,6 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-
-// --- POST: افزودن به سبد خرید ---
 
 export async function POST(req: NextRequest) {
   try {
@@ -102,10 +97,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1. کوئری محصول: حذف 'stock' برای رفع خطای کامپایل
     const product = await prisma.product.findUnique({
       where: { id: productId },
-      select: { id: true, isActive: true, price: true, name: true }, // 'stock' حذف شد
+      select: { id: true, isActive: true, price: true, name: true },
     });
 
     if (!product) {
@@ -122,7 +116,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. بررسی موجودی بر اساس Size (اگر sizeId ارسال شده باشد)
     let currentStock: number;
 
     if (sizeId) {
@@ -139,7 +132,6 @@ export async function POST(req: NextRequest) {
       }
       currentStock = sizeData.stock;
     } else {
-      // برای محصولات بدون سایز، فرض موجودی زیاد
       currentStock = 100000;
     }
 
@@ -154,7 +146,6 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      // پیدا کردن آیتم قبلی در سبد
       const existing = await tx.cartItem.findFirst({
         where: {
           userId,
@@ -162,7 +153,6 @@ export async function POST(req: NextRequest) {
           color: color || null,
           sizeId: sizeId || null,
         },
-        // برای چک موجودی در صورت وجود آیتم، باید Size را Include کنیم
         include: {
           size: {
             select: { stock: true },
@@ -207,7 +197,6 @@ export async function POST(req: NextRequest) {
           quantity,
           color: color || null,
           sizeId: sizeId || null,
-          // 🛑 خط size: sizeName || null, حذف شد تا Type Error رفع شود.
         },
         include: {
           product: {
@@ -236,8 +225,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
-// --- PATCH: به‌روزرسانی سبد خرید ---
 
 export async function PATCH(req: NextRequest) {
   try {
@@ -270,7 +257,6 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    // 1. کوئری: شامل مدل Size برای دسترسی به موجودی
     const existingItem = await prisma.cartItem.findFirst({
       where: { id: cartItemId, userId },
       include: {
@@ -295,7 +281,6 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
-    // 2. بررسی موجودی: استفاده از موجودی مدل Size
     const currentStock = existingItem.size?.stock ?? 100000;
 
     if (quantity > currentStock) {
@@ -337,8 +322,6 @@ export async function PATCH(req: NextRequest) {
     );
   }
 }
-
-// --- DELETE: حذف از سبد خرید ---
 
 export async function DELETE(req: NextRequest) {
   try {
