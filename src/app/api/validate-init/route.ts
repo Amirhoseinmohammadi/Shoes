@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateInitData, isInitDataExpired } from "@/lib/telegram-validator";
 import { setSessionCookie } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { initData } = body;
 
-    console.log("📨 validate-init called with:", {
-      initData: initData?.substring(0, 50),
-    });
+    console.log("📨 validate-init called");
 
     if (!initData) {
       console.error("❌ No initData provided");
@@ -64,6 +63,28 @@ export async function POST(request: NextRequest) {
 
     console.log("✅ User authenticated:", { id: user.id, isAdmin });
 
+    try {
+      await prisma.user.upsert({
+        where: { telegramId: user.id },
+        update: {
+          firstName: user.first_name || null,
+          lastName: user.last_name || null,
+          username: user.username || null,
+          updatedAt: new Date(),
+        },
+        create: {
+          telegramId: user.id,
+          username: user.username || `user_${user.id}`,
+          firstName: user.first_name || null,
+          lastName: user.last_name || null,
+        },
+      });
+
+      console.log("✅ User saved to database:", user.id);
+    } catch (dbError) {
+      console.error("❌ Database error:", dbError);
+    }
+
     await setSessionCookie({
       userId: user.id,
       firstName: user.first_name,
@@ -72,7 +93,7 @@ export async function POST(request: NextRequest) {
       isAdmin,
     });
 
-    console.log("✅ Session cookie set");
+    console.log("✅ Session cookie set for user:", user.id);
 
     return NextResponse.json({
       success: true,

@@ -43,6 +43,7 @@ export function useTelegram() {
         method: "POST",
         credentials: "include",
       });
+      localStorage.removeItem("telegramUser");
     } catch (err) {
       console.error("❌ Logout error:", err);
     }
@@ -127,8 +128,15 @@ export function useTelegram() {
           credentials: "include",
         });
 
+        console.log("📥 Server response:", response.status);
+
         if (!response.ok) {
-          console.error("❌ Server validation failed:", response.status);
+          const errorData = await response.json().catch(() => ({}));
+          console.error(
+            "❌ Server validation failed:",
+            response.status,
+            errorData,
+          );
           if (mountedRef.current) {
             setUser(null);
             setLoading(false);
@@ -137,6 +145,10 @@ export function useTelegram() {
         }
 
         const result = await response.json();
+        console.log(
+          "✅ Validation result:",
+          result.success ? "success" : "failed",
+        );
 
         if (result.success && result.user) {
           const validatedUser: TelegramUser = {
@@ -149,7 +161,7 @@ export function useTelegram() {
 
           if (mountedRef.current) {
             setUser(validatedUser);
-            console.log("✅ Auth successful:", validatedUser.id);
+            console.log("✅ Auth successful for user:", validatedUser.id);
           }
 
           try {
