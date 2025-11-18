@@ -1,4 +1,3 @@
-// src/lib/session.ts
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
@@ -16,7 +15,6 @@ export interface SessionPayload {
   username?: string;
   isAdmin: boolean;
   iat?: number;
-  // Index Signature برای سازگاری با JWTPayload
   [propName: string]: unknown;
 }
 
@@ -43,8 +41,7 @@ export async function verifySession(
 export async function setSessionCookie(payload: SessionPayload): Promise<void> {
   const token = await createSession(payload);
 
-  // ✅ اصلاح: Type Casting به 'any' برای رفع خطای "Property 'set' does not exist"
-  const cookieStore: any = cookies();
+  const cookieStore = await cookies();
 
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
@@ -56,8 +53,7 @@ export async function setSessionCookie(payload: SessionPayload): Promise<void> {
 }
 
 export async function getSession(): Promise<SessionPayload | null> {
-  // ✅ اصلاح: Type Casting به 'any' برای رفع خطای "Property 'get' does not exist"
-  const cookieStore: any = cookies();
+  const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
   if (!token) {
@@ -68,7 +64,6 @@ export async function getSession(): Promise<SessionPayload | null> {
 }
 
 export async function clearSessionCookie(): Promise<void> {
-  // ✅ اصلاح: Type Casting به 'any'
-  const cookieStore: any = cookies();
+  const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE_NAME);
 }
