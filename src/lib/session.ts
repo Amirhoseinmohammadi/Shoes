@@ -6,7 +6,7 @@ const secret = new TextEncoder().encode(
   process.env.TELEGRAM_BOT_TOKEN || "your-bot-token-fallback",
 );
 
-const SESSION_COOKIE_NAME = "telegram_session";
+export const SESSION_COOKIE_NAME = "telegram_session";
 const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours (in milliseconds)
 
 export interface SessionPayload {

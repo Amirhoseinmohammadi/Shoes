@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getSession } from "@/src/lib/session";
+import { verifySession } from "@/src/lib/session";
+
+const SESSION_COOKIE_NAME = "telegram_session";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -11,10 +13,20 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/admin")
   ) {
     try {
-      const session = await getSession();
+      const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+
+      if (!token) {
+        console.warn(`❌ Unauthorized request to ${pathname} - no cookie`);
+        return NextResponse.json(
+          { error: "Unauthorized - لطفا وارد شوید", success: false },
+          { status: 401 },
+        );
+      }
+
+      const session = await verifySession(token);
 
       if (!session) {
-        console.warn(`❌ Unauthorized request to ${pathname}`);
+        console.warn(`❌ Unauthorized request to ${pathname} - invalid token`);
         return NextResponse.json(
           { error: "Unauthorized - لطفا وارد شوید", success: false },
           { status: 401 },
@@ -28,7 +40,7 @@ export async function middleware(request: NextRequest) {
         session.isAdmin ? "true" : "false",
       );
       if (session.username) {
-        requestHeaders.set("x-session-username", session.username);
+        requestHeaders.set("x-session-username", String(session.username));
       }
 
       console.log(
