@@ -1,72 +1,62 @@
 import crypto from "crypto";
 
-function parseInitData(initData: string) {
-  const params = new URLSearchParams(initData);
-  const data: Record<string, any> = {};
-
-  for (const [key, value] of params.entries()) {
-    try {
-      data[key] = JSON.parse(value);
-    } catch {
-      data[key] = value;
+export const validateInitData = (
+  initData: string,
+  botToken: string,
+): boolean => {
+  const parseInitData = (dataString: string) => {
+    const params = new URLSearchParams(dataString);
+    const data: Record<string, string | undefined> = {};
+    for (const [key, value] of params) {
+      data[key] = decodeURIComponent(value);
     }
-  }
+    return data;
+  };
 
-  return data;
-}
-
-export function verifyTelegramInitData(initData: string, botToken: string) {
   const data = parseInitData(initData);
-
   const receivedHash = data.hash;
+
   if (!receivedHash || !data.auth_date) {
-    return { ok: false, user: null, error: "Missing hash/auth_date" };
+    return false;
   }
 
-  const dataCopy: Record<string, any> = { ...data };
-  delete dataCopy.hash;
+  delete data.hash;
 
-  const dataCheckString = Object.keys(dataCopy)
+  const dataCheckString = Object.keys(data)
+    .filter((key) => data[key] !== undefined)
     .sort()
-    .map(
-      (key) =>
-        `${key}=${typeof dataCopy[key] === "object" ? JSON.stringify(dataCopy[key]) : dataCopy[key]}`,
-    )
+    .map((key) => `${key}=${data[key]}`)
     .join("\n");
 
   const secretKey = crypto
-    .createHmac("sha256", "WebAppData")
+    .createHmac("sha256", Buffer.from("WebAppData"))
     .update(botToken)
     .digest();
 
   const calculatedHash = crypto
     .createHmac("sha256", secretKey)
-    .update(dataCheckString)
+    .update(dataCheckString, "utf8")
     .digest("hex");
 
-  if (calculatedHash !== receivedHash) {
-    return { ok: false, user: null, error: "Invalid hash" };
+  const isValid = receivedHash === calculatedHash;
+
+  if (!isValid) {
+    console.error("Telegram Data Validation Failed: Hash Mismatch.");
   }
 
+  return isValid;
+};
+
+export const isInitDataExpired = (
+  auth_date_str: string | undefined,
+): boolean => {
+  const authDate = parseInt(auth_date_str || "0");
   const now = Math.floor(Date.now() / 1000);
-  if (now - parseInt(data.auth_date) > 86400) {
-    return { ok: false, user: null, error: "Expired" };
+  const EXPIRATION_TIME = 86400; // 24 hours
+
+  if (now - authDate > EXPIRATION_TIME) {
+    console.error("Telegram Data Expired.");
+    return true;
   }
-
-  const rawUser =
-    typeof data.user === "string" ? JSON.parse(data.user) : data.user;
-
-  if (!rawUser || !rawUser.id) {
-    return { ok: false, user: null, error: "User data missing" };
-  }
-
-  const user = {
-    id: rawUser.id,
-    username: rawUser.username || null,
-    first_name: rawUser.first_name || "",
-    last_name: rawUser.last_name || "",
-    is_premium: rawUser.is_premium || false,
-  };
-
-  return { ok: true, user };
-}
+  return false;
+};
