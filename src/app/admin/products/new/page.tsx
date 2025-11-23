@@ -77,13 +77,12 @@ export default function NewProductPage() {
   ]);
   const [formLoading, setFormLoading] = useState(false);
   const [uploading, setUploading] = useState<number | null>(null);
+  const loading = false;
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ مرحله 2: بررسی دسترسی ادمین
   useEffect(() => {
     if (!loading && !isAdmin) {
       console.warn("❌ Non-admin user tried to access new product page");
-      // صفحه access denied نمایش داده می‌شود
     }
   }, [loading, isAdmin]);
 
@@ -121,13 +120,11 @@ export default function NewProductPage() {
 
     try {
       for (const file of files) {
-        // اعتبارسنجی نوع فایل
         if (!file.type.startsWith("image/")) {
           setError("لطفاً فقط فایل‌های تصویری آپلود کنید");
           continue;
         }
 
-        // اعتبارسنجی سایز فایل
         if (file.size > 5 * 1024 * 1024) {
           setError("حجم فایل نباید بیشتر از ۵ مگابایت باشد");
           continue;
@@ -264,13 +261,10 @@ export default function NewProductPage() {
     "کفش زنانه",
     "کفش مردانه",
   ];
-
-  // ✅ مرحله 3: اگر درحال لودینگ است
   if (loading) {
     return <LoadingSkeleton />;
   }
 
-  // ✅ مرحله 4: اگر ادمین نیست - دسترسی غیرمجاز
   if (!isAdmin) {
     return <AccessDeniedPage />;
   }
@@ -299,7 +293,6 @@ export default function NewProductPage() {
           )}
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-8">
-            {/* اطلاعات اصلی محصول */}
             <div className="rounded-xl border border-gray-200 p-6 dark:border-gray-700">
               <h2 className="mb-6 border-b pb-2 text-xl font-semibold text-gray-700 dark:text-gray-300">
                 📋 اطلاعات اصلی محصول
