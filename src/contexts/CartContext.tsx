@@ -129,6 +129,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    if (!telegramUser?.id) {
+      console.log("⏳ Authenticated but user ID not available yet.");
+      return;
+    }
+
     if (fetchControllerRef.current) {
       fetchControllerRef.current.abort();
     }
@@ -137,8 +142,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     fetchControllerRef.current = controller;
 
     const fetchCart = async () => {
+      setLoading(true);
       try {
-        console.log("📦 Fetching cart for authenticated user");
+        console.log(
+          "📦 Fetching cart for authenticated user:",
+          telegramUser.id,
+        );
         const res = await fetch("/api/cart", {
           method: "GET",
           credentials: "include",
@@ -169,9 +178,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           setCartItems(data.cartItems);
         }
       } catch (err: any) {
+        if (err.name !== "AbortError") {
+          console.error("❌ Cart fetch error:", err);
+        }
       } finally {
         if (mountedRef.current) {
           setInitialized(true);
+          setLoading(false);
         }
       }
     };
@@ -181,7 +194,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       controller.abort();
     };
-  }, [isAuthenticated, authLoading, handleUnauthorized]);
+  }, [isAuthenticated, authLoading, handleUnauthorized, telegramUser?.id]);
 
   const totalItems = cartItems.reduce((sum, i) => sum + i.quantity, 0);
   const totalPrice = cartItems.reduce(
@@ -403,15 +416,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     },
-    [removeItem, showToast, handleUnauthorized], // 💡 وابستگی‌ها اصلاح شد
+    [removeItem, showToast, handleUnauthorized],
   );
 
   const clearCart = useCallback(async (): Promise<void> => {
     try {
       const res = await fetch("/api/cart/clear", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
         credentials: "include",
       });
 
@@ -420,8 +431,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      if (mountedRef.current) {
+      if (res.ok && mountedRef.current) {
         setCartItems([]);
+      } else {
+        console.error("❌ Failed to clear cart on server side");
       }
     } catch (err) {
       console.error("❌ Clear cart error:", err);
