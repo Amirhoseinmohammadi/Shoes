@@ -61,8 +61,7 @@ function AccessDeniedPage() {
 }
 
 export default function NewProductPage() {
-  // ✅ مرحله 1: بررسی احراز هویت
-  const { user: telegramUser, loading, isAdmin } = useTelegram();
+  const { user, loading: authLoading, isAdmin } = useAuth();
   const router = useRouter();
 
   const [form, setForm] = useState<ProductForm>({
