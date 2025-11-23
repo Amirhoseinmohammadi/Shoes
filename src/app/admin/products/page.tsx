@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useTelegram } from "@/hooks/useTelegram";
+import { useAuth } from "@/contexts/AuthContext";
 import useSWR from "swr";
 import { apiClient } from "@/lib/api-client";
 import { useState } from "react";
@@ -23,7 +23,7 @@ const defaultConfig = {
 };
 
 export default function AdminProductsPage() {
-  const { user, loading: authLoading, isAdmin } = useTelegram();
+  const { user, loading: authLoading, isAdmin } = useAuth();
 
   const {
     data: products,
@@ -424,3 +424,4 @@ export default function AdminProductsPage() {
     </div>
   );
 }
+س

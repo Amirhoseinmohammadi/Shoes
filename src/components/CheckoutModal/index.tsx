@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTelegram } from "@/hooks/useTelegram";
+import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 
 interface CheckoutModalProps {
@@ -36,7 +36,7 @@ export default function CheckoutModal({
   const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { isTelegram } = useTelegram();
+  const { isTelegram } = useAuth();
 
   useEffect(() => {
     if (telegramUser && isOpen) {
@@ -49,7 +49,6 @@ export default function CheckoutModal({
   if (!isOpen) return null;
 
   const handleConfirm = async () => {
-    // ✅ اعتبارسنجی
     if (!name.trim()) {
       setError("نام و نام خانوادگی الزامی است");
       return;
@@ -70,14 +69,13 @@ export default function CheckoutModal({
     setLoading(true);
 
     try {
-      // ✅ ساخت داده‌های سفارش با فرمت صحیح
       const orderData = {
         customerName: name.trim(),
         customerPhone: phone.replace(/\s/g, "").trim(),
         totalPrice,
         telegramData: telegramUser?.id
           ? {
-              telegramId: Number(telegramUser.id), // ✅ مطمئن میشیم Number هست
+              telegramId: Number(telegramUser.id),
               firstName: telegramUser.first_name || null,
               lastName: telegramUser.last_name || null,
               username: telegramUser.username || null,
@@ -85,7 +83,7 @@ export default function CheckoutModal({
             }
           : null,
         items: cartItems.map((item) => ({
-          productId: item.productId || item.id, // ✅ اول productId رو چک میکنیم
+          productId: item.productId || item.id,
           quantity: item.quantity || 1,
           price: item.price,
           color: item.color || null,
@@ -110,19 +108,15 @@ export default function CheckoutModal({
         throw new Error(result.error || "خطا در ثبت سفارش");
       }
 
-      // ✅ پاک کردن فرم
       setName("");
       setPhone("");
 
-      // ✅ بستن مودال
       onClose();
 
-      // ✅ نمایش پیام موفقیت و رفرش صفحه
       alert(
         `✅ سفارش با موفقیت ثبت شد!\nکد پیگیری: ${result.trackingCode || result.orderId}`,
       );
 
-      // ✅ رفتن به صفحه اصلی
       window.location.href = "/";
     } catch (err: any) {
       console.error("❌ خطا در ثبت سفارش:", err);
@@ -142,7 +136,6 @@ export default function CheckoutModal({
         onClick={(e) => e.stopPropagation()}
         className="max-h-[90vh] w-full max-w-md overflow-hidden rounded-3xl bg-white text-gray-900 shadow-2xl transition dark:bg-[#1e1e1e] dark:text-white"
       >
-        {/* Header */}
         <div className="bg-gradient-to-r from-cyan-400 to-cyan-500 p-5 text-white dark:from-cyan-700 dark:to-cyan-500">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-xl font-bold">تأیید سفارش</h2>
@@ -182,7 +175,6 @@ export default function CheckoutModal({
           )}
         </div>
 
-        {/* Body */}
         <div className="max-h-[60vh] space-y-4 overflow-y-auto p-6">
           <div className="space-y-3">
             <div>
@@ -220,7 +212,6 @@ export default function CheckoutModal({
             )}
           </div>
 
-          {/* Cart Summary */}
           {cartItems.length > 0 && (
             <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-[#2b2b2b]">
               <h3 className="mb-3 font-semibold">خلاصه سفارش</h3>
@@ -249,7 +240,6 @@ export default function CheckoutModal({
           )}
         </div>
 
-        {/* Footer */}
         <div className="space-y-3 border-t border-gray-200 bg-gray-50 p-6 dark:border-gray-700 dark:bg-[#1c1c1c]">
           <button
             onClick={handleConfirm}

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import SingleShoe from "@/components/Products/SingleShoe";
 import { useApi } from "@/hooks/useApi";
-import { useTelegram } from "@/hooks/useTelegram";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   MagnifyingGlassIcon,
   ExclamationTriangleIcon,
@@ -18,20 +18,17 @@ interface ShoesProps {
 
 const Shoes = ({ telegramUser }: ShoesProps) => {
   const { data: shoes, error, isLoading } = useApi.useProducts();
-  const { user: currentUser, loading: authLoading } = useTelegram();
+  const { user, loading: authLoading } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [retryCount, setRetryCount] = useState(0);
 
-  // ✅ NEW: Get authenticated user from hook instead of props
-  const authenticatedUser = currentUser || telegramUser;
+  const authenticatedUser = user || telegramUser;
 
-  // ✅ NEW: Handle retry with exponential backoff
   const handleRetry = () => {
     setRetryCount((prev) => prev + 1);
     window.location.reload();
   };
 
-  // ✅ NEW: Show loading state during auth check
   if (authLoading) {
     return (
       <section className="min-h-screen bg-gray-100 py-12 dark:bg-gray-900">
@@ -53,14 +50,12 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
     return (
       <section className="min-h-screen bg-gray-100 py-12 dark:bg-gray-900">
         <div className="container mx-auto px-4">
-          {/* Search skeleton */}
           <div className="mb-8 flex justify-center">
             <div className="relative w-full max-w-2xl">
               <div className="h-14 w-full animate-pulse rounded-3xl bg-gray-300 dark:bg-gray-700"></div>
             </div>
           </div>
 
-          {/* Products skeleton */}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-4">
             {[...Array(8)].map((_, i) => (
               <div
@@ -78,7 +73,6 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
     );
   }
 
-  // ✅ IMPROVED: Better error handling with more info
   if (error) {
     return (
       <section className="flex min-h-screen items-center justify-center bg-gray-100 p-6 dark:bg-gray-900">
@@ -126,7 +120,6 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
     );
   }
 
-  // ✅ FIXED: Use authenticated user from hook
   const filteredShoes =
     shoes?.filter((shoe) =>
       shoe.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -135,7 +128,6 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
   return (
     <section className="min-h-screen bg-gray-100 py-12 dark:bg-gray-900">
       <div className="container mx-auto px-4">
-        {/* Search Bar */}
         <div className="mb-8 flex justify-center">
           <div className="relative w-full max-w-2xl">
             <MagnifyingGlassIcon className="absolute top-1/2 right-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
@@ -157,7 +149,6 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
           </div>
         </div>
 
-        {/* Products Grid */}
         {filteredShoes.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-4">
             {filteredShoes.map((shoe, i) => (
@@ -167,7 +158,6 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
                   animation: `fadeInUp 0.5s ease-out ${i * 0.05}s both`,
                 }}
               >
-                {/* ✅ FIXED: Pass authenticated user from hook */}
                 <SingleShoe shoe={shoe} telegramUser={authenticatedUser} />
               </div>
             ))}

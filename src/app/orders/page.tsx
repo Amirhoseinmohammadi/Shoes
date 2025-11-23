@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useTelegram } from "@/hooks/useTelegram";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Product {
   id: number;
@@ -68,11 +68,7 @@ const getStatusInfo = (status: string) => {
 };
 
 const OrdersPage = () => {
-  const {
-    user: telegramUser,
-    loading: authLoading,
-    isTelegram,
-  } = useTelegram();
+  const { user, loading: authLoading, isTelegram } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,8 +79,8 @@ const OrdersPage = () => {
       return;
     }
 
-    if (!telegramUser?.id) {
-      console.warn("⚠️ No telegram user authenticated");
+    if (!user?.id) {
+      console.warn("⚠️ No user authenticated");
       setLoading(false);
       setError(null);
       return;
@@ -95,7 +91,7 @@ const OrdersPage = () => {
         setLoading(true);
         setError(null);
 
-        console.log("📤 Fetching orders for user:", telegramUser.id);
+        console.log("📤 Fetching orders for user:", user.id);
 
         const res = await fetch("/api/orders", {
           method: "GET",
@@ -130,7 +126,7 @@ const OrdersPage = () => {
     };
 
     fetchOrders();
-  }, [telegramUser?.id, authLoading]);
+  }, [user?.id, authLoading]);
 
   if (authLoading) {
     return (
@@ -145,7 +141,7 @@ const OrdersPage = () => {
     );
   }
 
-  if (!telegramUser?.id) {
+  if (!user?.id) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
@@ -229,7 +225,6 @@ const OrdersPage = () => {
                 key={order.id}
                 className="rounded-2xl bg-white p-6 shadow-sm transition hover:shadow-md dark:bg-gray-800 dark:hover:shadow-lg"
               >
-                {/* Order Header */}
                 <div className="mb-4 flex items-center justify-between">
                   <div>
                     <h2 className="font-bold text-gray-900 dark:text-white">
@@ -248,7 +243,6 @@ const OrdersPage = () => {
                   </span>
                 </div>
 
-                {/* Order Date */}
                 <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
                   {new Date(order.createdAt).toLocaleDateString("fa-IR", {
                     year: "numeric",
@@ -262,7 +256,6 @@ const OrdersPage = () => {
                   })}
                 </p>
 
-                {/* Order Items */}
                 <div className="mb-4">
                   <h3 className="mb-3 font-semibold text-gray-900 dark:text-white">
                     محصولات:

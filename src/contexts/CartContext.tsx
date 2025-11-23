@@ -1,6 +1,6 @@
 "use client";
 
-import { useTelegram } from "@/hooks/useTelegram";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "./ToastContext";
 import {
   createContext,
@@ -96,19 +96,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     user: telegramUser,
     loading: authLoading,
     isAuthenticated,
-  } = useTelegram();
+  } = useAuth();
   const { showToast } = useToast();
   const mountedRef = useRef(true);
   const fetchControllerRef = useRef<AbortController | null>(null);
 
-  // ✅ Fetch cart when user is authenticated
   useEffect(() => {
     if (!isAuthenticated || authLoading) {
       console.log("⏳ Waiting for auth...", { authLoading, isAuthenticated });
       return;
     }
 
-    // Cancel previous request if exists
     if (fetchControllerRef.current) {
       fetchControllerRef.current.abort();
     }

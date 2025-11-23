@@ -13,7 +13,7 @@ import {
   FiTool,
   FiUser,
 } from "react-icons/fi";
-import { useTelegram } from "@/hooks/useTelegram";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MenuItem {
   id: string;
@@ -26,7 +26,7 @@ interface MenuItem {
 }
 
 const ProfilePage = () => {
-  const { user: telegramUser, loading, isTelegram } = useTelegram();
+  const { user, loading, isTelegram, isAdmin } = useAuth();
   const router = useRouter();
 
   const handleLogout = () => {
@@ -44,7 +44,7 @@ const ProfilePage = () => {
     );
   }
 
-  if (!telegramUser) {
+  if (!user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="rounded-xl bg-white p-8 text-center shadow-2xl dark:bg-gray-800">
@@ -64,9 +64,6 @@ const ProfilePage = () => {
       </div>
     );
   }
-
-  const user = telegramUser;
-  const isAdmin = user.id.toString() === process.env.NEXT_PUBLIC_ADMIN_USER_ID;
 
   const menuItems: MenuItem[] = [
     {
@@ -133,7 +130,6 @@ const ProfilePage = () => {
 
     console.log("Navigating to:", href, "isTelegram:", isTelegram);
 
-    // ✅ در محیط تلگرام: استفاده از router.push برای جلوگیری از reload
     if (isTelegram) {
       router.push(href);
     } else {
@@ -145,7 +141,6 @@ const ProfilePage = () => {
   return (
     <div className="safe-area-bottom min-h-screen bg-gray-50 pt-4 pb-32 dark:bg-gray-900">
       <div className="mx-auto max-w-2xl px-4">
-        {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <Link
             href="/"
@@ -171,7 +166,6 @@ const ProfilePage = () => {
           <ThemeToggler />
         </div>
 
-        {/* User Info */}
         <div className="flex items-center gap-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-cyan-600 p-6 text-white shadow-lg">
           <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white/40 bg-white/20 text-2xl font-bold">
             {user.first_name?.charAt(0) || "U"}
@@ -199,7 +193,6 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        {/* Menu */}
         <div className="mt-6 space-y-3">
           {menuItems
             .filter((item) => !item.adminOnly || isAdmin)
@@ -224,7 +217,6 @@ const ProfilePage = () => {
             ))}
         </div>
 
-        {/* Account Info */}
         <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
           <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">
             اطلاعات حساب

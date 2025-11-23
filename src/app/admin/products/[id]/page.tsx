@@ -4,13 +4,13 @@ import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { useTelegram } from "@/hooks/useTelegram";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface VariantForm {
   id?: number;
   color: string;
   images: File[];
-  previewUrls: string[]; // urls from server or object URLs for local previews
+  previewUrls: string[];
 }
 
 interface ProductForm {
@@ -62,7 +62,7 @@ function AccessDeniedPage() {
 }
 
 export default function EditProductPage() {
-  const { user: telegramUser, loading: authLoading, isAdmin } = useTelegram();
+  const { user, loading: authLoading, isAdmin } = useAuth();
   const router = useRouter();
   const { id } = useParams();
 
@@ -83,7 +83,6 @@ export default function EditProductPage() {
   const [uploading, setUploading] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Redirect non-admin as soon as we know auth state
   useEffect(() => {
     if (!authLoading && !isAdmin) {
       console.warn("❌ Non-admin user tried to access edit product page");
@@ -203,9 +202,6 @@ export default function EditProductPage() {
           const result = await res.json();
 
           if (result.success && result.imageUrl) {
-            // ✅ imageUrl میتواند:
-            // 1. Cloud URL باشد (اگر cloud storage استفاده کنید)
-            // 2. Base64 (فعلاً - لکن بعداً بهتر شود)
             uploadedUrls.push(result.imageUrl);
           } else {
             setError(result.message || "خطا در آپلود عکس");
@@ -229,7 +225,7 @@ export default function EditProductPage() {
       setError("خطا در آپلود عکس‌ها. لطفاً دوباره تلاش کنید.");
     } finally {
       setUploading(null);
-      if (e.target) e.target.value = ""; // reset file input
+      if (e.target) e.target.value = "";
     }
   };
 
@@ -380,7 +376,6 @@ export default function EditProductPage() {
           )}
 
           <form onSubmit={handleSave} className="flex flex-col gap-8">
-            {/* main info */}
             <div className="rounded-xl border border-gray-200 p-6 dark:border-gray-700">
               <h2 className="mb-6 border-b pb-2 text-xl font-semibold text-gray-700 dark:text-gray-300">
                 📋 اطلاعات اصلی محصول
@@ -488,7 +483,6 @@ export default function EditProductPage() {
               </div>
             </div>
 
-            {/* variants */}
             <div className="rounded-xl border border-gray-200 p-6 dark:border-gray-700">
               <div className="mb-6 flex items-center justify-between border-b pb-2 dark:border-gray-600">
                 <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300">
@@ -603,7 +597,6 @@ export default function EditProductPage() {
                         <div className="flex flex-wrap gap-3">
                           {variant.previewUrls.map((url, imgIndex) => (
                             <div key={imgIndex} className="group relative">
-                              {/* ✅ Image component استفاده کن */}
                               <Image
                                 src={url}
                                 alt={`عکس ${imgIndex + 1}`}
@@ -631,7 +624,6 @@ export default function EditProductPage() {
               </div>
             </div>
 
-            {/* actions */}
             <div className="flex flex-col gap-4 md:flex-row md:justify-between">
               <button
                 type="submit"

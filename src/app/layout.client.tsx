@@ -4,6 +4,7 @@ import { ReactNode, Suspense, lazy } from "react";
 import { ThemeProvider } from "next-themes";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { CartProvider } from "@/contexts/CartContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import PageTransition from "@/components/Common/PageTransition";
 
 const Footer = lazy(() => import("@/components/Footer"));
@@ -30,23 +31,25 @@ export default function RootLayoutClient({ children }: RootLayoutClientProps) {
       disableTransitionOnChange
     >
       <ToastProvider>
-        <CartProvider>
-          <div className="flex min-h-screen flex-col bg-white dark:bg-gray-900">
-            <main id="main-content" className="w-full flex-1 pb-24">
-              <PageTransition>{children}</PageTransition>
-            </main>
+        <AuthProvider>
+          <CartProvider>
+            <div className="flex min-h-screen flex-col bg-white dark:bg-gray-900">
+              <main id="main-content" className="w-full flex-1 pb-24">
+                <PageTransition>{children}</PageTransition>
+              </main>
 
-            <Suspense fallback={<FooterSkeleton />}>
-              <Footer />
-            </Suspense>
-
-            <div className="fixed right-0 bottom-0 left-0 z-50 w-full">
-              <Suspense fallback={<NavigationSkeleton />}>
-                <BottomNavigation />
+              <Suspense fallback={<FooterSkeleton />}>
+                <Footer />
               </Suspense>
+
+              <div className="fixed right-0 bottom-0 left-0 z-50 w-full">
+                <Suspense fallback={<NavigationSkeleton />}>
+                  <BottomNavigation />
+                </Suspense>
+              </div>
             </div>
-          </div>
-        </CartProvider>
+          </CartProvider>
+        </AuthProvider>
       </ToastProvider>
     </ThemeProvider>
   );

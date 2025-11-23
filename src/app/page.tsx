@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, Suspense } from "react";
 import dynamic from "next/dynamic";
-import { useTelegram } from "@/hooks/useTelegram";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Hero = dynamic(() => import("@/components/Hero"), {
   loading: () => (
@@ -37,11 +37,11 @@ const ThemeToggler = dynamic(() => import("@/components/Header/ThemeToggler"), {
 const TelegramStatus = ({
   isTelegram,
   loading,
-  telegramUser,
+  user,
 }: {
   isTelegram: boolean;
   loading: boolean;
-  telegramUser: any;
+  user: any;
 }) => {
   if (!isTelegram) {
     return (
@@ -77,7 +77,7 @@ const TelegramStatus = ({
     );
   }
 
-  if (!telegramUser) {
+  if (!user) {
     return (
       <div className="container mx-auto mb-6 px-4">
         <div className="rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 p-4 text-center text-white shadow-lg">
@@ -131,7 +131,7 @@ const HomeLoadingSkeleton = () => (
 );
 
 export default function Home() {
-  const { user: telegramUser, loading, isTelegram } = useTelegram();
+  const { user, loading, isAdmin, isTelegram } = useAuth();
   const [showWelcome, setShowWelcome] = useState(false);
   const [mounted, setMounted] = useState(false);
   const hasShownWelcome = useRef(false);
@@ -141,7 +141,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!loading && telegramUser?.id && mounted) {
+    if (!loading && user?.id && mounted) {
       if (!hasShownWelcome.current) {
         console.log("🎉 نمایش پیام خوش آمدگویی");
 
@@ -160,7 +160,7 @@ export default function Home() {
         };
       }
     }
-  }, [telegramUser?.id, loading, mounted]);
+  }, [user?.id, loading, mounted]);
 
   if (!mounted) {
     return <HomeLoadingSkeleton />;
@@ -190,11 +190,7 @@ export default function Home() {
         <Hero />
       </Suspense>
 
-      <TelegramStatus
-        isTelegram={isTelegram}
-        loading={loading}
-        telegramUser={telegramUser}
-      />
+      <TelegramStatus isTelegram={isTelegram} loading={loading} user={user} />
 
       <Suspense
         fallback={
@@ -210,10 +206,10 @@ export default function Home() {
           </div>
         }
       >
-        <Products telegramUser={telegramUser} />
+        <Products telegramUser={user} />
       </Suspense>
 
-      <WelcomeToast show={showWelcome} userName={telegramUser?.first_name} />
+      <WelcomeToast show={showWelcome} userName={user?.first_name} />
     </div>
   );
 }

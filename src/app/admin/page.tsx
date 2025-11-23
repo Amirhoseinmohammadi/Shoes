@@ -8,7 +8,7 @@ import {
   UserGroupIcon,
 } from "@heroicons/react/24/outline";
 import { useState, useEffect } from "react";
-import { useTelegram } from "@/hooks/useTelegram";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface StatCard {
   value: string;
@@ -26,7 +26,6 @@ interface AdminCardProps {
   textColor: string;
 }
 
-// کامپوننت کارت مدیریت
 function AdminCard({
   href,
   title,
@@ -120,8 +119,7 @@ function AccessDeniedPage() {
 }
 
 export default function AdminPage() {
-  // ✅ مرحله 1: بررسی احراز هویت
-  const { user: telegramUser, loading, isAdmin } = useTelegram();
+  const { user, loading, isAdmin } = useAuth(); // ✅ تغییر
   const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(true);
@@ -131,11 +129,9 @@ export default function AdminPage() {
     onlineUsers: "۰",
   });
 
-  // ✅ مرحله 2: بررسی دسترسی ادمین
   useEffect(() => {
     if (!loading && !isAdmin) {
       console.warn("❌ Non-admin user tried to access admin panel");
-      // می‌تونیم redirect کنیم یا صفحه access denied نشان دهیم
     }
   }, [loading, isAdmin]);
 
@@ -219,12 +215,10 @@ export default function AdminPage() {
     loadData();
   }, []);
 
-  // ✅ مرحله 3: اگر درحال لودینگ است
   if (loading || isLoading) {
     return <LoadingSkeleton />;
   }
 
-  // ✅ مرحله 4: اگر ادمین نیست - دسترسی غیرمجاز
   if (!isAdmin) {
     return <AccessDeniedPage />;
   }
@@ -240,10 +234,10 @@ export default function AdminPage() {
             به پنل مدیریت خوش آمدید. از اینجا می‌توانید تمام بخش‌های سایت را
             مدیریت کنید.
           </p>
-          {telegramUser && (
+          {user && (
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              کاربر: {telegramUser.first_name} {telegramUser.last_name}
-              {telegramUser.username && ` (@${telegramUser.username})`}
+              کاربر: {user.first_name} {user.last_name}
+              {user.username && ` (@${user.username})`}
             </p>
           )}
         </div>
