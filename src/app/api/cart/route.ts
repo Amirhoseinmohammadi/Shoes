@@ -12,8 +12,6 @@ async function requireSessionAuth(): Promise<number | null> {
   return null;
 }
 
-// --- [ توابع مدیریت API ] ---
-
 export async function GET(req: NextRequest) {
   try {
     const userId = await requireSessionAuth();
@@ -44,7 +42,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, cartItems });
   } catch (err) {
-    console.error("❌ GET /api/cart error:", err);
+    console.error("GET /api/cart error:", err);
     return NextResponse.json(
       { error: "خطا در دریافت سبد خرید", success: false },
       { status: 500 },
@@ -204,7 +202,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, cartItem: result });
   } catch (err: any) {
-    console.error("❌ POST /api/cart error:", err);
+    console.error("POST /api/cart error:", err);
     return NextResponse.json(
       {
         error: err.message || "خطا در افزودن به سبد خرید",
@@ -301,7 +299,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true, cartItem: updatedItem });
   } catch (err: any) {
-    console.error("❌ PATCH /api/cart error:", err);
+    console.error("PATCH /api/cart error:", err);
     return NextResponse.json(
       {
         error: err.message || "خطا در بروزرسانی سبد خرید",
@@ -353,7 +351,7 @@ export async function DELETE(req: NextRequest) {
       message: "آیتم حذف شد",
     });
   } catch (err) {
-    console.error("❌ DELETE /api/cart error:", err);
+    console.error("DELETE /api/cart error:", err);
     return NextResponse.json(
       { error: "خطا در حذف از سبد خرید", success: false },
       { status: 500 },

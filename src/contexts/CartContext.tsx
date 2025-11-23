@@ -21,8 +21,6 @@ interface TelegramUserType {
   language_code?: string;
 }
 
-// ... (Interfaceها بدون تغییر) ...
-
 export interface CartItem {
   id: number;
   productId: number;
@@ -51,7 +49,6 @@ interface AddItemParams {
 }
 
 interface CartContextType {
-  // ... (CartContextType بدون تغییر) ...
   cartItems: CartItem[];
   addItem: (params: AddItemParams) => Promise<boolean>;
   removeItem: (cartItemId: number) => Promise<boolean>;
@@ -69,8 +66,6 @@ interface CartContextType {
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
-
-// ... (useCart بدون تغییر) ...
 
 export const useCart = () => {
   const context = useContext(CartContext);
@@ -98,7 +93,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
-  // 💡 اضافه کردن logout از useAuth
   const {
     user: telegramUser,
     loading: authLoading,
@@ -110,25 +104,20 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const mountedRef = useRef(true);
   const fetchControllerRef = useRef<AbortController | null>(null);
 
-  // 💡 تابع مدیریت خطای 401 که در چندین جا استفاده خواهد شد
   const handleUnauthorized = useCallback(async () => {
     showToast({
       type: "error",
       message: "جلسه شما منقضی شده است. لطفا دوباره وارد شوید.",
       duration: 5000,
     });
-    // پاک کردن وضعیت محلی سبد خرید
     if (mountedRef.current) {
       setCartItems([]);
     }
-    // خروج از حساب برای پاک کردن کوکی در سمت سرور
     await logout();
   }, [showToast, logout]);
 
   useEffect(() => {
-    // 💡 شرط fetchCart را با افزودن چک loading بهتر می‌کنیم
     if (!isAuthenticated && !authLoading) {
-      // اگر احراز هویت تمام شده و کاربر لاگین نیست، هیچ کاری نکن
       console.log("👤 User not authenticated, skipping cart fetch.");
       setCartItems([]);
       setInitialized(true);
@@ -136,7 +125,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (authLoading) {
-      // در حال بارگذاری است، منتظر می‌مانیم
       console.log("⏳ Waiting for auth to complete.");
       return;
     }
@@ -157,7 +145,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           signal: controller.signal,
         });
 
-        // 💡 مدیریت خطای 401 در GET
         if (res.status === 401) {
           await handleUnauthorized();
           return;
@@ -172,8 +159,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           return;
         }
 
-        // ... (بقیه منطق موفقیت‌آمیز) ...
-
         const data = await res.json();
         if (
           mountedRef.current &&
@@ -184,7 +169,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           setCartItems(data.cartItems);
         }
       } catch (err: any) {
-        // ... (مدیریت خطا) ...
       } finally {
         if (mountedRef.current) {
           setInitialized(true);
@@ -197,7 +181,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       controller.abort();
     };
-  }, [isAuthenticated, authLoading, handleUnauthorized]); // 💡 handleUnauthorized را به وابستگی‌ها اضافه کنید
+  }, [isAuthenticated, authLoading, handleUnauthorized]);
 
   const totalItems = cartItems.reduce((sum, i) => sum + i.quantity, 0);
   const totalPrice = cartItems.reduce(
@@ -212,8 +196,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       color,
       size,
     }: AddItemParams): Promise<boolean> => {
-      // ❌ حذف شرط if (!telegramUser?.id) که خطای "لطفا وارد شوید" را صادر می‌کرد
-
       if (quantity <= 0 || quantity > 100) {
         showToast({
           type: "error",
@@ -252,7 +234,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           credentials: "include",
         });
 
-        // 💡 مدیریت خطای 401 در POST
         if (res.status === 401) {
           await handleUnauthorized();
           return false;
@@ -273,8 +254,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           });
           return false;
         }
-
-        // ... (بقیه منطق موفقیت‌آمیز) ...
 
         if (mountedRef.current && data.cartItem) {
           console.log("✅ Item added to cart");
@@ -302,7 +281,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
         return true;
       } catch (err) {
-        // ... (مدیریت خطا) ...
         return false;
       } finally {
         if (mountedRef.current) {
@@ -310,13 +288,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     },
-    [showToast, handleUnauthorized], // 💡 وابستگی‌ها اصلاح شد
+    [showToast, handleUnauthorized],
   );
 
   const removeItem = useCallback(
     async (cartItemId: number): Promise<boolean> => {
-      // ❌ حذف شرط if (!telegramUser?.id)
-
       setLoading(true);
       try {
         const res = await fetch(
@@ -327,7 +303,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           },
         );
 
-        // 💡 مدیریت خطای 401 در DELETE
         if (res.status === 401) {
           await handleUnauthorized();
           return false;
@@ -356,7 +331,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
         return true;
       } catch (err) {
-        // ... (مدیریت خطا) ...
         return false;
       } finally {
         if (mountedRef.current) {
@@ -364,13 +338,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     },
-    [showToast, handleUnauthorized], // 💡 وابستگی‌ها اصلاح شد
+    [showToast, handleUnauthorized],
   );
 
   const updateItemQuantity = useCallback(
     async (cartItemId: number, quantity: number): Promise<boolean> => {
-      // ❌ حذف شرط if (!telegramUser?.id)
-
       if (quantity <= 0) {
         return removeItem(cartItemId);
       }
@@ -396,7 +368,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           credentials: "include",
         });
 
-        // 💡 مدیریت خطای 401 در PATCH
         if (res.status === 401) {
           await handleUnauthorized();
           return false;
@@ -413,8 +384,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           return false;
         }
 
-        // ... (بقیه منطق موفقیت‌آمیز) ...
-
         if (mountedRef.current && data.cartItem) {
           setCartItems((prev) =>
             prev.map((i) =>
@@ -427,7 +396,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
         return true;
       } catch (err) {
-        // ... (مدیریت خطا) ...
         return false;
       } finally {
         if (mountedRef.current) {
@@ -439,8 +407,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const clearCart = useCallback(async (): Promise<void> => {
-    // ❌ حذف شرط if (!telegramUser?.id)
-
     try {
       const res = await fetch("/api/cart/clear", {
         method: "POST",
@@ -449,7 +415,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         credentials: "include",
       });
 
-      // 💡 مدیریت خطای 401 در clearCart (اختیاری اما توصیه می‌شود)
       if (res.status === 401) {
         await handleUnauthorized();
         return;
@@ -461,12 +426,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       console.error("❌ Clear cart error:", err);
     }
-  }, [handleUnauthorized]); // 💡 وابستگی‌ها اصلاح شد
+  }, [handleUnauthorized]);
 
   const checkout = useCallback(
     async (customer: { name: string; phone: string }): Promise<boolean> => {
-      // ❌ حذف شرط if (!telegramUser?.id)
-
       if (cartItems.length === 0) {
         showToast({
           type: "warning",
@@ -503,7 +466,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           credentials: "include",
         });
 
-        // 💡 مدیریت خطای 401 در checkout
         if (res.status === 401) {
           await handleUnauthorized();
           return false;
@@ -522,8 +484,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
         await clearCart();
 
-        // ... (بقیه منطق موفقیت‌آمیز) ...
-
         showToast({
           type: "success",
           message: `سفارش ثبت شد - کد: ${data.trackingCode}`,
@@ -532,7 +492,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
         return true;
       } catch (err) {
-        // ... (مدیریت خطا) ...
         return false;
       } finally {
         if (mountedRef.current) {
@@ -540,7 +499,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     },
-    [cartItems, clearCart, showToast, handleUnauthorized], // 💡 وابستگی‌ها اصلاح شد
+    [cartItems, clearCart, showToast, handleUnauthorized],
   );
 
   useEffect(() => {
@@ -550,7 +509,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const contextValue = useMemo(
-    // ... (contextValue بدون تغییر) ...
     () => ({
       cartItems,
       addItem,

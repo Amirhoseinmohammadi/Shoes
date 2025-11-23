@@ -16,8 +16,6 @@ export async function POST(request: NextRequest) {
     }
 
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
-    console.log("🔑 Bot token exists?", !!botToken);
-
     if (!botToken) {
       console.error("❌ TELEGRAM_BOT_TOKEN not configured!");
       return NextResponse.json(
@@ -27,8 +25,6 @@ export async function POST(request: NextRequest) {
     }
 
     const isValid = validateInitData(initData, botToken);
-    console.log("✓ Signature valid?", isValid);
-
     if (!isValid) {
       console.error("❌ Telegram signature validation failed");
       return NextResponse.json(
@@ -61,10 +57,10 @@ export async function POST(request: NextRequest) {
     const isAdmin =
       user.id.toString() === process.env.NEXT_PUBLIC_ADMIN_USER_ID;
 
-    console.log("✅ User authenticated:", { id: user.id, isAdmin });
+    let primaryUserId: number;
 
     try {
-      await prisma.user.upsert({
+      const savedUser = await prisma.user.upsert({
         where: { telegramId: user.id },
         update: {
           firstName: user.first_name || null,
@@ -78,22 +74,28 @@ export async function POST(request: NextRequest) {
           firstName: user.first_name || null,
           lastName: user.last_name || null,
         },
+        select: { id: true },
       });
 
-      console.log("✅ User saved to database:", user.id);
+      primaryUserId = savedUser.id;
+      console.log("✅ User saved to database. Primary ID:", primaryUserId);
     } catch (dbError) {
-      console.error("❌ Database error:", dbError);
+      console.error("❌ Database error: Could not upsert user!", dbError);
+      return NextResponse.json(
+        { error: "Internal Server Error: Database failure" },
+        { status: 500 },
+      );
     }
 
     await setSessionCookie({
-      userId: user.id,
+      userId: primaryUserId,
       firstName: user.first_name,
       lastName: user.last_name,
       username: user.username,
       isAdmin,
     });
 
-    console.log("✅ Session cookie set for user:", user.id);
+    console.log("✅ Session cookie set with PK:", primaryUserId);
 
     return NextResponse.json({
       success: true,

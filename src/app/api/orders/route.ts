@@ -5,6 +5,9 @@ import { getSession } from "@/lib/session";
 const ADMIN_TELEGRAM_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID;
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
+/**
+ * @returns {number | null}
+ */
 async function requireSessionAuth(): Promise<number | null> {
   const session = await getSession();
 
@@ -30,7 +33,7 @@ interface OrderRequestBody {
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = await requireSessionAuth();
+    const userId = await requireSessionAuth(); // ✅ استفاده صحیح از احراز هویت
 
     if (!userId) {
       return NextResponse.json(
@@ -77,7 +80,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireSessionAuth();
+    const userId = await requireSessionAuth(); // ✅ استفاده صحیح از احراز هویت
 
     if (!userId) {
       return NextResponse.json(
