@@ -56,9 +56,6 @@ export async function generateStaticParams() {
   return [{ locale: "fa" }];
 }
 
-// ❌ حذف شد: تابع handleLinkLoad دیگر در سرور مورد نیاز نیست.
-// const handleLinkLoad: ReactEventHandler<HTMLLinkElement> = (e) => { ... };
-
 const SHABNAM_FONT_CSS_URL =
   "https://cdn.jsdelivr.net/gh/rastikerdar/shabnam-font@v5.0.1/dist/font-face.css";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, Suspense } from "react";
+import { useEffect, useState, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -134,7 +134,6 @@ export default function Home() {
   const { user, loading, isAdmin, isTelegram } = useAuth();
   const [showWelcome, setShowWelcome] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const hasShownWelcome = useRef(false);
 
   useEffect(() => {
     setMounted(true);
@@ -142,12 +141,15 @@ export default function Home() {
 
   useEffect(() => {
     if (!loading && user?.id && mounted) {
-      if (!hasShownWelcome.current) {
-        console.log("🎉 نمایش پیام خوش آمدگویی");
+      const welcomeKey = `welcomeShown_user_${user.id}`;
+
+      if (typeof window !== "undefined" && !localStorage.getItem(welcomeKey)) {
+        console.log("🎉 نمایش پیام خوش آمدگویی (LocalStorage Check)");
 
         const showTimer = setTimeout(() => {
           setShowWelcome(true);
-          hasShownWelcome.current = true;
+
+          localStorage.setItem(welcomeKey, "true");
         }, 500);
 
         const hideTimer = setTimeout(() => {

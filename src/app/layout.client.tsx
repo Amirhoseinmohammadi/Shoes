@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactNode, Suspense, lazy } from "react";
+import { ReactNode, Suspense, lazy, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { ThemeProvider } from "next-themes";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { CartProvider } from "@/contexts/CartContext";
@@ -23,6 +24,12 @@ interface RootLayoutClientProps {
 }
 
 export default function RootLayoutClient({ children }: RootLayoutClientProps) {
+  const pathname = usePathname();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
   return (
     <ThemeProvider
       attribute="class"

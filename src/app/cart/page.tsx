@@ -27,15 +27,30 @@ interface CheckoutCustomer {
 const formatQuantity = (quantity: number) =>
   quantity >= 10 ? `${Math.ceil(quantity / 10)} کارتن` : `${quantity} جفت`;
 
+/**
+ */
 const calculateTotal = (items: CartItemType[]) =>
-  items.reduce((total, item) => total + (item.price / 10) * item.quantity, 0);
+  items.reduce((total, item) => {
+    const price = Number(item.price) || 0;
+    const quantity = Number(item.quantity) || 0;
+
+    return total + price * quantity;
+  }, 0);
 
 const calculateFinalAmount = (
   items: CartItemType[],
   discount = 2500,
   tax = 2000,
   telegramDiscount = 0,
-) => calculateTotal(items) - discount - telegramDiscount + tax;
+) => {
+  const total = calculateTotal(items);
+
+  const finalDiscount = Number(discount) || 0;
+  const finalTax = Number(tax) || 0;
+  const finalTelegramDiscount = Number(telegramDiscount) || 0;
+
+  return total - finalDiscount - finalTelegramDiscount + finalTax;
+};
 
 const CartItemCard = ({ item, loading, onUpdateQuantity, onRemove }: any) => {
   const displayColor = (() => {
@@ -45,8 +60,7 @@ const CartItemCard = ({ item, loading, onUpdateQuantity, onRemove }: any) => {
       case "مشکی":
         return "#000000";
       case "نارنجی":
-        return "#FF8C00";
-      case "قرمز":
+      case "قرمز": // EF4444
         return "#EF4444";
       default:
         return "#ccc";
@@ -54,6 +68,10 @@ const CartItemCard = ({ item, loading, onUpdateQuantity, onRemove }: any) => {
   })();
 
   const quantityIncrement = 10;
+
+  const itemPrice = Number(item.price) || 0;
+  const itemQuantity = Number(item.quantity) || 0;
+  const itemTotal = itemPrice * itemQuantity;
 
   return (
     <div className="rounded-2xl bg-white p-4 shadow-sm transition hover:shadow-md dark:bg-gray-800 dark:hover:shadow-lg">
@@ -82,17 +100,17 @@ const CartItemCard = ({ item, loading, onUpdateQuantity, onRemove }: any) => {
             </p>
           )}
           <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-            قیمت واحد: {(item.price || 0).toLocaleString()} تومان
+            قیمت واحد (کارتن): {itemPrice.toLocaleString()} تومان
           </p>
         </div>
 
         <div className="text-right">
           <p className="font-bold text-gray-900 dark:text-white">
-            {((item.price / 10) * item.quantity).toLocaleString()}
+            {itemTotal.toLocaleString()}
           </p>
           <p className="text-xs text-gray-600 dark:text-gray-400">تومان</p>
           <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-            {formatQuantity(item.quantity)}
+            {formatQuantity(itemQuantity)}
           </p>
         </div>
       </div>
@@ -100,27 +118,27 @@ const CartItemCard = ({ item, loading, onUpdateQuantity, onRemove }: any) => {
       <div className="flex items-center justify-between border-t border-gray-200 pt-3 dark:border-gray-700">
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-700 dark:text-gray-300">
-            تعداد:
+            تعداد کارتن:
           </span>
           <div className="flex items-center gap-2 rounded-lg bg-gray-100 p-1 dark:bg-gray-700">
             <button
               onClick={() =>
                 onUpdateQuantity(
                   item.id,
-                  Math.max(0, item.quantity - quantityIncrement),
+                  Math.max(0, itemQuantity - quantityIncrement),
                 )
               }
-              disabled={item.quantity <= quantityIncrement || loading}
+              disabled={itemQuantity <= quantityIncrement || loading}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-600 transition hover:bg-white hover:text-gray-800 disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
             >
               −
             </button>
             <span className="w-8 text-center text-sm font-bold text-gray-900 dark:text-white">
-              {Math.ceil(item.quantity / quantityIncrement)}
+              {Math.ceil(itemQuantity / quantityIncrement)}
             </span>
             <button
               onClick={() =>
-                onUpdateQuantity(item.id, item.quantity + quantityIncrement)
+                onUpdateQuantity(item.id, itemQuantity + quantityIncrement)
               }
               disabled={loading}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-600 transition hover:bg-white hover:text-gray-800 disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
@@ -186,19 +204,11 @@ const CartPage = () => {
   };
 
   const handleConfirmOrder = async (customer: CheckoutCustomer) => {
-    const telegramDiscount = telegramUser ? 1000 : 0;
-    const finalAmount = calculateFinalAmount(
-      cartItems as CartItemType[],
-      2500,
-      2000,
-      telegramDiscount,
-    );
-
     const success = await checkout(customer);
 
     if (success) {
       showToast({
-        message: "سفارش با موفقیت ثبت شد!",
+        message: "سفارش با موفقیت ثبت شد! سبد خرید شما خالی شد.",
         type: "success",
       });
 
