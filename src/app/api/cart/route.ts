@@ -2,31 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
-async function getSessionUserId(req: NextRequest): Promise<number | null> {
-  try {
-    const userId = req.headers.get("x-session-user-id");
-    if (!userId) {
-      return null;
-    }
-    return parseInt(userId, 10);
-  } catch {
-    return null;
-  }
-}
+async function requireSessionAuth(): Promise<number | null> {
+  const session = await getSession();
 
-async function requireSessionAuth(req: NextRequest): Promise<number | null> {
-  const userId = await getSessionUserId(req);
-
-  if (!userId) {
-    return null;
+  if (session && typeof session.userId === "number") {
+    return session.userId;
   }
 
-  return userId;
+  return null;
 }
+
+// --- [ توابع مدیریت API ] ---
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = await requireSessionAuth(req);
+    const userId = await requireSessionAuth();
 
     if (!userId) {
       return NextResponse.json(
@@ -64,7 +54,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireSessionAuth(req);
+    const userId = await requireSessionAuth();
 
     if (!userId) {
       return NextResponse.json(
@@ -189,7 +179,6 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // افزودن آیتم جدید
       return await tx.cartItem.create({
         data: {
           userId,
@@ -228,7 +217,7 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const userId = await requireSessionAuth(req);
+    const userId = await requireSessionAuth();
 
     if (!userId) {
       return NextResponse.json(
@@ -325,7 +314,7 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const userId = await requireSessionAuth(req);
+    const userId = await requireSessionAuth();
 
     if (!userId) {
       return NextResponse.json(

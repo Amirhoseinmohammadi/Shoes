@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
 
 const ADMIN_TELEGRAM_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID;
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+
+async function requireSessionAuth(): Promise<number | null> {
+  const session = await getSession();
+
+  if (session && typeof session.userId === "number") {
+    return session.userId;
+  }
+
+  return null;
+}
 
 interface OrderItemInput {
   productId: number;
@@ -17,21 +28,10 @@ interface OrderRequestBody {
   customerPhone: string;
 }
 
-async function getSessionUserId(req: NextRequest): Promise<number | null> {
-  try {
-    const userId = req.headers.get("x-session-user-id");
-    if (!userId) {
-      return null;
-    }
-    return parseInt(userId, 10);
-  } catch {
-    return null;
-  }
-}
-
 export async function GET(req: NextRequest) {
   try {
-    const userId = await getSessionUserId(req);
+    const userId = await requireSessionAuth();
+
     if (!userId) {
       return NextResponse.json(
         { success: false, error: "Unauthorized - لطفا وارد شوید" },
@@ -77,7 +77,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await getSessionUserId(req);
+    const userId = await requireSessionAuth();
+
     if (!userId) {
       return NextResponse.json(
         { success: false, error: "Unauthorized - لطفا وارد شوید" },
