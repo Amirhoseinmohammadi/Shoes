@@ -423,23 +423,44 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     try {
       const res = await fetch("/api/cart/clear", {
         method: "POST",
+        headers: { "Content-Type": "application/json" }, // برای اطمینان بیشتر اضافه شد
         credentials: "include",
       });
 
+      // اگر سرور پاسخ 401 بدهد (خطای سشن)، باید لاگ اوت شود
       if (res.status === 401) {
         await handleUnauthorized();
         return;
       }
 
-      if (res.ok && mountedRef.current) {
-        setCartItems([]);
+      // 🔑 این چک حیاتی است: اگر پاسخ موفقیت‌آمیز بود (مثلاً 200)، استیت را خالی کن
+      if (res.ok) {
+        if (mountedRef.current) {
+          setCartItems([]); // خالی کردن سبد خرید در فرانت‌اند
+          console.log("✅ Cart state cleared successfully.");
+        }
       } else {
-        console.error("❌ Failed to clear cart on server side");
+        // اگر res.ok نبود (مثلاً 500 یا 400 از سرور)
+        const errorData = await res.json();
+        console.error(
+          "❌ Failed to clear cart on server side:",
+          errorData.error,
+        );
+        showToast({
+          type: "error",
+          message: errorData.error || "خطا در پاکسازی سبد خرید",
+          duration: 3000,
+        });
       }
     } catch (err) {
-      console.error("❌ Clear cart error:", err);
+      console.error("❌ Network or fetch error during clearCart:", err);
+      showToast({
+        type: "error",
+        message: "خطای شبکه در پاکسازی سبد خرید",
+        duration: 3000,
+      });
     }
-  }, [handleUnauthorized]);
+  }, [handleUnauthorized, showToast]);
 
   const checkout = useCallback(
     async (customer: { name: string; phone: string }): Promise<boolean> => {
