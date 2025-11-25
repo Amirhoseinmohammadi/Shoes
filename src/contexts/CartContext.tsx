@@ -516,7 +516,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           return false;
         }
 
+        console.log("🗑️ Clearing cart after successful order...");
         await clearCart();
+        console.log("✅ Cart cleared successfully");
 
         showToast({
           type: "success",

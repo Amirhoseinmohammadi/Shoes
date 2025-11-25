@@ -58,6 +58,35 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const initializingRef = useRef(false);
   const mountedRef = useRef(true);
 
+  // ✅ استفاده از endpoint موجود
+  const checkExistingSession = useCallback(async () => {
+    try {
+      console.log("🔍 Checking existing session...");
+
+      const response = await fetch("/api/auth/session", {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+
+        if (result.success && result.user) {
+          console.log("✅ Found existing session:", result.user.id);
+          if (mountedRef.current) {
+            setUser(result.user);
+            return true;
+          }
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.error("❌ Session check error:", error);
+      return false;
+    }
+  }, []);
+
   const validateAndSetUser = useCallback(async (initData: string) => {
     try {
       console.log("📤 Validating with server...");
@@ -92,7 +121,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.error("❌ Validation exception:", error);
       if (mountedRef.current) setUser(null);
     }
-
     return false;
   }, []);
 
@@ -109,6 +137,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     const initAuth = async () => {
       try {
+        // ✅ اول Session موجود رو چک کن
+        const hasSession = await checkExistingSession();
+
+        if (hasSession) {
+          console.log("✅ User already authenticated via session");
+          if (mountedRef.current) {
+            setIsTelegram(true); // ✅ اگر session داره، احتمالاً از تلگرام اومده
+            setLoading(false);
+          }
+          return;
+        }
+
         const tg = (window as any).Telegram?.WebApp;
 
         if (!tg) {
@@ -170,21 +210,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if ((window as any).Telegram?.WebApp) {
         clearInterval(checkInterval);
-        initAuth();
-      } else if (attempts >= maxAttempts) {
         clearInterval(checkInterval);
         console.warn("⚠️ Telegram WebApp not available after attempts");
-        if (mountedRef.current) {
-          setIsTelegram(false);
-          setLoading(false);
-        }
+
+        // ✅ حتی اگر تلگرام نباشه، Session رو چک کن
+        checkExistingSession().finally(() => {
+          if (mountedRef.current) {
+            setIsTelegram(false);
+            setLoading(false);
+          }
+        });
       }
     }, 100);
 
-    return () => {
-      clearInterval(checkInterval);
-    };
-  }, [validateAndSetUser]);
+    return () => {};
+  }, [validateAndSetUser, checkExistingSession]);
 
   const logout = useCallback(async () => {
     try {

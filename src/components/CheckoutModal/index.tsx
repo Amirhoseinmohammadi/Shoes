@@ -108,16 +108,17 @@ export default function CheckoutModal({
         throw new Error(result.error || "خطا در ثبت سفارش");
       }
 
+      // ✅ فقط داده‌های فرم رو خالی کن
       setName("");
       setPhone("");
 
-      onClose();
-
-      alert(
-        `✅ سفارش با موفقیت ثبت شد!\nکد پیگیری: ${result.trackingCode || result.orderId}`,
-      );
-
-      window.location.href = "/";
+      // ✅ به جای window.location، از onConfirm استفاده کن
+      onConfirm({
+        name: orderData.customerName,
+        phone: orderData.customerPhone,
+        orderId: result.orderId,
+        trackingCode: result.trackingCode || result.orderId.toString(),
+      });
     } catch (err: any) {
       console.error("❌ خطا در ثبت سفارش:", err);
       setError(err.message || "خطایی در ثبت سفارش رخ داد");

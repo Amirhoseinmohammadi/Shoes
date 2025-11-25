@@ -212,7 +212,41 @@ const CartPage = () => {
         type: "success",
       });
 
-      setModalOpen(false);
+      setModalOpen;
+
+      const handleConfirmOrder = async (orderData: {
+        name: string;
+        phone: string;
+        orderId: number;
+        trackingCode: string;
+      }) => {
+        try {
+          // ✅ اول Modal رو ببند
+          setModalOpen(false);
+
+          // ✅ Toast موفقیت نشون بده
+          showToast({
+            message: `سفارش با موفقیت ثبت شد! کد پیگیری: ${orderData.trackingCode}`,
+            type: "success",
+            duration: 4000,
+          });
+
+          // ✅ منتظر بمون تا CartContext سبد رو خالی کنه
+          // (این قبلاً در checkout انجام شده)
+
+          // ✅ بعد از 1 ثانیه به صفحه اصلی برو
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 1000);
+        } catch (error) {
+          console.error("❌ خطا در نهایی‌سازی سفارش:", error);
+          showToast({
+            message: "خطا در نهایی‌سازی سفارش",
+            type: "error",
+          });
+        }
+      };
+      false;
     } else {
       showToast({
         message: "خطا در ثبت سفارش",
