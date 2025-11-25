@@ -210,10 +210,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if ((window as any).Telegram?.WebApp) {
         clearInterval(checkInterval);
+        initAuth();
+      } else if (attempts >= maxAttempts) {
+        // ✅ فقط وقتی تلاش‌ها تموم شد
         clearInterval(checkInterval);
-        console.warn("⚠️ Telegram WebApp not available after attempts");
-
-        // ✅ حتی اگر تلگرام نباشه، Session رو چک کن
+        console.warn("⚠️ Telegram WebApp not available after 50 attempts");
         checkExistingSession().finally(() => {
           if (mountedRef.current) {
             setIsTelegram(false);
@@ -222,8 +223,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         });
       }
     }, 100);
-
-    return () => {};
+    return () => {
+      clearInterval(checkInterval);
+    };
   }, [validateAndSetUser, checkExistingSession]);
 
   const logout = useCallback(async () => {
