@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
         },
         create: {
           telegramId: user.id,
-          username: user.username || `user_${user.id}`,
+          username: user.username || null,
           firstName: user.first_name || null,
           lastName: user.last_name || null,
         },
@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
       console.log("✅ User saved to database. Primary ID:", primaryUserId);
     } catch (dbError) {
       console.error("❌ Database error: Could not upsert user!", dbError);
+      console.error("Full error details:", JSON.stringify(dbError, null, 2));
       return NextResponse.json(
         { error: "Internal Server Error: Database failure" },
         { status: 500 },
@@ -103,6 +104,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("❌ Validation error:", error);
+    console.error(
+      "Full error stack:",
+      error instanceof Error ? error.stack : error,
+    );
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
