@@ -13,11 +13,6 @@ export interface TelegramUser {
   isAdmin?: boolean;
 }
 
-const userCache = {
-  data: null as TelegramUser | null,
-  validatedAt: 0,
-};
-
 export function useTelegram() {
   const [user, setUser] = useState<TelegramUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,8 +30,6 @@ export function useTelegram() {
     if (mountedRef.current) {
       setUser(null);
     }
-    userCache.data = null;
-    userCache.validatedAt = 0;
 
     try {
       await fetch("/api/auth/logout", {
@@ -46,6 +39,11 @@ export function useTelegram() {
       localStorage.removeItem("telegramUser");
     } catch (err) {
       console.error("❌ Logout error:", err);
+    } finally {
+      // ✅ صفحه رو ریفرش کن تا session cookie حتماً پاک شود
+      if (mountedRef.current) {
+        window.location.href = "/";
+      }
     }
   }, []);
 
@@ -98,18 +96,6 @@ export function useTelegram() {
 
         console.log("👤 User found in Telegram:", tgUser.id);
 
-        const now = Date.now();
-        const cacheAge = now - userCache.validatedAt;
-
-        if (userCache.data && cacheAge < 5 * 60 * 1000) {
-          console.log("✅ Using cached user:", userCache.data.id);
-          if (mountedRef.current) {
-            setUser(userCache.data);
-            setLoading(false);
-          }
-          return;
-        }
-
         if (!tg.initData) {
           console.error("❌ No initData available");
           if (mountedRef.current) {
@@ -155,9 +141,6 @@ export function useTelegram() {
             ...tgUser,
             isAdmin: result.user.isAdmin,
           };
-
-          userCache.data = validatedUser;
-          userCache.validatedAt = now;
 
           if (mountedRef.current) {
             setUser(validatedUser);

@@ -1,5 +1,3 @@
-"use client";
-
 import {
   createContext,
   useContext,
@@ -32,16 +30,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    console.warn("⚠️ useAuth called outside AuthProvider");
-    return {
-      user: null,
-      loading: true,
-      isTelegram: false,
-      isAuthenticated: false,
-      isAdmin: false,
-      logout: async () => {},
-    };
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -58,7 +48,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const initializingRef = useRef(false);
   const mountedRef = useRef(true);
 
-  // ✅ استفاده از endpoint موجود
   const checkExistingSession = useCallback(async () => {
     try {
       console.log("🔍 Checking existing session...");
@@ -89,10 +78,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const validateAndSetUser = useCallback(async (initData: string) => {
     try {
-      console.log(
-        "📤 Validating with server, initData length:",
-        initData.length,
-      );
+      console.log("📤 Validating with server...");
 
       const response = await fetch("/api/validate-init", {
         method: "POST",
@@ -101,17 +87,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         credentials: "include",
       });
 
-      console.log("📥 Server response status:", response.status);
-
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("❌ Validation failed:", response.status, errorText);
+        console.error("❌ Validation failed:", response.status);
         if (mountedRef.current) setUser(null);
         return false;
       }
 
       const result = await response.json();
-      console.log("📦 Server response:", result);
 
       if (result.success && result.user) {
         const userData: TelegramUser = result.user;
@@ -144,13 +126,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     const initAuth = async () => {
       try {
-        // ✅ اول Session موجود رو چک کن
         const hasSession = await checkExistingSession();
 
         if (hasSession) {
           console.log("✅ User already authenticated via session");
           if (mountedRef.current) {
-            setIsTelegram(true); // ✅ اگر session داره، احتمالاً از تلگرام اومده
+            setIsTelegram(true);
             setLoading(false);
           }
           return;
@@ -182,12 +163,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         const tgUser = tg.initDataUnsafe?.user;
         const initData = tg.initData;
 
-        console.log("🔍 tgUser:", tgUser);
-        console.log("🔍 initData present:", !!initData);
-
         if (!tgUser?.id || !initData) {
           console.error("❌ No Telegram user data or initData");
-          console.error("tgUser.id:", tgUser?.id, "initData:", !!initData);
           if (mountedRef.current) {
             setLoading(false);
           }
@@ -200,6 +177,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
         if (!success) {
           console.error("❌ Could not validate user");
+          if (mountedRef.current) {
+            setLoading(false);
+          }
         }
       } catch (error) {
         console.error("❌ Auth init error:", error);
@@ -223,7 +203,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         clearInterval(checkInterval);
         initAuth();
       } else if (attempts >= maxAttempts) {
-        // ✅ فقط وقتی تلاش‌ها تموم شد
         clearInterval(checkInterval);
         console.warn("⚠️ Telegram WebApp not available after 50 attempts");
         checkExistingSession().finally(() => {
@@ -234,6 +213,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         });
       }
     }, 100);
+
     return () => {
       clearInterval(checkInterval);
     };
@@ -254,6 +234,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     } finally {
       if (mountedRef.current) {
         setUser(null);
+        // ✅ صفحه رو ریفرش کن تا session cookie حتماً پاک شود
+        window.location.href = "/";
       }
     }
   }, []);
