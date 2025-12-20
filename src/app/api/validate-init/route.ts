@@ -8,7 +8,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { initData } = body;
 
-    console.log("📨 validate-init called");
+    console.log(
+      "📨 validate-init called with initData length:",
+      initData?.length,
+    );
 
     if (!initData) {
       console.error("❌ No initData provided");
@@ -24,9 +27,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log(
+      "🔐 Validating initData with bot token starting with:",
+      botToken.substring(0, 10) + "...",
+    );
+
     const isValid = validateInitData(initData, botToken);
+    console.log("🔍 Validation result:", isValid);
+
     if (!isValid) {
       console.error("❌ Telegram signature validation failed");
+      console.log("📄 initData received:", initData.substring(0, 200) + "...");
       return NextResponse.json(
         { error: "Invalid Telegram data" },
         { status: 401 },
@@ -35,6 +46,7 @@ export async function POST(request: NextRequest) {
 
     const params = new URLSearchParams(initData);
     const authDate = params.get("auth_date");
+    console.log("📅 auth_date:", authDate);
 
     if (isInitDataExpired(authDate)) {
       console.error("❌ Telegram data expired");
@@ -45,6 +57,8 @@ export async function POST(request: NextRequest) {
     }
 
     const userData = params.get("user");
+    console.log("👤 userData:", userData);
+
     if (!userData) {
       console.error("❌ No user data in initData");
       return NextResponse.json(
