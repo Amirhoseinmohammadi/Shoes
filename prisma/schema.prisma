@@ -14,8 +14,7 @@ datasource db {
 model User {
   id         Int      @id @default(autoincrement())
 
-  // 🔑 Telegram is the source of truth
-  telegramId BigInt   @unique
+  telegramId String @unique 
   username   String?  
 
   firstName  String?
@@ -122,7 +121,6 @@ model CartItem {
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   size      Size?    @relation(fields: [sizeId], references: [id], onDelete: Cascade)
 
-  // 🔒 جلوگیری از آیتم تکراری برای یک user
   @@unique([userId, productId, sizeId, color])
 
   @@map("cart_items")

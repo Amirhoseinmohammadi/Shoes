@@ -3,26 +3,29 @@ import { validateInitData, isInitDataExpired } from "@/lib/telegram-validator";
 import { setSessionCookie, clearSessionCookie } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const { initData } = await request.json();
+    const { initData } = await req.json();
 
     if (!initData) {
-      return NextResponse.json({ error: "initData required" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "initData required" },
+        { status: 400 },
+      );
     }
 
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     if (!botToken) {
-      console.error("❌ TELEGRAM_BOT_TOKEN not set");
+      console.error("❌ TELEGRAM_BOT_TOKEN missing");
       return NextResponse.json(
-        { error: "Server configuration error" },
+        { success: false, error: "Server misconfigured" },
         { status: 500 },
       );
     }
 
     if (!validateInitData(initData, botToken)) {
       return NextResponse.json(
-        { error: "Invalid Telegram data" },
+        { success: false, error: "Invalid Telegram data" },
         { status: 401 },
       );
     }
@@ -32,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     if (isInitDataExpired(authDate)) {
       return NextResponse.json(
-        { error: "Telegram data expired" },
+        { success: false, error: "Telegram data expired" },
         { status: 401 },
       );
     }
@@ -40,40 +43,38 @@ export async function POST(request: NextRequest) {
     const userRaw = params.get("user");
     if (!userRaw) {
       return NextResponse.json(
-        { error: "No user data found" },
+        { success: false, error: "No user data" },
         { status: 400 },
       );
     }
 
     const tgUser = JSON.parse(userRaw);
 
+    // ✅ telegramId as STRING
+    const telegramId = String(tgUser.id);
+
     const dbUser = await prisma.user.upsert({
-      where: { telegramId: tgUser.id },
+      where: { telegramId },
       update: {
         firstName: tgUser.first_name || null,
         lastName: tgUser.last_name || null,
         username: tgUser.username || null,
-        updatedAt: new Date(),
       },
       create: {
-        telegramId: tgUser.id,
+        telegramId,
         firstName: tgUser.first_name || null,
         lastName: tgUser.last_name || null,
         username: tgUser.username || null,
       },
     });
 
-    const isAdmin =
-      dbUser.telegramId.toString() === process.env.ADMIN_TELEGRAM_ID;
-
     await clearSessionCookie();
-
     await setSessionCookie({
       userId: dbUser.id,
       firstName: dbUser.firstName ?? undefined,
       lastName: dbUser.lastName ?? undefined,
       username: dbUser.username ?? undefined,
-      isAdmin,
+      isAdmin: false,
     });
 
     return NextResponse.json({
@@ -84,11 +85,14 @@ export async function POST(request: NextRequest) {
         first_name: dbUser.firstName,
         last_name: dbUser.lastName,
         username: dbUser.username,
-        isAdmin,
+        isAdmin: false,
       },
     });
-  } catch (error) {
-    console.error("❌ validate-init error:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  } catch (err) {
+    console.error("❌ validate-init error:", err);
+    return NextResponse.json(
+      { success: false, error: "Server error" },
+      { status: 500 },
+    );
   }
 }
