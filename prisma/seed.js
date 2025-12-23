@@ -1,27 +1,48 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
+import shoesData from "../src/components/Products/shoesData.js";
 
 const prisma = new PrismaClient();
 
-const TEST_TELEGRAM_ID = BigInt(999999999);
-
 async function main() {
-  console.log("🌱 Seeding database...");
+  console.log("🌱 Seeding products only (no users)...");
 
-  await prisma.user.upsert({
-    where: {
-      telegramId: TEST_TELEGRAM_ID,
-    },
-    update: {},
-    create: {
-      telegramId: TEST_TELEGRAM_ID,
-      username: "test_user",
-      firstName: "Test",
-      lastName: "User",
-    },
-  });
+  for (const product of shoesData) {
+    await prisma.product.upsert({
+      where: { name: product.name },
+      update: {
+        brand: product.brand,
+        price: product.price,
+        description: product.description || null,
+        isActive: true,
+      },
+      create: {
+        name: product.name,
+        brand: product.brand,
+        price: product.price,
+        description: product.description || null,
+        isActive: true,
+        variants: {
+          create: product.variants.map((variant) => ({
+            color: variant.color,
+            images: {
+              create: variant.images.map((url) => ({ url })),
+            },
+            sizes: {
+              create: variant.sizes.map((size) => ({
+                size: size.size,
+                stock: size.stock,
+              })),
+            },
+          })),
+        },
+      },
+    });
 
-  console.log("✅ Seed completed");
+    console.log(`✅ Product seeded: ${product.name}`);
+  }
+
+  console.log("🎉 Product seeding finished.");
 }
 
 main()
