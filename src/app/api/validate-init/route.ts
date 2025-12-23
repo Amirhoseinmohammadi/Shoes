@@ -1,43 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateInitData, isInitDataExpired } from "@/lib/telegram-validator";
-import { setSessionCookie } from "@/lib/session";
+import { setSessionCookie, clearSessionCookie } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { initData } = body;
-
-    console.log(
-      "📨 validate-init called with initData length:",
-      initData?.length,
-    );
+    const { initData } = await request.json();
 
     if (!initData) {
-      console.error("❌ No initData provided");
       return NextResponse.json({ error: "initData required" }, { status: 400 });
     }
 
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     if (!botToken) {
-      console.error("❌ TELEGRAM_BOT_TOKEN not configured!");
+      console.error("❌ TELEGRAM_BOT_TOKEN not set");
       return NextResponse.json(
         { error: "Server configuration error" },
         { status: 500 },
       );
     }
 
-    console.log(
-      "🔐 Validating initData with bot token starting with:",
-      botToken.substring(0, 10) + "...",
-    );
-
-    const isValid = validateInitData(initData, botToken);
-    console.log("🔍 Validation result:", isValid);
-
-    if (!isValid) {
-      console.error("❌ Telegram signature validation failed");
-      console.log("📄 initData received:", initData.substring(0, 200) + "...");
+    if (!validateInitData(initData, botToken)) {
       return NextResponse.json(
         { error: "Invalid Telegram data" },
         { status: 401 },
@@ -46,82 +29,66 @@ export async function POST(request: NextRequest) {
 
     const params = new URLSearchParams(initData);
     const authDate = params.get("auth_date");
-    console.log("📅 auth_date:", authDate);
 
     if (isInitDataExpired(authDate)) {
-      console.error("❌ Telegram data expired");
       return NextResponse.json(
         { error: "Telegram data expired" },
         { status: 401 },
       );
     }
 
-    const userData = params.get("user");
-    console.log("👤 userData:", userData);
-
-    if (!userData) {
-      console.error("❌ No user data in initData");
+    const userRaw = params.get("user");
+    if (!userRaw) {
       return NextResponse.json(
         { error: "No user data found" },
         { status: 400 },
       );
     }
 
-    const user = JSON.parse(userData);
+    const tgUser = JSON.parse(userRaw);
+
+    const dbUser = await prisma.user.upsert({
+      where: { telegramId: tgUser.id },
+      update: {
+        firstName: tgUser.first_name || null,
+        lastName: tgUser.last_name || null,
+        username: tgUser.username || null,
+        updatedAt: new Date(),
+      },
+      create: {
+        telegramId: tgUser.id,
+        firstName: tgUser.first_name || null,
+        lastName: tgUser.last_name || null,
+        username: tgUser.username || null,
+      },
+    });
+
     const isAdmin =
-      user.id.toString() === process.env.NEXT_PUBLIC_ADMIN_USER_ID;
+      dbUser.telegramId.toString() === process.env.ADMIN_TELEGRAM_ID;
 
-    let primaryUserId: number;
-
-    try {
-      const savedUser = await prisma.user.upsert({
-        where: { telegramId: user.id },
-        update: {
-          firstName: user.first_name || null,
-          lastName: user.last_name || null,
-          username: user.username || null,
-          updatedAt: new Date(),
-        },
-        create: {
-          telegramId: user.id,
-          username: user.username || null,
-          firstName: user.first_name || null,
-          lastName: user.last_name || null,
-        },
-        select: { id: true },
-      });
-
-      primaryUserId = savedUser.id;
-      console.log("✅ User saved to database. Primary ID:", primaryUserId);
-    } catch (dbError) {
-      console.error("❌ Database error: Could not upsert user!", dbError);
-      console.error("Full error details:", JSON.stringify(dbError, null, 2));
-      return NextResponse.json(
-        { error: "Internal Server Error: Database failure" },
-        { status: 500 },
-      );
-    }
+    await clearSessionCookie();
 
     await setSessionCookie({
-      userId: primaryUserId,
-      firstName: user.first_name,
-      lastName: user.last_name,
-      username: user.username,
+      userId: dbUser.id,
+      firstName: dbUser.firstName ?? undefined,
+      lastName: dbUser.lastName ?? undefined,
+      username: dbUser.username ?? undefined,
       isAdmin,
     });
 
-    console.log("✅ Session cookie set with PK:", primaryUserId);
-
     return NextResponse.json({
       success: true,
-      user: { ...user, isAdmin },
+      user: {
+        id: dbUser.id,
+        telegramId: dbUser.telegramId,
+        first_name: dbUser.firstName,
+        last_name: dbUser.lastName,
+        username: dbUser.username,
+        isAdmin,
+      },
     });
   } catch (error) {
-    console.error("❌ Validation error:", error);
-    console.error(
-      "Full error stack:",
-      error instanceof Error ? error.stack : error,
-    );
+    console.error("❌ validate-init error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

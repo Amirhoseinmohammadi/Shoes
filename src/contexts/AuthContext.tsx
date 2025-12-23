@@ -30,8 +30,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 };
@@ -45,40 +45,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState(true);
   const [isTelegram, setIsTelegram] = useState(false);
 
-  const initializingRef = useRef(false);
   const mountedRef = useRef(true);
-
-  const checkExistingSession = useCallback(async () => {
-    try {
-      console.log("🔍 Checking existing session...");
-
-      const response = await fetch("/api/auth/session", {
-        method: "GET",
-        credentials: "include",
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-
-        if (result.success && result.user) {
-          console.log("✅ Found existing session:", result.user.id);
-          if (mountedRef.current) {
-            setUser(result.user);
-            return true;
-          }
-        }
-      }
-
-      return false;
-    } catch (error) {
-      console.error("❌ Session check error:", error);
-      return false;
-    }
-  }, []);
+  const initializedRef = useRef(false);
 
   const validateAndSetUser = useCallback(async (initData: string) => {
     try {
-      console.log("📤 Validating with server...");
+      console.log("📤 Validating Telegram user...");
 
       const response = await fetch("/api/validate-init", {
         method: "POST",
@@ -89,103 +61,64 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (!response.ok) {
         console.error("❌ Validation failed:", response.status);
-        if (mountedRef.current) setUser(null);
         return false;
       }
 
       const result = await response.json();
 
-      if (result.success && result.user) {
-        const userData: TelegramUser = result.user;
-        if (mountedRef.current) {
-          setUser(userData);
-          console.log("✅ User authenticated:", userData.id);
-          return true;
-        }
-      } else {
-        console.error("❌ Validation error:", result.error);
-        if (mountedRef.current) setUser(null);
+      if (result.success && result.user && mountedRef.current) {
+        setUser(result.user);
+        console.log("✅ User authenticated:", result.user.id);
+        return true;
       }
-    } catch (error) {
-      console.error("❌ Validation exception:", error);
-      if (mountedRef.current) setUser(null);
+
+      console.error("❌ Validation error:", result?.error);
+      return false;
+    } catch (err) {
+      console.error("❌ Validation exception:", err);
+      return false;
     }
-    return false;
   }, []);
 
   useEffect(() => {
-    if (initializingRef.current) return;
-    initializingRef.current = true;
+    if (initializedRef.current) return;
+    initializedRef.current = true;
 
-    if (typeof window === "undefined") {
-      if (mountedRef.current) {
-        setLoading(false);
-      }
-      return;
-    }
+    if (typeof window === "undefined") return;
 
     const initAuth = async () => {
       try {
-        const hasSession = await checkExistingSession();
-
-        if (hasSession) {
-          console.log("✅ User already authenticated via session");
-          if (mountedRef.current) {
-            setIsTelegram(true);
-            setLoading(false);
-          }
-          return;
-        }
-
         const tg = (window as any).Telegram?.WebApp;
 
         if (!tg) {
-          console.log("⚠️ Not in Telegram environment");
-          if (mountedRef.current) {
-            setIsTelegram(false);
-            setLoading(false);
-          }
+          console.error("❌ Telegram WebApp not available");
+          setIsTelegram(false);
+          setUser(null);
           return;
         }
 
-        console.log("✅ Telegram WebApp found");
-        if (mountedRef.current) {
-          setIsTelegram(true);
-        }
+        setIsTelegram(true);
 
         try {
           tg.ready?.();
           tg.expand?.();
-        } catch (e) {
-          console.warn("⚠️ Could not call Telegram methods:", e);
-        }
+        } catch {}
 
         const tgUser = tg.initDataUnsafe?.user;
         const initData = tg.initData;
 
         if (!tgUser?.id || !initData) {
-          console.error("❌ No Telegram user data or initData");
-          if (mountedRef.current) {
-            setLoading(false);
-          }
+          console.error("❌ Invalid Telegram initData");
+          setUser(null);
           return;
         }
 
-        console.log("👤 Telegram user found:", tgUser.id);
+        console.log("👤 Telegram user:", tgUser.id);
 
-        const success = await validateAndSetUser(initData);
-
-        if (!success) {
-          console.error("❌ Could not validate user");
-          if (mountedRef.current) {
-            setLoading(false);
-          }
-        }
+        await validateAndSetUser(initData);
       } catch (error) {
-        console.error("❌ Auth init error:", error);
-        if (mountedRef.current) {
-          setUser(null);
-        }
+        console.error("❌ Auth initialization error:", error);
+        setUser(null);
       } finally {
         if (mountedRef.current) {
           setLoading(false);
@@ -193,48 +126,37 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
     };
 
-    let attempts = 0;
-    const maxAttempts = 50;
+    let tries = 0;
+    const maxTries = 50;
 
-    const checkInterval = setInterval(() => {
-      attempts++;
+    const interval = setInterval(() => {
+      tries++;
 
       if ((window as any).Telegram?.WebApp) {
-        clearInterval(checkInterval);
+        clearInterval(interval);
         initAuth();
-      } else if (attempts >= maxAttempts) {
-        clearInterval(checkInterval);
-        console.warn("⚠️ Telegram WebApp not available after 50 attempts");
-        checkExistingSession().finally(() => {
-          if (mountedRef.current) {
-            setIsTelegram(false);
-            setLoading(false);
-          }
-        });
+      } else if (tries >= maxTries) {
+        clearInterval(interval);
+        console.warn("⚠️ Telegram WebApp not detected");
+        setLoading(false);
       }
     }, 100);
 
-    return () => {
-      clearInterval(checkInterval);
-    };
-  }, [validateAndSetUser, checkExistingSession]);
+    return () => clearInterval(interval);
+  }, [validateAndSetUser]);
 
   const logout = useCallback(async () => {
     try {
       console.log("🚪 Logging out...");
-
       await fetch("/api/auth/logout", {
         method: "POST",
         credentials: "include",
       });
-
-      console.log("✅ Logout successful");
     } catch (err) {
       console.error("❌ Logout error:", err);
     } finally {
       if (mountedRef.current) {
         setUser(null);
-        // ✅ صفحه رو ریفرش کن تا session cookie حتماً پاک شود
         window.location.href = "/";
       }
     }
@@ -252,7 +174,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       loading,
       isTelegram,
       isAuthenticated: !!user?.id,
-      isAdmin: user?.isAdmin || false,
+      isAdmin: user?.isAdmin ?? false,
       logout,
     }),
     [user, loading, isTelegram, logout],

@@ -16,36 +16,47 @@ export async function middleware(request: NextRequest) {
       const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
 
       if (!token) {
-        console.warn(`❌ Unauthorized request to ${pathname} - no cookie`);
-        return NextResponse.json(
-          { error: "Unauthorized - لطفا وارد شوید", success: false },
-          { status: 401 },
+        console.warn(`❌ Unauthorized ${pathname} - missing session cookie`);
+
+        return new NextResponse(
+          JSON.stringify({
+            success: false,
+            error: "Unauthorized - لطفا وارد شوید",
+          }),
+          {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          },
         );
       }
 
       const session = await verifySession(token);
 
-      if (!session) {
-        console.warn(`❌ Unauthorized request to ${pathname} - invalid token`);
-        return NextResponse.json(
-          { error: "Unauthorized - لطفا وارد شوید", success: false },
-          { status: 401 },
+      if (!session || typeof session.userId !== "number") {
+        console.warn(`❌ Unauthorized ${pathname} - invalid session`);
+
+        return new NextResponse(
+          JSON.stringify({
+            success: false,
+            error: "Unauthorized - لطفا وارد شوید",
+          }),
+          {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          },
         );
       }
 
       const requestHeaders = new Headers(request.headers);
-      requestHeaders.set("x-session-user-id", session.userId.toString());
+      requestHeaders.set("x-session-user-id", String(session.userId));
       requestHeaders.set(
         "x-session-is-admin",
         session.isAdmin ? "true" : "false",
       );
-      if (session.username) {
-        requestHeaders.set("x-session-username", String(session.username));
-      }
 
-      console.log(
-        `✅ Authenticated request to ${pathname} by user ${session.userId}`,
-      );
+      if (session.username) {
+        requestHeaders.set("x-session-username", session.username);
+      }
 
       return NextResponse.next({
         request: {
@@ -53,10 +64,17 @@ export async function middleware(request: NextRequest) {
         },
       });
     } catch (error) {
-      console.error("❌ Middleware error:", error);
-      return NextResponse.json(
-        { error: "Authentication failed", success: false },
-        { status: 500 },
+      console.error("❌ Middleware authentication error:", error);
+
+      return new NextResponse(
+        JSON.stringify({
+          success: false,
+          error: "Authentication failed",
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        },
       );
     }
   }

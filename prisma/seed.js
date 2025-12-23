@@ -1,45 +1,32 @@
-const { PrismaClient } = require("@prisma/client");
-const shoesData = require("../src/components/Products/shoesData");
+import "dotenv/config";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+const TEST_TELEGRAM_ID = BigInt(999999999);
+
 async function main() {
+  console.log("🌱 Seeding database...");
+
   await prisma.user.upsert({
-    where: { username: "defaultuser" },
+    where: {
+      telegramId: TEST_TELEGRAM_ID,
+    },
     update: {},
-    create: { username: "defaultuser" },
+    create: {
+      telegramId: TEST_TELEGRAM_ID,
+      username: "test_user",
+      firstName: "Test",
+      lastName: "User",
+    },
   });
 
-  for (const product of shoesData) {
-    await prisma.product.upsert({
-      where: { name: product.name },
-      update: {},
-      create: {
-        name: product.name,
-        brand: product.brand,
-        price: product.price,
-        description: product.description || null,
-        variants: {
-          create: product.variants.map((variant) => ({
-            color: variant.color,
-            images: { create: variant.images.map((url) => ({ url })) },
-            sizes: {
-              create: variant.sizes.map((size) => ({
-                size: size.size,
-                stock: size.stock,
-              })),
-            },
-          })),
-        },
-      },
-    });
-    console.log("Product upserted");
-  }
+  console.log("✅ Seed completed");
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error("❌ Seed error:", e);
     process.exit(1);
   })
   .finally(async () => {

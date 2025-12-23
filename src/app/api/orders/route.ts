@@ -2,50 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
-const ADMIN_TELEGRAM_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID;
+const ADMIN_TELEGRAM_ID = process.env.ADMIN_TELEGRAM_ID;
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
-/**
- * @returns {number | null}
- */
-async function requireSessionAuth(): Promise<number | null> {
+async function requireSessionAuth(): Promise<number> {
   const session = await getSession();
 
-  if (session && typeof session.userId === "number") {
-    return session.userId;
+  if (!session || typeof session.userId !== "number") {
+    throw new Error("UNAUTHORIZED");
   }
 
-  return null;
+  return session.userId;
 }
 
-interface OrderItemInput {
-  productId: number;
-  quantity?: number;
-  color?: string | null;
-  size?: string | null;
-}
-
-interface OrderRequestBody {
-  items: OrderItemInput[];
-  customerName: string;
-  customerPhone: string;
-}
-
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const userId = await requireSessionAuth(); // ✅ استفاده صحیح از احراز هویت
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized - لطفا وارد شوید" },
-        { status: 401 },
-      );
-    }
+    const userId = await requireSessionAuth();
 
     const orders = await prisma.order.findMany({
-      where: {
-        userId: userId,
-      },
+      where: { userId },
       include: {
         items: {
           include: {
@@ -67,12 +42,16 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, orders });
   } catch (error: any) {
+    if (error.message === "UNAUTHORIZED") {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+
     console.error("❌ GET /api/orders error:", error);
     return NextResponse.json(
-      {
-        success: false,
-        error: "خطا در دریافت سفارشات",
-      },
+      { success: false, error: "خطا در دریافت سفارشات" },
       { status: 500 },
     );
   }
@@ -80,59 +59,16 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireSessionAuth(); // ✅ استفاده صحیح از احراز هویت
+    const userId = await requireSessionAuth();
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized - لطفا وارد شوید" },
-        { status: 401 },
-      );
-    }
+    const body = await req.json();
+    const { customerName, customerPhone } = body;
 
-    const body: OrderRequestBody = await req.json();
-    const { items, customerName, customerPhone } = body;
-
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return NextResponse.json(
-        { success: false, error: "لیست محصولات الزامی است" },
-        { status: 400 },
-      );
-    }
-
-    if (items.length > 50) {
-      return NextResponse.json(
-        { success: false, error: "حداکثر 50 محصول در سفارش" },
-        { status: 400 },
-      );
-    }
-
-    for (const item of items) {
-      if (!item.productId || typeof item.productId !== "number") {
-        return NextResponse.json(
-          { success: false, error: "شناسه محصول نامعتبر است" },
-          { status: 400 },
-        );
-      }
-
-      const quantity = item.quantity || 1;
-      if (typeof quantity !== "number" || quantity <= 0 || quantity > 100) {
-        return NextResponse.json(
-          { success: false, error: "تعداد نامعتبر است (1-100)" },
-          { status: 400 },
-        );
-      }
-    }
+    /* ---------- basic validation ---------- */
 
     if (!customerName?.trim() || customerName.trim().length < 2) {
       return NextResponse.json(
-        { success: false, error: "نام مشتری باید حداقل 2 کاراکتر باشد" },
-        { status: 400 },
-      );
-    }
-
-    if (customerName.trim().length > 100) {
-      return NextResponse.json(
-        { success: false, error: "نام مشتری خیلی طولانی است" },
+        { success: false, error: "نام مشتری نامعتبر است" },
         { status: 400 },
       );
     }
@@ -152,46 +88,40 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const productIds = items.map((i) => i.productId);
-
-    const products = await prisma.product.findMany({
-      where: { id: { in: productIds } },
-      select: {
-        id: true,
-        name: true,
-        price: true,
-        brand: true,
-        isActive: true,
+    const cartItems = await prisma.cartItem.findMany({
+      where: { userId },
+      include: {
+        product: {
+          select: {
+            id: true,
+            name: true,
+            brand: true,
+            price: true,
+            isActive: true,
+          },
+        },
       },
     });
 
-    if (products.length !== productIds.length) {
+    if (cartItems.length === 0) {
       return NextResponse.json(
-        { success: false, error: "بعضی محصولات یافت نشد" },
-        { status: 404 },
+        { success: false, error: "سبد خرید خالی است" },
+        { status: 400 },
       );
     }
 
-    const productsMap = new Map(products.map((p) => [p.id, p]));
-
-    for (const item of items) {
-      const product = productsMap.get(item.productId);
-
-      if (!product) {
+    for (const item of cartItems) {
+      if (!item.product || !item.product.isActive) {
         return NextResponse.json(
-          { success: false, error: `محصول ${item.productId} یافت نشد` },
-          { status: 404 },
-        );
-      }
-
-      if (!product.isActive) {
-        return NextResponse.json(
-          { success: false, error: `محصول ${product.name} غیرفعال است` },
+          {
+            success: false,
+            error: `محصول ${item.product?.name ?? ""} غیرفعال است`,
+          },
           { status: 400 },
         );
       }
 
-      if (!product.price || product.price <= 0) {
+      if (!item.product.price || item.product.price <= 0) {
         return NextResponse.json(
           { success: false, error: "قیمت محصول نامعتبر است" },
           { status: 500 },
@@ -199,20 +129,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const itemsWithPrice = items.map((item) => {
-      const product = productsMap.get(item.productId)!;
-      const quantity = item.quantity || 1;
+    const itemsWithPrice = cartItems.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      price: item.product.price,
+      color: item.color,
+      size: item.sizeId ? String(item.sizeId) : null,
+    }));
 
-      return {
-        productId: item.productId,
-        quantity,
-        price: product.price,
-        color: item.color?.trim() || null,
-        size: item.size?.trim() || null,
-      };
-    });
-
-    const calculatedTotal = itemsWithPrice.reduce(
+    const total = itemsWithPrice.reduce(
       (sum, i) => sum + i.price * i.quantity,
       0,
     );
@@ -220,11 +145,11 @@ export async function POST(req: NextRequest) {
     const order = await prisma.$transaction(async (tx) => {
       const created = await tx.order.create({
         data: {
+          userId,
           status: "PENDING",
-          total: calculatedTotal,
+          total,
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
-          userId: userId,
           items: { create: itemsWithPrice },
         },
         include: {
@@ -236,6 +161,10 @@ export async function POST(req: NextRequest) {
             },
           },
         },
+      });
+
+      await tx.cartItem.deleteMany({
+        where: { userId },
       });
 
       const trackingCode = `TRK${created.id.toString().padStart(6, "0")}`;
@@ -256,34 +185,32 @@ export async function POST(req: NextRequest) {
     });
 
     if (ADMIN_TELEGRAM_ID && BOT_TOKEN) {
-      try {
-        const itemsList = order.items
-          .map(
-            (i) =>
-              `• ${i.product.name} (${i.quantity}x) - ${(i.price * i.quantity).toLocaleString()} ت`,
-          )
-          .join("\n");
+      const itemsText = order.items
+        .map(
+          (i) =>
+            `• ${i.product.name} (${i.quantity}x) - ${(i.price * i.quantity).toLocaleString()} ت`,
+        )
+        .join("\n");
 
-        const message = `
-✅ سفارش جدید!
-🆔 کد: ${order.trackingCode}
-👤 نام: ${customerName}
-📞 تماس: ${customerPhone}
-💰 مبلغ: ${calculatedTotal.toLocaleString()} تومان
-📦 محصولات:
-${itemsList}
-        `.trim();
+      const message = `
+✅ سفارش جدید
+🆔 ${order.trackingCode}
+👤 ${order.customerName}
+📞 ${order.customerPhone}
+💰 ${order.total.toLocaleString()} تومان
 
-        fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chat_id: ADMIN_TELEGRAM_ID, text: message }),
-        }).catch((err) => {
-          console.error("⚠️ Telegram notification failed:", err);
-        });
-      } catch (err) {
-        console.error("⚠️ Telegram error:", err);
-      }
+📦 اقلام:
+${itemsText}
+      `.trim();
+
+      fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: ADMIN_TELEGRAM_ID,
+          text: message,
+        }),
+      }).catch(() => {});
     }
 
     return NextResponse.json({
@@ -294,13 +221,16 @@ ${itemsList}
       orderId: order.id,
     });
   } catch (error: any) {
+    if (error.message === "UNAUTHORIZED") {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+
     console.error("❌ POST /api/orders error:", error);
     return NextResponse.json(
-      {
-        success: false,
-        error: "خطا در ثبت سفارش",
-        message: error.message || "خطای نامشخص",
-      },
+      { success: false, error: "خطا در ثبت سفارش" },
       { status: 500 },
     );
   }

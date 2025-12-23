@@ -3,18 +3,15 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// اینجا آیدی کاربری که میخوای حذف کنی یا آرایه‌ای از آیدی‌ها
-const userIdsToDelete = [1, 3]; // مثال
+const userIdsToDelete = [1, 3];
 
 async function main() {
   try {
     const result = await prisma.$transaction(async (tx) => {
-      // ابتدا حذف سفارش‌های کاربران
       await tx.order.deleteMany({
         where: { userId: { in: userIdsToDelete } },
       });
 
-      // سپس حذف کاربران
       const deleted = await tx.user.deleteMany({
         where: { id: { in: userIdsToDelete } },
       });
