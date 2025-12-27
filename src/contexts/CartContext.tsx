@@ -13,6 +13,8 @@ import {
   useRef,
 } from "react";
 
+/* ================= TYPES ================= */
+
 interface TelegramUserType {
   id: number;
   first_name?: string;
@@ -51,6 +53,8 @@ interface CartContextType {
   telegramUser: TelegramUserType | null;
 }
 
+/* ================= CONTEXT ================= */
+
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const useCart = () => {
@@ -58,6 +62,8 @@ export const useCart = () => {
   if (!ctx) throw new Error("useCart must be used inside CartProvider");
   return ctx;
 };
+
+/* ================= PROVIDER ================= */
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -69,6 +75,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const mountedRef = useRef(true);
 
+  /* -------- AUTH ERROR -------- */
+
   const handleUnauthorized = useCallback(async () => {
     showToast({
       type: "error",
@@ -77,6 +85,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setCartItems([]);
     await logout();
   }, [logout, showToast]);
+
+  /* -------- FETCH CART (NORMALIZED) -------- */
 
   const fetchCart = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -98,7 +108,19 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       const data = await res.json();
 
       if (mountedRef.current && Array.isArray(data.cartItems)) {
-        setCartItems(data.cartItems);
+        const normalized: CartItem[] = data.cartItems.map((item: any) => ({
+          id: item.id,
+          productId: item.product.id,
+          name: item.product.name,
+          brand: item.product.brand,
+          price: item.product.price,
+          image: item.product.images?.[0]?.url || "/images/default-shoe.png",
+          quantity: item.quantity,
+          color: item.color,
+          size: item.size?.label,
+        }));
+
+        setCartItems(normalized);
       }
     } catch (e) {
       console.error(e);
@@ -110,6 +132,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     fetchCart();
   }, [fetchCart]);
+
+  /* ================= ACTIONS ================= */
 
   const addItem = async ({
     productId,
@@ -215,6 +239,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const clearCart = async () => {
     setCartItems([]);
   };
+
+  /* ================= TOTALS ================= */
 
   const totalItems = useMemo(
     () => cartItems.reduce((s, i) => s + i.quantity, 0),
