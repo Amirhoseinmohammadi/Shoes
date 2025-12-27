@@ -3,7 +3,6 @@
 import { useState, useMemo, memo } from "react";
 import { useParams } from "next/navigation";
 import { useCart } from "@/contexts/CartContext";
-import { useToast } from "@/contexts/ToastContext";
 import Image from "next/image";
 import Link from "next/link";
 import { Shoe } from "@/types/shoe";
@@ -14,6 +13,10 @@ interface AugmentedShoe extends Shoe {
   images?: { url: string }[];
 }
 
+interface SingleShoeProps {
+  shoe: AugmentedShoe;
+}
+
 const colorMap: Record<string, string> = {
   سفید: "#FFFFFF",
   مشکی: "#000000",
@@ -21,11 +24,6 @@ const colorMap: Record<string, string> = {
   آبی: "#007BFF",
   قرمز: "#EF4444",
 };
-
-interface SingleShoeProps {
-  shoe: AugmentedShoe;
-  telegramUser?: any;
-}
 
 const ColorButton = memo(
   ({
@@ -54,6 +52,7 @@ const ViewButton = memo(({ shoeId }: { shoeId: number }) => (
   <Link
     href={`/products/${shoeId}`}
     className="flex items-center justify-center rounded-lg border px-2.5 py-2 text-gray-600 hover:border-cyan-400 hover:text-cyan-600"
+    aria-label="مشاهده محصول"
   >
     <EyeIcon className="h-5 w-5" />
   </Link>
@@ -80,60 +79,42 @@ const AddToCartButton = memo(
 AddToCartButton.displayName = "AddToCartButton";
 
 export default memo(function SingleShoe({ shoe }: SingleShoeProps) {
-  const { addItem } = useCart();
-  const { showToast } = useToast();
+  const { addItem, loading: cartLoading } = useCart();
   const params = useParams();
 
   const [selectedVariant, setSelectedVariant] = useState(0);
-  const [loading, setLoading] = useState(false);
 
   const currentShoe = shoe as AugmentedShoe;
-  const variants = useMemo(
-    () => currentShoe?.variants || [],
-    [currentShoe?.variants],
-  );
+
+  const variants = useMemo(() => currentShoe?.variants ?? [], [currentShoe]);
 
   const hasVariants = variants.length > 0;
-  const variantObj = hasVariants ? variants[selectedVariant] : null;
+  const variant = hasVariants ? variants[selectedVariant] : null;
 
-  const selectedColor = variantObj?.color || currentShoe?.color || "نامشخص";
+  const selectedColor = variant?.color || currentShoe?.color || undefined;
 
   const images = useMemo(
     () =>
-      variantObj?.images?.map((i) => i.url) ||
+      variant?.images?.map((i) => i.url) ||
       currentShoe?.images?.map((i) => i.url) ||
       [],
-    [variantObj?.images, currentShoe?.images],
+    [variant, currentShoe],
   );
 
-  const selectedImageUrl = images[0] || "/images/default-shoe.png";
+  const selectedImage = images[0] || "/images/default-shoe.png";
+
+  const displayPrice = variant?.price ?? currentShoe?.price ?? 0;
+
   const isCurrentPage = params?.id?.toString() === currentShoe?.id?.toString();
 
   const handleAddToCart = async () => {
     if (!currentShoe?.id) return;
 
-    setLoading(true);
-    try {
-      const success = await addItem({
-        productId: currentShoe.id, // ✅ اصلاح اصلی
-        quantity: 1,
-        color: selectedColor,
-      });
-
-      showToast({
-        type: success ? "success" : "error",
-        message: success
-          ? `${currentShoe.name} به سبد خرید اضافه شد`
-          : "خطا در افزودن به سبد خرید",
-      });
-    } catch {
-      showToast({
-        type: "error",
-        message: "خطا در افزودن به سبد خرید",
-      });
-    } finally {
-      setLoading(false);
-    }
+    await addItem({
+      productId: currentShoe.id,
+      quantity: 1,
+      color: selectedColor,
+    });
   };
 
   if (!currentShoe?.id) return null;
@@ -142,11 +123,12 @@ export default memo(function SingleShoe({ shoe }: SingleShoeProps) {
     <article className="rounded-2xl bg-white shadow dark:bg-gray-800">
       <div className="relative aspect-square">
         <Image
-          src={selectedImageUrl}
+          src={selectedImage}
           alt={currentShoe.name}
           fill
           className="object-cover"
         />
+
         {!isCurrentPage && (
           <Link
             href={`/products/${currentShoe.id}`}
@@ -164,7 +146,7 @@ export default memo(function SingleShoe({ shoe }: SingleShoeProps) {
           <div className="flex gap-2">
             {variants.map((v, idx) => (
               <ColorButton
-                key={v.id || idx}
+                key={v.id ?? idx}
                 color={v.color}
                 isActive={idx === selectedVariant}
                 onClick={() => setSelectedVariant(idx)}
@@ -173,12 +155,10 @@ export default memo(function SingleShoe({ shoe }: SingleShoeProps) {
           </div>
         )}
 
-        <div className="font-bold">
-          {(currentShoe.price || 0).toLocaleString()} تومان
-        </div>
+        <div className="font-bold">{displayPrice.toLocaleString()} تومان</div>
 
         <div className="flex gap-2">
-          <AddToCartButton loading={loading} onClick={handleAddToCart} />
+          <AddToCartButton loading={cartLoading} onClick={handleAddToCart} />
           {!isCurrentPage && <ViewButton shoeId={currentShoe.id} />}
         </div>
       </div>

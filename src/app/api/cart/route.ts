@@ -4,21 +4,15 @@ import { getSession } from "@/lib/session";
 
 async function requireSessionAuth(): Promise<number | null> {
   const session = await getSession();
-
-  if (session && typeof session.userId === "number") {
-    return session.userId;
-  }
-
-  return null;
+  return typeof session?.userId === "number" ? session.userId : null;
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const userId = await requireSessionAuth();
-
     if (!userId) {
       return NextResponse.json(
-        { error: "Unauthorized - لطفا وارد شوید", success: false },
+        { error: "Unauthorized", success: false },
         { status: 401 },
       );
     }
@@ -28,11 +22,8 @@ export async function GET(req: NextRequest) {
       include: {
         product: {
           include: {
-            variants: {
-              include: {
-                images: true,
-              },
-            },
+            images: true,
+            variants: { include: { images: true } },
           },
         },
         size: true,
@@ -53,87 +44,35 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const userId = await requireSessionAuth();
-
     if (!userId) {
       return NextResponse.json(
-        { error: "Unauthorized - لطفا وارد شوید", success: false },
+        { error: "Unauthorized", success: false },
         { status: 401 },
       );
     }
 
-    const body = await req.json();
-    const { productId, quantity, color, sizeId } = body;
+    const { productId, quantity, color, sizeId } = await req.json();
 
-    if (!productId || typeof productId !== "number" || productId <= 0) {
+    if (!productId || quantity <= 0 || quantity > 1000) {
       return NextResponse.json(
-        { error: "شناسه محصول نامعتبر است", success: false },
-        { status: 400 },
-      );
-    }
-
-    if (!quantity || typeof quantity !== "number" || quantity <= 0) {
-      return NextResponse.json(
-        { error: "تعداد نامعتبر است", success: false },
-        { status: 400 },
-      );
-    }
-
-    if (quantity > 100) {
-      return NextResponse.json(
-        { error: "حداکثر تعداد 100 است", success: false },
+        { error: "داده نامعتبر", success: false },
         { status: 400 },
       );
     }
 
     const product = await prisma.product.findUnique({
       where: { id: productId },
-      select: { id: true, isActive: true, price: true, name: true },
+      select: { id: true, isActive: true },
     });
 
-    if (!product) {
+    if (!product || !product.isActive) {
       return NextResponse.json(
-        { error: "محصول یافت نشد", success: false },
-        { status: 404 },
-      );
-    }
-
-    if (!product.isActive) {
-      return NextResponse.json(
-        { error: "محصول غیرفعال است", success: false },
+        { error: "محصول نامعتبر یا غیرفعال", success: false },
         { status: 400 },
       );
     }
 
-    let currentStock: number;
-
-    if (sizeId) {
-      const sizeData = await prisma.size.findUnique({
-        where: { id: sizeId },
-        select: { stock: true },
-      });
-
-      if (!sizeData) {
-        return NextResponse.json(
-          { error: "سایز نامعتبر است", success: false },
-          { status: 400 },
-        );
-      }
-      currentStock = sizeData.stock;
-    } else {
-      currentStock = 100000;
-    }
-
-    if (currentStock < quantity) {
-      return NextResponse.json(
-        {
-          error: `موجودی ناکافی (موجودی: ${currentStock})`,
-          success: false,
-        },
-        { status: 400 },
-      );
-    }
-
-    const result = await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
       const existing = await tx.cartItem.findFirst({
         where: {
           userId,
@@ -141,73 +80,25 @@ export async function POST(req: NextRequest) {
           color: color || null,
           sizeId: sizeId || null,
         },
-        include: {
-          size: {
-            select: { stock: true },
-          },
-        },
       });
 
       if (existing) {
-        const newQuantity = existing.quantity + quantity;
-
-        const stockToCheck = existing.size?.stock ?? 100000;
-
-        if (newQuantity > stockToCheck) {
-          throw new Error(
-            `موجودی کافی نیست برای تعداد ${newQuantity} (${product.name})`,
-          );
-        }
-
-        return await tx.cartItem.update({
+        await tx.cartItem.update({
           where: { id: existing.id },
-          data: { quantity: newQuantity },
-          include: {
-            product: {
-              include: {
-                variants: {
-                  include: {
-                    images: true,
-                  },
-                },
-              },
-            },
-            size: true,
-          },
+          data: { quantity: existing.quantity + quantity },
+        });
+      } else {
+        await tx.cartItem.create({
+          data: { userId, productId, quantity, color, sizeId },
         });
       }
-
-      return await tx.cartItem.create({
-        data: {
-          userId,
-          productId,
-          quantity,
-          color: color || null,
-          sizeId: sizeId || null,
-        },
-        include: {
-          product: {
-            include: {
-              variants: {
-                include: {
-                  images: true,
-                },
-              },
-            },
-          },
-          size: true,
-        },
-      });
     });
 
-    return NextResponse.json({ success: true, cartItem: result });
+    return GET();
   } catch (err: any) {
     console.error("POST /api/cart error:", err);
     return NextResponse.json(
-      {
-        error: err.message || "خطا در افزودن به سبد خرید",
-        success: false,
-      },
+      { error: err.message || "خطا", success: false },
       { status: 500 },
     );
   }
@@ -216,95 +107,29 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const userId = await requireSessionAuth();
-
     if (!userId) {
       return NextResponse.json(
-        { error: "Unauthorized - لطفا وارد شوید", success: false },
+        { error: "Unauthorized", success: false },
         { status: 401 },
       );
     }
 
-    const body = await req.json();
-    const { cartItemId, quantity } = body;
-
-    if (!cartItemId || typeof cartItemId !== "number") {
-      return NextResponse.json(
-        { error: "شناسه آیتم نامعتبر است", success: false },
-        { status: 400 },
-      );
-    }
-
-    if (
-      quantity !== undefined &&
-      (typeof quantity !== "number" || quantity < 0)
-    ) {
-      return NextResponse.json(
-        { error: "تعداد نامعتبر است", success: false },
-        { status: 400 },
-      );
-    }
-
-    const existingItem = await prisma.cartItem.findFirst({
-      where: { id: cartItemId, userId },
-      include: {
-        size: {
-          select: { stock: true },
-        },
-      },
-    });
-
-    if (!existingItem) {
-      return NextResponse.json(
-        { error: "آیتم یافت نشد", success: false },
-        { status: 404 },
-      );
-    }
+    const { cartItemId, quantity } = await req.json();
 
     if (quantity === 0) {
       await prisma.cartItem.delete({ where: { id: cartItemId } });
-      return NextResponse.json({
-        success: true,
-        message: "آیتم حذف شد",
+    } else {
+      await prisma.cartItem.update({
+        where: { id: cartItemId },
+        data: { quantity },
       });
     }
 
-    const currentStock = existingItem.size?.stock ?? 100000;
-
-    if (quantity > currentStock) {
-      return NextResponse.json(
-        {
-          error: `موجودی ناکافی (موجودی: ${currentStock})`,
-          success: false,
-        },
-        { status: 400 },
-      );
-    }
-
-    const updatedItem = await prisma.cartItem.update({
-      where: { id: cartItemId },
-      data: { quantity },
-      include: {
-        product: {
-          include: {
-            variants: {
-              include: {
-                images: true,
-              },
-            },
-          },
-        },
-        size: true,
-      },
-    });
-
-    return NextResponse.json({ success: true, cartItem: updatedItem });
-  } catch (err: any) {
+    return GET();
+  } catch (err) {
     console.error("PATCH /api/cart error:", err);
     return NextResponse.json(
-      {
-        error: err.message || "خطا در بروزرسانی سبد خرید",
-        success: false,
-      },
+      { error: "خطا در بروزرسانی", success: false },
       { status: 500 },
     );
   }
@@ -313,47 +138,28 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const userId = await requireSessionAuth();
-
     if (!userId) {
       return NextResponse.json(
-        { error: "Unauthorized - لطفا وارد شوید", success: false },
+        { error: "Unauthorized", success: false },
         { status: 401 },
       );
     }
 
-    const url = new URL(req.url);
-    const cartItemId = url.searchParams.get("id");
-
-    if (!cartItemId || isNaN(parseInt(cartItemId))) {
+    const id = Number(new URL(req.url).searchParams.get("id"));
+    if (!id) {
       return NextResponse.json(
-        { error: "شناسه آیتم نامعتبر است", success: false },
+        { error: "شناسه نامعتبر", success: false },
         { status: 400 },
-      );
-    }
-
-    const id = parseInt(cartItemId, 10);
-
-    const existingItem = await prisma.cartItem.findFirst({
-      where: { id, userId },
-    });
-
-    if (!existingItem) {
-      return NextResponse.json(
-        { error: "آیتم یافت نشد", success: false },
-        { status: 404 },
       );
     }
 
     await prisma.cartItem.delete({ where: { id } });
 
-    return NextResponse.json({
-      success: true,
-      message: "آیتم حذف شد",
-    });
+    return GET();
   } catch (err) {
     console.error("DELETE /api/cart error:", err);
     return NextResponse.json(
-      { error: "خطا در حذف از سبد خرید", success: false },
+      { error: "خطا در حذف", success: false },
       { status: 500 },
     );
   }

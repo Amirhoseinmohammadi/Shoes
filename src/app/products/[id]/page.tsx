@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useApi } from "@/hooks/useApi";
 import { useCart } from "@/contexts/CartContext";
@@ -13,16 +13,13 @@ export default function ProductPage() {
   const productId = id ? parseInt(id as string, 10) : undefined;
 
   const { data: product, error, isLoading } = useApi.useProduct(productId!);
-  const { addItem } = useCart();
+  const { addItem, loading: cartLoading } = useCart();
   const { showToast } = useToast();
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColorIndex, setSelectedColorIndex] = useState(0);
-  const [quantity, setQuantity] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [quantity] = useState(1);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-
-  /* -------------------- LOADING / ERROR -------------------- */
 
   if (isLoading) {
     return (
@@ -46,52 +43,37 @@ export default function ProductPage() {
     );
   }
 
-  /* -------------------- VARIANTS -------------------- */
+  const variants = product.variants ?? [];
+  const currentVariant = variants[selectedColorIndex] ?? null;
 
-  const variants = product.variants || [];
-  const currentVariant = variants[selectedColorIndex] || null;
-
-  const images =
-    currentVariant?.images?.map((i: any) => i.url) ||
-    product.images?.map((i: any) => i.url) ||
-    [];
+  const images = useMemo(
+    () =>
+      currentVariant?.images?.map((i: any) => i.url) ||
+      product.images?.map((i: any) => i.url) ||
+      [],
+    [currentVariant, product],
+  );
 
   const displayImage = images[currentImageIndex] || "/images/default-shoe.png";
 
-  /* -------------------- ADD TO CART -------------------- */
+  const displayPrice = currentVariant?.price ?? product.price ?? 0;
 
   const handleAddToCart = async () => {
     if (!selectedSize) {
-      showToast({ type: "error", message: "لطفاً سایز را انتخاب کنید" });
+      showToast({
+        type: "error",
+        message: "لطفاً سایز را انتخاب کنید",
+      });
       return;
     }
 
-    setLoading(true);
-    try {
-      const success = await addItem({
-        productId: product.id, // ✅ فقط ID
-        quantity,
-        color: currentVariant?.color || product.color || "نامشخص",
-        // sizeId: Number(selectedSize) // اگر sizeId عددی داری، این را فعال کن
-      });
-
-      showToast({
-        type: success ? "success" : "error",
-        message: success
-          ? "محصول به سبد خرید اضافه شد"
-          : "خطا در افزودن به سبد خرید",
-      });
-    } catch {
-      showToast({
-        type: "error",
-        message: "خطا در افزودن به سبد خرید",
-      });
-    } finally {
-      setLoading(false);
-    }
+    await addItem({
+      productId: product.id,
+      quantity,
+      color: currentVariant?.color || product.color || undefined,
+      // sizeId: number  ← وقتی سایز واقعی از DB داشتی
+    });
   };
-
-  /* -------------------- UI -------------------- */
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32 dark:bg-gray-900">
@@ -119,11 +101,11 @@ export default function ProductPage() {
 
           {images.length > 1 && (
             <div className="mt-3 flex gap-2 overflow-x-auto">
-              {images.map((img: string, idx: number) => (
+              {images.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentImageIndex(idx)}
-                  className={`h-12 w-12 rounded-lg border-2 ${
+                  className={`relative h-12 w-12 rounded-lg border-2 ${
                     currentImageIndex === idx
                       ? "border-cyan-500"
                       : "border-gray-300"
@@ -141,7 +123,7 @@ export default function ProductPage() {
           <div className="rounded-2xl bg-white p-4 shadow dark:bg-gray-800">
             <h1 className="mb-2 text-2xl font-bold">{product.name}</h1>
             <p className="text-xl font-bold">
-              {(product.price || 0).toLocaleString()} تومان
+              {displayPrice.toLocaleString()} تومان
             </p>
           </div>
 
@@ -194,10 +176,10 @@ export default function ProductPage() {
       <div className="fixed inset-x-0 bottom-0 border-t bg-white p-4 dark:bg-gray-800">
         <button
           onClick={handleAddToCart}
-          disabled={loading}
+          disabled={cartLoading}
           className="flex w-full items-center justify-center gap-2 rounded-full bg-cyan-500 py-3 font-bold text-white disabled:opacity-50"
         >
-          {loading ? "در حال افزودن..." : "افزودن به سبد خرید"}
+          {cartLoading ? "در حال افزودن..." : "افزودن به سبد خرید"}
         </button>
       </div>
     </div>

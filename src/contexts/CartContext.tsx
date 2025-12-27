@@ -13,8 +13,6 @@ import {
   useRef,
 } from "react";
 
-/* ================= TYPES ================= */
-
 interface TelegramUserType {
   id: number;
   first_name?: string;
@@ -53,8 +51,6 @@ interface CartContextType {
   telegramUser: TelegramUserType | null;
 }
 
-/* ================= CONTEXT ================= */
-
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const useCart = () => {
@@ -63,19 +59,21 @@ export const useCart = () => {
   return ctx;
 };
 
-/* ================= PROVIDER ================= */
-
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
 
   const { user: telegramUser, loading: authLoading, logout } = useAuth();
-  const isAuthenticated = !!telegramUser?.id;
+  const isAuthenticated = Boolean(telegramUser?.id);
   const { showToast } = useToast();
 
   const mountedRef = useRef(true);
 
-  /* -------- AUTH ERROR -------- */
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setCartItems([]);
+    }
+  }, [isAuthenticated]);
 
   const handleUnauthorized = useCallback(async () => {
     showToast({
@@ -86,10 +84,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     await logout();
   }, [logout, showToast]);
 
-  /* -------- FETCH CART (NORMALIZED) -------- */
-
   const fetchCart = useCallback(async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !mountedRef.current) return;
 
     try {
       setLoading(true);
@@ -107,23 +103,32 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
       const data = await res.json();
 
-      if (mountedRef.current && Array.isArray(data.cartItems)) {
-        const normalized: CartItem[] = data.cartItems.map((item: any) => ({
-          id: item.id,
-          productId: item.product.id,
-          name: item.product.name,
-          brand: item.product.brand,
-          price: item.product.price,
-          image: item.product.images?.[0]?.url || "/images/default-shoe.png",
-          quantity: item.quantity,
-          color: item.color,
-          size: item.size?.label,
-        }));
+      if (!Array.isArray(data.cartItems)) return;
 
+      const normalized: CartItem[] = data.cartItems.map((item: any) => {
+        const product = item.product || {};
+
+        return {
+          id: item.id,
+          productId: product.id ?? item.productId,
+          name: product.name ?? "محصول",
+          brand: product.brand ?? "",
+          price: Number(product.price ?? 0),
+          image:
+            product.images?.[0]?.url ||
+            product.variants?.[0]?.images?.[0]?.url ||
+            "/images/default-shoe.png",
+          quantity: Number(item.quantity ?? 1),
+          color: item.color ?? undefined,
+          size: item.size?.label ?? item.size?.size ?? undefined,
+        };
+      });
+
+      if (mountedRef.current) {
         setCartItems(normalized);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error("fetchCart error:", err);
     } finally {
       if (mountedRef.current) setLoading(false);
     }
@@ -132,8 +137,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     fetchCart();
   }, [fetchCart]);
-
-  /* ================= ACTIONS ================= */
 
   const addItem = async ({
     productId,
@@ -161,20 +164,28 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       if (!res.ok || !data.success) {
         showToast({
           type: "error",
-          message: data.error || "خطا در افزودن محصول",
+          message: data?.error || "خطا در افزودن محصول",
         });
         return false;
       }
 
       await fetchCart();
 
-      showToast({ type: "success", message: "به سبد خرید اضافه شد" });
+      showToast({
+        type: "success",
+        message: "به سبد خرید اضافه شد",
+      });
+
       return true;
-    } catch {
-      showToast({ type: "error", message: "خطای ارتباط با سرور" });
+    } catch (err) {
+      console.error(err);
+      showToast({
+        type: "error",
+        message: "خطای ارتباط با سرور",
+      });
       return false;
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   };
 
@@ -229,10 +240,15 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       if (!data.success) return false;
 
       await fetchCart();
-      showToast({ type: "success", message: "سفارش ثبت شد" });
+
+      showToast({
+        type: "success",
+        message: "سفارش ثبت شد",
+      });
+
       return true;
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   };
 
@@ -240,15 +256,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setCartItems([]);
   };
 
-  /* ================= TOTALS ================= */
-
   const totalItems = useMemo(
-    () => cartItems.reduce((s, i) => s + i.quantity, 0),
+    () => cartItems.reduce((sum, i) => sum + i.quantity, 0),
     [cartItems],
   );
 
   const totalPrice = useMemo(
-    () => cartItems.reduce((s, i) => s + i.price * i.quantity, 0),
+    () => cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0),
     [cartItems],
   );
 
