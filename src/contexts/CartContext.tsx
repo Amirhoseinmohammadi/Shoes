@@ -83,6 +83,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       setLoading(true);
+
       const res = await fetch("/api/cart", {
         credentials: "include",
       });
@@ -95,6 +96,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       if (!res.ok) return;
 
       const data = await res.json();
+
       if (mountedRef.current && Array.isArray(data.cartItems)) {
         setCartItems(data.cartItems);
       }
@@ -140,15 +142,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         return false;
       }
 
-      setCartItems((prev) => {
-        const exists = prev.find((i) => i.id === data.cartItem.id);
-        if (exists) {
-          return prev.map((i) =>
-            i.id === data.cartItem.id ? data.cartItem : i,
-          );
-        }
-        return [...prev, data.cartItem];
-      });
+      await fetchCart();
 
       showToast({ type: "success", message: "به سبد خرید اضافه شد" });
       return true;
@@ -172,10 +166,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       const data = await res.json();
       if (!data.success) return false;
 
-      setCartItems((prev) =>
-        prev.map((i) => (i.id === cartItemId ? data.cartItem : i)),
-      );
-
+      await fetchCart();
       return true;
     } catch {
       return false;
@@ -192,7 +183,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       const data = await res.json();
       if (!data.success) return false;
 
-      setCartItems((prev) => prev.filter((i) => i.id !== cartItemId));
+      await fetchCart();
       return true;
     } catch {
       return false;
@@ -202,6 +193,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const checkout = async (customer: { name: string; phone: string }) => {
     try {
       setLoading(true);
+
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -212,7 +204,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       const data = await res.json();
       if (!data.success) return false;
 
-      setCartItems([]);
+      await fetchCart();
       showToast({ type: "success", message: "سفارش ثبت شد" });
       return true;
     } finally {
