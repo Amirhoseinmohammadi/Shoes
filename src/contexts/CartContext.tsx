@@ -9,8 +9,8 @@ import {
   ReactNode,
   useEffect,
   useCallback,
-  useRef,
   useMemo,
+  useRef,
 } from "react";
 
 interface TelegramUserType {
@@ -34,9 +34,14 @@ export interface CartItem {
 
 interface CartContextType {
   cartItems: CartItem[];
-  addItem: (...args: any[]) => Promise<boolean>;
-  removeItem: (id: number) => Promise<boolean>;
-  updateItemQuantity: (id: number, qty: number) => Promise<boolean>;
+  addItem: (data: {
+    productId: number;
+    quantity?: number;
+    color?: string;
+    sizeId?: number;
+  }) => Promise<boolean>;
+  removeItem: (cartItemId: number) => Promise<boolean>;
+  updateItemQuantity: (cartItemId: number, qty: number) => Promise<boolean>;
   checkout: (customer: { name: string; phone: string }) => Promise<boolean>;
   clearCart: () => Promise<void>;
   loading: boolean;
@@ -60,68 +65,164 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const { user: telegramUser, loading: authLoading, logout } = useAuth();
   const isAuthenticated = !!telegramUser?.id;
-
   const { showToast } = useToast();
+
   const mountedRef = useRef(true);
-  const abortRef = useRef<AbortController | null>(null);
-
-  useEffect(() => {
-    setCartItems([]);
-
-    if (abortRef.current) {
-      abortRef.current.abort();
-      abortRef.current = null;
-    }
-  }, [telegramUser?.id]);
-
-  /* ---------------- AUTH ERROR ---------------- */
 
   const handleUnauthorized = useCallback(async () => {
     showToast({
       type: "error",
       message: "جلسه شما منقضی شده است",
-      duration: 4000,
     });
     setCartItems([]);
     await logout();
-  }, [showToast, logout]);
+  }, [logout, showToast]);
+
+  const fetchCart = useCallback(async () => {
+    if (!isAuthenticated) return;
+
+    try {
+      setLoading(true);
+      const res = await fetch("/api/cart", {
+        credentials: "include",
+      });
+
+      if (res.status === 401) {
+        await handleUnauthorized();
+        return;
+      }
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+      if (mountedRef.current && Array.isArray(data.cartItems)) {
+        setCartItems(data.cartItems);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
+  }, [isAuthenticated, handleUnauthorized]);
 
   useEffect(() => {
-    if (!isAuthenticated || authLoading) return;
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    const fetchCart = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch("/api/cart", {
-          credentials: "include",
-          signal: controller.signal,
-        });
-
-        if (res.status === 401) {
-          await handleUnauthorized();
-          return;
-        }
-
-        if (!res.ok) return;
-
-        const data = await res.json();
-        if (mountedRef.current && Array.isArray(data.cartItems)) {
-          setCartItems(data.cartItems);
-        }
-      } catch (e: any) {
-        if (e.name !== "AbortError") console.error(e);
-      } finally {
-        if (mountedRef.current) setLoading(false);
-      }
-    };
-
     fetchCart();
+  }, [fetchCart]);
 
-    return () => controller.abort();
-  }, [isAuthenticated, authLoading, handleUnauthorized]);
+  const addItem = async ({
+    productId,
+    quantity = 1,
+    color,
+    sizeId,
+  }: {
+    productId: number;
+    quantity?: number;
+    color?: string;
+    sizeId?: number;
+  }) => {
+    try {
+      setLoading(true);
+
+      const res = await fetch("/api/cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ productId, quantity, color, sizeId }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        showToast({
+          type: "error",
+          message: data.error || "خطا در افزودن محصول",
+        });
+        return false;
+      }
+
+      setCartItems((prev) => {
+        const exists = prev.find((i) => i.id === data.cartItem.id);
+        if (exists) {
+          return prev.map((i) =>
+            i.id === data.cartItem.id ? data.cartItem : i,
+          );
+        }
+        return [...prev, data.cartItem];
+      });
+
+      showToast({ type: "success", message: "به سبد خرید اضافه شد" });
+      return true;
+    } catch {
+      showToast({ type: "error", message: "خطای ارتباط با سرور" });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateItemQuantity = async (cartItemId: number, qty: number) => {
+    try {
+      const res = await fetch("/api/cart", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ cartItemId, quantity: qty }),
+      });
+
+      const data = await res.json();
+      if (!data.success) return false;
+
+      setCartItems((prev) =>
+        prev.map((i) => (i.id === cartItemId ? data.cartItem : i)),
+      );
+
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const removeItem = async (cartItemId: number) => {
+    try {
+      const res = await fetch(`/api/cart?id=${cartItemId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      const data = await res.json();
+      if (!data.success) return false;
+
+      setCartItems((prev) => prev.filter((i) => i.id !== cartItemId));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const checkout = async (customer: { name: string; phone: string }) => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(customer),
+      });
+
+      const data = await res.json();
+      if (!data.success) return false;
+
+      setCartItems([]);
+      showToast({ type: "success", message: "سفارش ثبت شد" });
+      return true;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearCart = async () => {
+    setCartItems([]);
+  };
 
   const totalItems = useMemo(
     () => cartItems.reduce((s, i) => s + i.quantity, 0),
@@ -129,15 +230,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const totalPrice = useMemo(
-    () => cartItems.reduce((s, i) => s + (i.price || 0) * (i.quantity || 0), 0),
+    () => cartItems.reduce((s, i) => s + i.price * i.quantity, 0),
     [cartItems],
   );
-
-  const addItem = async () => true;
-  const removeItem = async () => true;
-  const updateItemQuantity = async () => true;
-  const checkout = async () => true;
-  const clearCart = async () => setCartItems([]);
 
   useEffect(() => {
     return () => {
