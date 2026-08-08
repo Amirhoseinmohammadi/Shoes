@@ -21,6 +21,17 @@ export default function ProductPage() {
   const [quantity] = useState(1);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  const variants = product?.variants ?? [];
+  const currentVariant = variants[selectedColorIndex] ?? null;
+
+  const images = useMemo(
+    () =>
+      currentVariant?.images?.map((i: any) => i.url) ||
+      product?.images?.map((i: any) => i.url) ||
+      [],
+    [currentVariant, product],
+  );
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 pt-4 pb-32 dark:bg-gray-900">
@@ -42,17 +53,6 @@ export default function ProductPage() {
       </div>
     );
   }
-
-  const variants = product.variants ?? [];
-  const currentVariant = variants[selectedColorIndex] ?? null;
-
-  const images = useMemo(
-    () =>
-      currentVariant?.images?.map((i: any) => i.url) ||
-      product.images?.map((i: any) => i.url) ||
-      [],
-    [currentVariant, product],
-  );
 
   const displayImage = images[currentImageIndex] || "/images/default-shoe.png";
 
