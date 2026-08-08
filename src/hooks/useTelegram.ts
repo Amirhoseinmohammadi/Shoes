@@ -22,8 +22,9 @@ export function useTelegram() {
 
   const sendData = useCallback((data: any) => {
     const tg = (window as any).Telegram?.WebApp;
-    if (!tg) return;
+    if (!tg) return false;
     tg.sendData?.(JSON.stringify(data));
+    return true;
   }, []);
 
   const logout = useCallback(async () => {
@@ -36,11 +37,9 @@ export function useTelegram() {
         method: "POST",
         credentials: "include",
       });
-      localStorage.removeItem("telegramUser");
     } catch (err) {
-      console.error("❌ Logout error:", err);
+      console.error("Logout error:", err);
     } finally {
-      // ✅ صفحه رو ریفرش کن تا session cookie حتماً پاک شود
       if (mountedRef.current) {
         window.location.href = "/";
       }
@@ -63,7 +62,6 @@ export function useTelegram() {
         const tg = (window as any).Telegram?.WebApp;
 
         if (!tg) {
-          console.log("⚠️ Telegram WebApp not available");
           if (mountedRef.current) {
             setIsTelegram(false);
             setLoading(false);
@@ -71,7 +69,6 @@ export function useTelegram() {
           return;
         }
 
-        console.log("✅ Telegram WebApp found");
         if (mountedRef.current) {
           setIsTelegram(true);
         }
@@ -79,33 +76,17 @@ export function useTelegram() {
         try {
           tg.ready?.();
           tg.expand?.();
-        } catch (e) {
-          console.warn("⚠️ Could not call Telegram methods:", e);
-        }
+        } catch {}
 
         const tgUser: TelegramUser = tg.initDataUnsafe?.user;
 
-        if (!tgUser?.id) {
-          console.error("❌ No user ID found in Telegram data");
+        if (!tgUser?.id || !tg.initData) {
           if (mountedRef.current) {
             setUser(null);
             setLoading(false);
           }
           return;
         }
-
-        console.log("👤 User found in Telegram:", tgUser.id);
-
-        if (!tg.initData) {
-          console.error("❌ No initData available");
-          if (mountedRef.current) {
-            setUser(null);
-            setLoading(false);
-          }
-          return;
-        }
-
-        console.log("📤 Validating with server...");
 
         const response = await fetch("/api/validate-init", {
           method: "POST",
@@ -114,15 +95,7 @@ export function useTelegram() {
           credentials: "include",
         });
 
-        console.log("📥 Server response:", response.status);
-
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error(
-            "❌ Server validation failed:",
-            response.status,
-            errorData,
-          );
           if (mountedRef.current) {
             setUser(null);
             setLoading(false);
@@ -131,10 +104,6 @@ export function useTelegram() {
         }
 
         const result = await response.json();
-        console.log(
-          "✅ Validation result:",
-          result.success ? "success" : "failed",
-        );
 
         if (result.success && result.user) {
           const validatedUser: TelegramUser = {
@@ -144,22 +113,14 @@ export function useTelegram() {
 
           if (mountedRef.current) {
             setUser(validatedUser);
-            console.log("✅ Auth successful for user:", validatedUser.id);
-          }
-
-          try {
-            localStorage.setItem("telegramUser", JSON.stringify(validatedUser));
-          } catch (e) {
-            console.warn("⚠️ Could not save to localStorage:", e);
           }
         } else {
-          console.error("❌ Validation failed:", result.error);
           if (mountedRef.current) {
             setUser(null);
           }
         }
       } catch (error) {
-        console.error("❌ Telegram init error:", error);
+        console.error("Telegram init error:", error);
         if (mountedRef.current) {
           setUser(null);
         }
@@ -197,6 +158,6 @@ export function useTelegram() {
     isTelegram,
     logout,
     isAuthenticated: !!user?.id,
-    isAdmin: user?.isAdmin || false,
+    isAdmin: user?.isAdmin ?? false,
   };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, TelegramUser } from "@/contexts/AuthContext";
 import { useToast } from "./ToastContext";
 import {
   createContext,
@@ -12,13 +12,6 @@ import {
   useMemo,
   useRef,
 } from "react";
-
-interface TelegramUserType {
-  id: number;
-  first_name?: string;
-  last_name?: string;
-  username?: string;
-}
 
 export interface CartItem {
   id: number;
@@ -48,7 +41,7 @@ interface CartContextType {
   totalItems: number;
   totalPrice: number;
   isAuthenticated: boolean;
-  telegramUser: TelegramUserType | null;
+  telegramUser: TelegramUser | null;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -237,7 +230,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       });
 
       const data = await res.json();
-      if (!data.success) return false;
+      if (!data.success) {
+        showToast({
+          type: "error",
+          message: data?.error || "خطا در ثبت سفارش",
+        });
+        return false;
+      }
 
       await fetchCart();
 
@@ -247,13 +246,31 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       });
 
       return true;
+    } catch (err) {
+      console.error("checkout error:", err);
+      showToast({
+        type: "error",
+        message: "خطای ارتباط با سرور",
+      });
+      return false;
     } finally {
       if (mountedRef.current) setLoading(false);
     }
   };
 
   const clearCart = async () => {
-    setCartItems([]);
+    try {
+      const res = await fetch("/api/cart", {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        setCartItems([]);
+      }
+    } catch (err) {
+      console.error("clearCart error:", err);
+    }
   };
 
   const totalItems = useMemo(

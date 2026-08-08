@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode, useRef, useEffect } from "react";
 import { CheckCircle, AlertCircle, AlertTriangle, Info } from "lucide-react";
 
 interface Toast {
@@ -29,13 +29,19 @@ export const useToast = () => {
 
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const timeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const removeToast = (id: string) => {
+    const timeout = timeoutsRef.current.get(id);
+    if (timeout) {
+      clearTimeout(timeout);
+      timeoutsRef.current.delete(id);
+    }
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
   const showToast = (toast: Omit<Toast, "id">) => {
-    const id = Date.now().toString();
+    const id = crypto.randomUUID();
     const newToast: Toast = { ...toast, id };
 
     setToasts((prev) => [...prev, newToast]);
@@ -43,11 +49,19 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
     const duration = newToast.duration ?? (newToast.action ? undefined : 3000);
 
     if (duration) {
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         removeToast(id);
       }, duration);
+      timeoutsRef.current.set(id, timeout);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+      timeoutsRef.current.clear();
+    };
+  }, []);
 
   const getIcon = (type: Toast["type"]) => {
     switch (type) {
