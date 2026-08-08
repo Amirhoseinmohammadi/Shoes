@@ -1,9 +1,10 @@
-import useSWR from "swr";
+import useSWR, { SWRConfiguration } from "swr";
 import { apiClient } from "@/lib/api-client";
 
-const defaultConfig = {
+const defaultConfig: SWRConfiguration = {
   revalidateOnFocus: false,
   dedupingInterval: 60000,
+  shouldRetryOnError: false,
 };
 
 export const useApi = {
