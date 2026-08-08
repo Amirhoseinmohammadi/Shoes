@@ -108,7 +108,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           brand: product.brand ?? "",
           price: Number(product.price ?? 0),
           image:
-            product.images?.[0]?.url ||
             product.variants?.[0]?.images?.[0]?.url ||
             "/images/default-shoe.png",
           quantity: Number(item.quantity ?? 1),

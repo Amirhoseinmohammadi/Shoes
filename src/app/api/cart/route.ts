@@ -22,7 +22,6 @@ export async function GET() {
       include: {
         product: {
           include: {
-            images: true,
             variants: { include: { images: true } },
           },
         },
