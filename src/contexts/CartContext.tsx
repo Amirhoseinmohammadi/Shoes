@@ -1,6 +1,8 @@
 "use client";
 
-import { useAuth, TelegramUser } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
+import type { AuthUser } from "@/types/auth";
+import type { CartItem, AddToCartInput, CheckoutInput } from "@/types/cart";
 import { useToast } from "./ToastContext";
 import {
   createContext,
@@ -13,35 +15,21 @@ import {
   useRef,
 } from "react";
 
-export interface CartItem {
-  id: number;
-  productId: number;
-  name: string;
-  brand: string;
-  price: number;
-  image: string;
-  quantity: number;
-  color?: string;
-  size?: string;
-}
+// CartItem re-exported from @/types/cart
+export type { CartItem } from "@/types/cart";
 
 interface CartContextType {
   cartItems: CartItem[];
-  addItem: (data: {
-    productId: number;
-    quantity?: number;
-    color?: string;
-    sizeId?: number;
-  }) => Promise<boolean>;
+  addItem: (data: AddToCartInput) => Promise<boolean>;
   removeItem: (cartItemId: number) => Promise<boolean>;
   updateItemQuantity: (cartItemId: number, qty: number) => Promise<boolean>;
-  checkout: (customer: { name: string; phone: string }) => Promise<boolean>;
+  checkout: (customer: CheckoutInput) => Promise<boolean>;
   clearCart: () => Promise<void>;
   loading: boolean;
   totalItems: number;
   totalPrice: number;
   isAuthenticated: boolean;
-  telegramUser: TelegramUser | null;
+  telegramUser: AuthUser | null;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -98,7 +86,20 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
       if (!Array.isArray(data.cartItems)) return;
 
-      const normalized: CartItem[] = data.cartItems.map((item: any) => {
+      const normalized: CartItem[] = data.cartItems.map((item: {
+        id: number;
+        productId: number;
+        color?: string | null;
+        quantity?: number;
+        product?: {
+          id?: number;
+          name?: string;
+          brand?: string;
+          price?: number;
+          variants?: { images?: { url: string }[] }[];
+        };
+        size?: { label?: string; size?: string } | null;
+      }) => {
         const product = item.product || {};
 
         return {
@@ -135,12 +136,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     quantity = 1,
     color,
     sizeId,
-  }: {
-    productId: number;
-    quantity?: number;
-    color?: string;
-    sizeId?: number;
-  }) => {
+  }: AddToCartInput) => {
     try {
       setLoading(true);
 
@@ -217,7 +213,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const checkout = async (customer: { name: string; phone: string }) => {
+  const checkout = async (customer: CheckoutInput) => {
     try {
       setLoading(true);
 

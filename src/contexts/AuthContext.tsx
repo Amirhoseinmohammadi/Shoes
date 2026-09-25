@@ -10,17 +10,13 @@ import {
   useMemo,
   useCallback,
 } from "react";
+import type { AuthUser } from "@/types/auth";
 
-export interface TelegramUser {
-  id: number;
-  first_name?: string;
-  last_name?: string;
-  username?: string;
-  isAdmin?: boolean;
-}
+/** @deprecated از `AuthUser` در `@/types/auth` استفاده کنید */
+export type TelegramUser = AuthUser;
 
 interface AuthContextType {
-  user: TelegramUser | null;
+  user: AuthUser | null;
   loading: boolean;
   isTelegram: boolean;
   isAuthenticated: boolean;
@@ -43,7 +39,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const [user, setUser] = useState<TelegramUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [isTelegram, setIsTelegram] = useState(false);
 

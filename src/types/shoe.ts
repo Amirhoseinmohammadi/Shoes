@@ -1,30 +1,5 @@
 // src/types/shoe.ts
-export interface VariantImage {
-  id: number;
-  url: string;
-  variantId: number;
-}
+// ⚠️ DEPRECATED — این فایل فقط برای backward compatibility نگه داشته شده.
+// لطفاً از "@/types/product" import کنید.
 
-export interface VariantSize {
-  id: number;
-  size: string;
-  stock: number;
-  variantId: number;
-}
-
-export interface ShoeVariant {
-  id: number;
-  color: string;
-  images: VariantImage[];
-  sizes: VariantSize[];
-}
-
-export interface Shoe {
-  id: number;
-  name: string;
-  brand: string;
-  price: number;
-  description?: string | null;
-  image?: string | null;
-  variants: ShoeVariant[];
-}
+export type { VariantImage, ProductSize as VariantSize, ProductVariant as ShoeVariant, Product as Shoe } from "./product";

@@ -3,6 +3,12 @@
 import { useEffect, useState, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  TelegramStatus,
+  WelcomeToast,
+  HomeLoadingSkeleton,
+} from "@/components/Home";
+import LoadingSkeleton from "@/components/Common/LoadingSkeleton";
 
 const Hero = dynamic(() => import("@/components/Hero"), {
   loading: () => (
@@ -14,14 +20,7 @@ const Hero = dynamic(() => import("@/components/Hero"), {
 const Products = dynamic(() => import("@/components/Products"), {
   loading: () => (
     <div className="container mx-auto px-4 py-12">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-4">
-        {[...Array(8)].map((_, i) => (
-          <div
-            key={i}
-            className="aspect-square animate-pulse rounded-2xl bg-gray-200 dark:bg-gray-700"
-          />
-        ))}
-      </div>
+      <LoadingSkeleton type="productGrid" count={8} />
     </div>
   ),
   ssr: true,
@@ -34,104 +33,8 @@ const ThemeToggler = dynamic(() => import("@/components/Header/ThemeToggler"), {
   ssr: false,
 });
 
-const TelegramStatus = ({
-  isTelegram,
-  loading,
-  user,
-}: {
-  isTelegram: boolean;
-  loading: boolean;
-  user: any;
-}) => {
-  if (!isTelegram) {
-    return (
-      <div className="container mx-auto mb-6 px-4">
-        <div className="rounded-2xl bg-gradient-to-r from-gray-600 to-gray-700 p-4 text-center text-white shadow-lg">
-          <div className="flex items-center justify-center gap-3">
-            <span className="text-xl" aria-label="warning">
-              ⚠️
-            </span>
-            <span className="font-medium">
-              لطفاً برنامه را از طریق تلگرام باز کنید.
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="container mx-auto mb-6 px-4">
-        <div className="rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 p-4 text-center text-white shadow-lg">
-          <div className="flex items-center justify-center gap-3">
-            <div
-              className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
-              role="status"
-              aria-label="loading"
-            />
-            <span className="font-medium">در حال اتصال به تلگرام...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="container mx-auto mb-6 px-4">
-        <div className="rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 p-4 text-center text-white shadow-lg">
-          <div className="flex items-center justify-center gap-3">
-            <span className="text-xl" aria-label="warning">
-              ⚠️
-            </span>
-            <span className="font-medium">کاربر تلگرام شناسایی نشد</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return null;
-};
-
-const WelcomeToast = ({
-  show,
-  userName,
-}: {
-  show: boolean;
-  userName?: string;
-}) => {
-  if (!show) return null;
-
-  return (
-    <div
-      className="animate-fade-in fixed bottom-32 left-1/2 z-50 -translate-x-1/2 transform rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4 text-white shadow-2xl"
-      role="status"
-      aria-live="polite"
-    >
-      <div className="flex items-center gap-3">
-        <span className="text-2xl" aria-hidden="true">
-          👋
-        </span>
-        <div>
-          <p className="font-bold">خوش آمدید {userName || "کاربر"}!</p>
-          <p className="text-sm opacity-90">به فروشگاه ما خوش آمدید</p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const HomeLoadingSkeleton = () => (
-  <div className="min-h-screen bg-white dark:bg-gray-900">
-    <div className="fixed top-4 right-4 z-50 h-10 w-10 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700" />
-    <div className="h-screen w-full animate-pulse bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800" />
-  </div>
-);
-
 export default function Home() {
-  const { user, loading, isAdmin, isTelegram } = useAuth();
+  const { user, loading, isTelegram } = useAuth();
   const [showWelcome, setShowWelcome] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -144,11 +47,8 @@ export default function Home() {
       const welcomeKey = `welcomeShown_user_${user.id}`;
 
       if (typeof window !== "undefined" && !localStorage.getItem(welcomeKey)) {
-        console.log("🎉 نمایش پیام خوش آمدگویی (LocalStorage Check)");
-
         const showTimer = setTimeout(() => {
           setShowWelcome(true);
-
           localStorage.setItem(welcomeKey, "true");
         }, 500);
 
@@ -169,7 +69,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-white dark:bg-gray-900">
+    <div className="min-h-screen w-full bg-white dark:bg-gray-900 transition-colors">
       <div
         className="fixed top-4 right-4 z-50"
         role="region"
@@ -197,14 +97,7 @@ export default function Home() {
       <Suspense
         fallback={
           <div className="container mx-auto px-4 py-12">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-4">
-              {[...Array(8)].map((_, i) => (
-                <div
-                  key={i}
-                  className="aspect-square animate-pulse rounded-2xl bg-gray-200 dark:bg-gray-700"
-                />
-              ))}
-            </div>
+            <LoadingSkeleton type="productGrid" count={8} />
           </div>
         }
       >

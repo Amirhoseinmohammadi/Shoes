@@ -1,26 +1,19 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import type { AuthUser, TelegramWebAppUser } from "@/types/auth";
 
-export interface TelegramUser {
-  id: number;
-  first_name?: string;
-  last_name?: string;
-  username?: string;
-  language_code?: string;
-  is_premium?: boolean;
-  photo_url?: string;
-  isAdmin?: boolean;
-}
+/** @deprecated از `AuthUser` در `@/types/auth` استفاده کنید */
+export type TelegramUser = AuthUser;
 
 export function useTelegram() {
-  const [user, setUser] = useState<TelegramUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [isTelegram, setIsTelegram] = useState(false);
   const initializingRef = useRef(false);
   const mountedRef = useRef(true);
 
-  const sendData = useCallback((data: any) => {
+  const sendData = useCallback((data: Record<string, unknown>) => {
     const tg = (window as any).Telegram?.WebApp;
     if (!tg) return false;
     tg.sendData?.(JSON.stringify(data));
@@ -78,7 +71,7 @@ export function useTelegram() {
           tg.expand?.();
         } catch {}
 
-        const tgUser: TelegramUser = tg.initDataUnsafe?.user;
+        const tgUser: TelegramWebAppUser | undefined = tg.initDataUnsafe?.user;
 
         if (!tgUser?.id || !tg.initData) {
           if (mountedRef.current) {

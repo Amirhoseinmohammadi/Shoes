@@ -1,3 +1,14 @@
+import type {
+  ApiResponse,
+  Product,
+  ProductInput,
+  Order,
+  CreateOrderInput,
+  UpdateOrderStatusInput,
+  AuthUser,
+  ValidateInitResponse,
+} from "@/types/api";
+
 const API_BASE = process.env.NEXT_PUBLIC_APP_URL || "";
 
 class ApiClient {
@@ -10,10 +21,10 @@ class ApiClient {
     );
   }
 
-  public async request(
+  public async request<T = unknown>(
     endpoint: string,
     options: RequestInit = {},
-  ): Promise<any> {
+  ): Promise<T> {
     const base = this.getBase();
     const url = new URL(endpoint, base).toString();
 
@@ -74,7 +85,7 @@ class ApiClient {
       }
 
       // Return text if content type is not JSON (e.g., HTML, plain text)
-      return await response.text();
+      return (await response.text()) as unknown as T;
     } catch (error) {
       console.error("❌ apiClient request failed:", endpoint, error);
       throw error;
@@ -84,21 +95,10 @@ class ApiClient {
   // --- Endpoints remain the same, relying on the now public request method ---
 
   auth = {
-    login: (email: string, password: string) =>
-      this.request("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-      }),
+    logout: () =>
+      this.request<ApiResponse<null>>("/api/auth/logout", { method: "POST" }),
 
-    register: (userData: any) =>
-      this.request("/api/auth/register", {
-        method: "POST",
-        body: JSON.stringify(userData),
-      }),
-
-    logout: () => this.request("/api/auth/logout", { method: "POST" }),
-
-    getSession: () => this.request("/api/auth/session"),
+    getSession: () => this.request<ApiResponse<AuthUser>>("/api/auth/session"),
   };
 
   users = {
@@ -121,52 +121,55 @@ class ApiClient {
       const url = category
         ? `/api/products?category=${encodeURIComponent(category)}`
         : "/api/products";
-      return this.request(url);
+      return this.request<ApiResponse<Product[]>>(url);
     },
 
-    getById: (id: number) => this.request(`/api/products/${id}`),
+    getById: (id: number) =>
+      this.request<ApiResponse<Product>>(`/api/products/${id}`),
 
-    create: (productData: any) =>
-      this.request("/api/products", {
+    create: (productData: ProductInput) =>
+      this.request<ApiResponse<Product>>("/api/products", {
         method: "POST",
         body: JSON.stringify(productData),
       }),
 
-    update: (id: number, productData: any) =>
-      this.request(`/api/products/${id}`, {
+    update: (id: number, productData: Partial<ProductInput>) =>
+      this.request<ApiResponse<Product>>(`/api/products/${id}`, {
         method: "PUT",
         body: JSON.stringify(productData),
       }),
 
     delete: (id: number) =>
-      this.request(`/api/products/${id}`, { method: "DELETE" }),
-
-    search: (query: string) =>
-      this.request(`/api/products/search?q=${encodeURIComponent(query)}`),
+      this.request<ApiResponse<null>>(`/api/products/${id}`, {
+        method: "DELETE",
+      }),
   };
 
   orders = {
     getAll: (userId?: number) => {
       const url = userId ? `/api/orders?userId=${userId}` : "/api/orders";
-      return this.request(url);
+      return this.request<ApiResponse<Order[]>>(url);
     },
 
-    getById: (id: number) => this.request(`/api/orders/${id}`),
+    getById: (id: number) =>
+      this.request<ApiResponse<Order>>(`/api/orders/${id}`),
 
-    create: (orderData: any) =>
-      this.request("/api/orders", {
+    create: (orderData: CreateOrderInput) =>
+      this.request<ApiResponse<Order>>("/api/orders", {
         method: "POST",
         body: JSON.stringify(orderData),
       }),
 
-    updateStatus: (id: number, status: string) =>
-      this.request(`/api/orders/${id}`, {
+    updateStatus: (id: number, status: UpdateOrderStatusInput["status"]) =>
+      this.request<ApiResponse<Order>>(`/api/orders/${id}`, {
         method: "PUT",
         body: JSON.stringify({ status }),
       }),
 
     delete: (id: number) =>
-      this.request(`/api/orders/${id}`, { method: "DELETE" }),
+      this.request<ApiResponse<null>>(`/api/orders/${id}`, {
+        method: "DELETE",
+      }),
   };
 
   categories = {
@@ -191,17 +194,9 @@ class ApiClient {
 
   telegram = {
     validateInit: (initData: string) =>
-      this.request("/api/telegram/validate-init", {
+      this.request<ValidateInitResponse>("/api/validate-init", {
         method: "POST",
         body: JSON.stringify({ initData }),
-      }),
-
-    getUser: (userId: number) => this.request(`/api/telegram/user/${userId}`),
-
-    sendMessage: (userId: number, message: string) =>
-      this.request("/api/telegram/send-message", {
-        method: "POST",
-        body: JSON.stringify({ userId, message }),
       }),
   };
 }

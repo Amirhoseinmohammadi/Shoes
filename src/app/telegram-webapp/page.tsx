@@ -1,19 +1,12 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Script from "next/script";
-import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api-client";
-
-interface TelegramUser {
-  id: number;
-  first_name: string;
-  last_name?: string;
-  username?: string;
-  language_code?: string;
-}
+import { AuthUser } from "@/types/auth";
 
 export default function TelegramWebApp() {
-  const [user, setUser] = useState<TelegramUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -55,11 +48,11 @@ export default function TelegramWebApp() {
       const response = await apiClient.telegram.validateInit(initData);
       console.log("✅ Telegram validation response:", response);
 
-      if (response.valid && response.payload?.user) {
-        setUser(response.payload.user);
+      if (response.success && response.user) {
+        setUser(response.user);
         localStorage.setItem(
           "telegramUser",
-          JSON.stringify(response.payload.user),
+          JSON.stringify(response.user),
         );
       } else {
         console.warn("🚫 Invalid initData", response);

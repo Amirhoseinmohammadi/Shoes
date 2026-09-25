@@ -15,6 +15,7 @@ interface AugmentedShoe extends Shoe {
 
 interface SingleShoeProps {
   shoe: AugmentedShoe;
+  telegramUser?: unknown;
 }
 
 const colorMap: Record<string, string> = {
@@ -103,7 +104,7 @@ export default memo(function SingleShoe({ shoe }: SingleShoeProps) {
 
   const selectedImage = images[0] || "/images/default-shoe.png";
 
-  const displayPrice = variant?.price ?? currentShoe?.price ?? 0;
+  const displayPrice = (variant as unknown as { price?: number })?.price ?? currentShoe?.price ?? 0;
 
   const isCurrentPage = params?.id?.toString() === currentShoe?.id?.toString();
 

@@ -1,58 +1,31 @@
-// types/api.ts
+// src/types/api.ts
+// ─── API Response Wrappers ────────────────────────────────────────────────────
 
-export interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: "user" | "admin";
-  createdAt: string;
+/** Response موفق از API */
+export interface ApiSuccess<T> {
+  success: true;
+  data?: T;
+  message?: string;
 }
 
-export interface Product {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  image: string;
-  category: string;
-  sizes: string[];
-  colors: string[];
-  stock: number;
-  createdAt: string;
+/** Response خطا از API */
+export interface ApiError {
+  success: false;
+  error: string;
 }
 
-export interface OrderItem {
-  id: number;
-  productId: number;
-  quantity: number;
-  price: number;
-  size: string;
-  color: string;
-  product: Product;
-}
+/** Union type برای همه‌ی API response ها */
+export type ApiResponse<T> = ApiSuccess<T> | ApiError;
 
-export interface Order {
-  id: number;
-  userId: number;
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
-  totalAmount: number;
-  items: OrderItem[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Category {
-  id: number;
-  name: string;
-  slug: string;
-}
-
-export interface Comment {
-  id: number;
-  userId: number;
-  productId: number;
-  content: string;
-  rating: number;
-  createdAt: string;
-  user: User;
-}
+// ─── Re-export همه type های دیگر برای import راحت‌تر ──────────────────────────
+export type { TelegramWebAppUser, AuthUser, SessionPayload, ValidateInitResponse } from "./auth";
+export type { Product, ProductSummary, ProductInput, ProductVariant, ProductSize, VariantImage } from "./product";
+export type {
+  Order,
+  OrderItem,
+  OrderStatus,
+  CreateOrderInput,
+  UpdateOrderStatusInput,
+} from "./order";
+export { ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from "./order";
+export type { CartItem, AddToCartInput, CheckoutInput } from "./cart";
