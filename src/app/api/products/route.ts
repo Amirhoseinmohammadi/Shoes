@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { errorResponse, successResponse, unauthorizedResponse } from "@/lib/apiResponse";
 import { PrismaClient } from "@prisma/client";
 
 declare global {
@@ -13,6 +14,9 @@ export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const id = url.searchParams.get("id");
+    const page = parseInt(url.searchParams.get("page") || "1", 10);
+    const limit = parseInt(url.searchParams.get("limit") || "20", 10);
+    const skip = (page - 1) * limit;
 
     if (id) {
       const product = await prisma.product.findUnique({
@@ -35,9 +39,14 @@ export async function GET(req: NextRequest) {
     }
 
     const products = await prisma.product.findMany({
+      skip,
+      take: limit,
       include: { variants: { include: { images: true, sizes: true } } },
     });
-    return NextResponse.json(products);
+
+    const total = await prisma.product.count();
+
+    return NextResponse.json({ data: products, pagination: { page, limit, total } });
   } catch (error) {
     console.error("GET /api/products error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
@@ -46,6 +55,16 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    // Admin authentication
+    const sessionUserId = await (await import("@/lib/session")).getSession().then(s => s?.userId);
+    if (!sessionUserId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const adminUser = await prisma.user.findUnique({ where: { id: sessionUserId } });
+    if (!adminUser || adminUser.telegramId !== process.env.ADMIN_TELEGRAM_ID) {
+      return NextResponse.json({ error: "Forbidden - admin only" }, { status: 403 });
+    }
+
     const body = await req.json();
     const { name, brand, price, image, variants } = body;
 

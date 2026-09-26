@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { errorResponse, successResponse, unauthorizedResponse } from "@/lib/apiResponse";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
@@ -28,11 +29,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      message: `سبد خرید شما با موفقیت پاک شد (${deleted.count} آیتم حذف شد)`,
-      deletedCount: deleted.count,
-    });
+    return successResponse({ message: `سبد خرید شما با موفقیت پاک شد (${deleted.count} آیتم حذف شد)`,
+      deletedCount: deleted.count, });
   } catch (err: any) {
     console.error("POST /api/cart/clear error:", err);
     return NextResponse.json(

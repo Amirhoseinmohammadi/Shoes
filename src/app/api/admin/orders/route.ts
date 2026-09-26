@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { errorResponse, successResponse, unauthorizedResponse } from "@/lib/apiResponse";
 import { orderService } from "@/services/order.service";
 import { getSession } from "@/lib/session";
 import { OrderStatus } from "@prisma/client";
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest) {
       limit,
     });
 
-    return NextResponse.json({ success: true, orders });
+    return successResponse({ orders });
   } catch (error) {
     console.error("GET /api/admin/orders error:", error);
     return NextResponse.json(
@@ -55,7 +56,7 @@ export async function PATCH(req: NextRequest) {
 
     const updatedOrder = await orderService.updateOrderStatus(orderId, status);
 
-    return NextResponse.json({ success: true, order: updatedOrder });
+    return successResponse({ order: updatedOrder });
   } catch (error) {
     console.error("PATCH /api/admin/orders error:", error);
     return NextResponse.json(

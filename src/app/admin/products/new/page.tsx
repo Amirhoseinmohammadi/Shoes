@@ -241,7 +241,7 @@ export default function NewProductPage() {
       }
 
       const result = await res.json();
-      console.log("محصول ایجاد شد:", result);
+      
 
       router.push("/admin/products");
       router.refresh();

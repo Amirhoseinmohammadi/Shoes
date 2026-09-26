@@ -5,7 +5,7 @@ if (!process.env.TELEGRAM_BOT_TOKEN) {
   throw new Error("❌ TELEGRAM_BOT_TOKEN is not set");
 }
 
-const secret = new TextEncoder().encode(process.env.TELEGRAM_BOT_TOKEN);
+const secret = new TextEncoder().encode(process.env.SESSION_SECRET ?? (() => { console.warn('⚠️ SESSION_SECRET not set, falling back to TELEGRAM_BOT_TOKEN'); return process.env.TELEGRAM_BOT_TOKEN; })());
 
 export const SESSION_COOKIE_NAME = "telegram_session";
 const SESSION_DURATION_SECONDS = 24 * 60 * 60; // 24h
@@ -48,7 +48,7 @@ export async function setSessionCookie(payload: SessionPayload): Promise<void> {
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: "strict",
     path: "/",
     maxAge: SESSION_DURATION_SECONDS,
   });
@@ -66,13 +66,6 @@ export async function getSession(): Promise<SessionPayload | null> {
 export async function clearSessionCookie(): Promise<void> {
   const cookieStore = await cookies();
 
-  cookieStore.set(SESSION_COOKIE_NAME, "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
-
+  // Directly delete the session cookie. Setting it with maxAge:0 is redundant.
   cookieStore.delete(SESSION_COOKIE_NAME);
 }

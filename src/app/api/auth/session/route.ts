@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse, successResponse, unauthorizedResponse } from "@/lib/apiResponse";
 import { getSession } from "@/lib/session";
 
 export async function GET() {
@@ -6,34 +7,19 @@ export async function GET() {
     const session = await getSession();
 
     if (!session || typeof session.userId !== "number") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "No active session",
-        },
-        { status: 401 },
-      );
+    return errorResponse("No active session", 401);
     }
 
-    return NextResponse.json({
-      success: true,
-      user: {
+    return successResponse({ user: {
         id: session.userId,
         first_name: session.firstName ?? null,
         last_name: session.lastName ?? null,
         username: session.username ?? null,
         isAdmin: session.isAdmin ?? false,
-      },
-    });
+      }, });
   } catch (error) {
     console.error("❌ GET /api/auth/session error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to read session",
-      },
-      { status: 500 },
-    );
+    return errorResponse("Failed to read session", 500);
   }
 }
 

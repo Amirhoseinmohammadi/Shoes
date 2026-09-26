@@ -19,13 +19,13 @@ export default function TelegramWebApp() {
           return;
         }
 
-        console.log("📲 Telegram WebApp detected:", tg.version);
+        
         tg.ready();
         tg.expand();
         tg.enableClosingConfirmation(false);
 
         const initData = tg?.initDataUnsafe || tg?.initData;
-        console.log("📦 initData received:", initData);
+        
 
         if (initData && Object.keys(initData).length > 0) {
           await validateUser(tg.initData);
@@ -46,7 +46,7 @@ export default function TelegramWebApp() {
     try {
       setLoading(true);
       const response = await apiClient.telegram.validateInit(initData);
-      console.log("✅ Telegram validation response:", response);
+      
 
       if (response.success && response.user) {
         setUser(response.user);
@@ -68,7 +68,7 @@ export default function TelegramWebApp() {
     const tg = (window as any).Telegram?.WebApp;
     if (tg) {
       tg.sendData(JSON.stringify({ action: "checkout" }));
-      console.log("🛒 Checkout data sent to Telegram");
+      
     }
   };
 

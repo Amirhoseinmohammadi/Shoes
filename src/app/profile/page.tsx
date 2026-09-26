@@ -128,7 +128,7 @@ const ProfilePage = () => {
 
     if (!href) return;
 
-    console.log("Navigating to:", href, "isTelegram:", isTelegram);
+    
 
     if (isTelegram) {
       router.push(href);

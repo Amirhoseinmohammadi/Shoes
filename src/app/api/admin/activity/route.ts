@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse, successResponse, unauthorizedResponse } from "@/lib/apiResponse";
 import { adminService } from "@/services/admin.service";
 import { getSession } from "@/lib/session";
 
@@ -13,7 +14,7 @@ export async function GET() {
     }
 
     const activities = await adminService.getRecentActivities();
-    return NextResponse.json({ success: true, activities });
+    return successResponse({ activities });
   } catch (error) {
     console.error("GET /api/admin/activity error:", error);
     return NextResponse.json(

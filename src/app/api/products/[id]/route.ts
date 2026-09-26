@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { errorResponse, successResponse, unauthorizedResponse } from "@/lib/apiResponse";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(
@@ -32,6 +33,14 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
+    const sessionUserId = await (await import("@/lib/session")).getSession().then(s => s?.userId);
+    if (!sessionUserId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const adminUser = await prisma.user.findUnique({ where: { id: sessionUserId } });
+    if (!adminUser || adminUser.telegramId !== process.env.ADMIN_TELEGRAM_ID) {
+      return NextResponse.json({ error: "Forbidden - admin only" }, { status: 403 });
+    }
     const body = await req.json();
     const { name, brand, price, image } = body;
 
@@ -56,6 +65,14 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const sessionUserId = await (await import("@/lib/session")).getSession().then(s => s?.userId);
+    if (!sessionUserId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const adminUser = await prisma.user.findUnique({ where: { id: sessionUserId } });
+    if (!adminUser || adminUser.telegramId !== process.env.ADMIN_TELEGRAM_ID) {
+      return NextResponse.json({ error: "Forbidden - admin only" }, { status: 403 });
+    }
     await prisma.product.delete({
       where: { id: Number(id) },
     });

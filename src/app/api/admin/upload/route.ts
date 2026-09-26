@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { errorResponse, successResponse, unauthorizedResponse } from "@/lib/apiResponse";
 import { requireAuth } from "@/lib/auth-guard";
 
 export async function POST(request: NextRequest) {
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`✅ Admin ${authReq.userId} uploading image`);
+    
 
     const formData = await request.formData();
     const file = formData.get("image") as File;
@@ -45,13 +46,10 @@ export async function POST(request: NextRequest) {
     const base64 = Buffer.from(bytes).toString("base64");
     const dataUrl = `data:${file.type};base64,${base64}`;
 
-    console.log(`✅ Image uploaded successfully by admin ${authReq.userId}`);
+    
 
-    return NextResponse.json({
-      success: true,
-      imageUrl: dataUrl,
-      message: "تصویر با موفقیت آپلود شد",
-    });
+    return successResponse({ imageUrl: dataUrl,
+      message: "تصویر با موفقیت آپلود شد", });
   } catch (error: any) {
     console.error("❌ Upload error:", error);
     return NextResponse.json(

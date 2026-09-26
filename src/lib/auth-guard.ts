@@ -1,4 +1,30 @@
 import { NextRequest } from "next/server";
+import { getSession } from "@/lib/session";
+import { unauthorizedResponse } from "@/lib/apiResponse";
+
+/**
+ * Simple authentication guard that checks the session cookie.
+ * Returns the request object with attached user information when authorized,
+ * otherwise returns a standardized unauthorized response.
+ */
+export async function requireAuth(
+  request: NextRequest,
+  requireAdmin: boolean = false,
+): Promise<NextRequest | ReturnType<typeof unauthorizedResponse>> {
+  const session = await getSession();
+  if (!session?.userId) {
+    return unauthorizedResponse();
+  }
+  if (requireAdmin && !session.isAdmin) {
+    return unauthorizedResponse();
+  }
+  // Attach useful fields to the request for downstream handlers.
+  (request as any).userId = session.userId;
+  (request as any).isAdmin = session.isAdmin;
+  (request as any).username = session.username;
+  return request;
+}
+
 
 export interface AuthenticatedRequest extends NextRequest {
   userId?: number;

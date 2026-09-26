@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { errorResponse, successResponse, unauthorizedResponse } from "@/lib/apiResponse";
 import { requireAuth } from "@/lib/auth-guard";
 import { PrismaClient } from "@prisma/client";
 
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`✅ Admin ${authReq.userId} fetching products`);
+    
 
     // ✅ مرحله 2: دریافت تمام محصولات
     const products = await prisma.product.findMany({
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`✅ Admin ${authReq.userId} creating product`);
+    
 
     // ✅ مرحله 2: دریافت داده های از request
     const data = await request.json();
@@ -141,13 +142,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log(`✅ Product ${product.id} created by admin ${authReq.userId}`);
+    
 
-    return NextResponse.json({
-      success: true,
-      message: "محصول با موفقیت ایجاد شد",
-      product,
-    });
+    return successResponse({ message: "محصول با موفقیت ایجاد شد",
+      product, });
   } catch (error: any) {
     console.error("❌ Error creating product:", error);
     return NextResponse.json(

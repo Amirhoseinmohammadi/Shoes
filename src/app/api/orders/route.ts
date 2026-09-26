@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { successResponse, errorResponse, unauthorizedResponse } from "@/lib/apiResponse";
 
 const ADMIN_TELEGRAM_ID = process.env.ADMIN_TELEGRAM_ID;
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -40,20 +41,14 @@ export async function GET() {
       take: 50,
     });
 
-    return NextResponse.json({ success: true, orders });
+    return successResponse({ orders });
   } catch (error: any) {
     if (error.message === "UNAUTHORIZED") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 },
-      );
+      return unauthorizedResponse();
     }
 
     console.error("❌ GET /api/orders error:", error);
-    return NextResponse.json(
-      { success: false, error: "خطا در دریافت سفارشات" },
-      { status: 500 },
-    );
+    return errorResponse("خطا در دریافت سفارشات", 500);
   }
 }
 
@@ -67,25 +62,16 @@ export async function POST(req: NextRequest) {
     /* ---------- basic validation ---------- */
 
     if (!customerName?.trim() || customerName.trim().length < 2) {
-      return NextResponse.json(
-        { success: false, error: "نام مشتری نامعتبر است" },
-        { status: 400 },
-      );
+      return errorResponse("نام مشتری نامعتبر است", 400);
     }
 
     if (!customerPhone?.trim()) {
-      return NextResponse.json(
-        { success: false, error: "شماره تماس الزامی است" },
-        { status: 400 },
-      );
+      return errorResponse("شماره تماس الزامی است", 400);
     }
 
     const phoneRegex = /^(\+98|0)?9\d{9}$/;
     if (!phoneRegex.test(customerPhone.trim())) {
-      return NextResponse.json(
-        { success: false, error: "شماره تماس نامعتبر است" },
-        { status: 400 },
-      );
+      return errorResponse("شماره تماس نامعتبر است", 400);
     }
 
     const cartItems = await prisma.cartItem.findMany({
@@ -104,28 +90,16 @@ export async function POST(req: NextRequest) {
     });
 
     if (cartItems.length === 0) {
-      return NextResponse.json(
-        { success: false, error: "سبد خرید خالی است" },
-        { status: 400 },
-      );
+      return errorResponse("سبد خرید خالی است", 400);
     }
 
     for (const item of cartItems) {
       if (!item.product || !item.product.isActive) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `محصول ${item.product?.name ?? ""} غیرفعال است`,
-          },
-          { status: 400 },
-        );
+        return errorResponse(`محصول ${item.product?.name ?? ""} غیرفعال است`, 400);
       }
 
       if (!item.product.price || item.product.price <= 0) {
-        return NextResponse.json(
-          { success: false, error: "قیمت محصول نامعتبر است" },
-          { status: 500 },
-        );
+        return errorResponse("قیمت محصول نامعتبر است", 500);
       }
     }
 
@@ -213,8 +187,7 @@ ${itemsText}
       }).catch(() => {});
     }
 
-    return NextResponse.json({
-      success: true,
+    return successResponse({
       message: "سفارش با موفقیت ثبت شد",
       order,
       trackingCode: order.trackingCode,
@@ -222,16 +195,10 @@ ${itemsText}
     });
   } catch (error: any) {
     if (error.message === "UNAUTHORIZED") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 },
-      );
+      return unauthorizedResponse();
     }
 
     console.error("❌ POST /api/orders error:", error);
-    return NextResponse.json(
-      { success: false, error: "خطا در ثبت سفارش" },
-      { status: 500 },
-    );
+    return errorResponse("خطا در ثبت سفارش", 500);
   }
 }

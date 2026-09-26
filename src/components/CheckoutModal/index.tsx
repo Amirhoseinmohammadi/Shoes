@@ -91,7 +91,7 @@ export default function CheckoutModal({
         })),
       };
 
-      console.log("📦 ارسال سفارش:", orderData);
+      
 
       const res = await fetch("/api/orders", {
         method: "POST",
@@ -102,7 +102,7 @@ export default function CheckoutModal({
 
       const result = await res.json();
 
-      console.log("📥 پاسخ سرور:", result);
+      
 
       if (!result.success) {
         throw new Error(result.error || "خطا در ثبت سفارش");

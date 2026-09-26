@@ -48,10 +48,7 @@ class ApiClient {
     };
 
     try {
-      console.log("🔄 apiClient request:", {
-        url,
-        config: { ...config, body: !!config.body },
-      });
+      
 
       const response = await fetch(url, config);
 

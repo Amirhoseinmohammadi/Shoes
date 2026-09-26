@@ -1,30 +1,19 @@
 import { NextResponse } from "next/server";
+import { errorResponse, successResponse, unauthorizedResponse } from "@/lib/apiResponse";
 import { clearSessionCookie } from "@/lib/session";
 
 export async function POST() {
   try {
     await clearSessionCookie();
 
-    return NextResponse.json({
-      success: true,
-      message: "Logged out successfully",
-    });
+    return successResponse({ message: "Logged out successfully", });
   } catch (error) {
     console.error("❌ POST /api/auth/logout error:", error);
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Logout failed",
-      },
-      { status: 500 },
-    );
+    return errorResponse("Logout failed", 500);
   }
 }
 
 export async function GET() {
-  return NextResponse.json(
-    { success: false, error: "Method not allowed" },
-    { status: 405 },
-  );
+    return errorResponse("Method not allowed", 405);
 }

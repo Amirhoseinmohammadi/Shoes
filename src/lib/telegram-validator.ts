@@ -4,7 +4,7 @@ export const validateInitData = (
   initData: string,
   botToken: string,
 ): boolean => {
-  console.log("🔍 Starting initData validation");
+  
 
   const parseInitData = (dataString: string) => {
     const params = new URLSearchParams(dataString);
@@ -16,10 +16,10 @@ export const validateInitData = (
   };
 
   const data = parseInitData(initData);
-  console.log("📄 Parsed data keys:", Object.keys(data));
+  
 
   const receivedHash = data.hash;
-  console.log("🔑 Received hash:", receivedHash);
+  
 
   if (!receivedHash || !data.auth_date) {
     console.error("❌ Missing hash or auth_date");
@@ -34,7 +34,7 @@ export const validateInitData = (
     .map((key) => `${key}=${data[key]}`)
     .join("\n");
 
-  console.log("📝 Data check string length:", dataCheckString.length);
+  
 
   const secretKey = crypto
     .createHmac("sha256", Buffer.from("WebAppData"))
@@ -46,17 +46,17 @@ export const validateInitData = (
     .update(dataCheckString, "utf8")
     .digest("hex");
 
-  console.log("🔐 Calculated hash:", calculatedHash);
-  console.log("🔍 Received hash:", receivedHash);
+  
+  
 
   const isValid = receivedHash === calculatedHash;
 
   if (!isValid) {
     console.error("❌ Telegram Data Validation Failed: Hash Mismatch.");
-    console.log("Expected:", calculatedHash);
-    console.log("Received:", receivedHash);
+    
+    
   } else {
-    console.log("✅ Hash validation passed");
+    
   }
 
   return isValid;

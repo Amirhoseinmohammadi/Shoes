@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { errorResponse, successResponse, unauthorizedResponse } from "@/lib/apiResponse";
 import axios from "axios";
 
 export async function POST(request: NextRequest) {
   try {
     const update = await request.json();
-    console.log("📩 Incoming update:", JSON.stringify(update, null, 2));
+    
 
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     if (!botToken) {
@@ -25,10 +26,7 @@ export async function POST(request: NextRequest) {
 
       try {
         if (text === "/start") {
-          console.log(
-            "✅ /start received from user:",
-            update.message?.from?.id,
-          );
+          
 
           await axios.post(
             `https://api.telegram.org/bot${botToken}/sendMessage`,

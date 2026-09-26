@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse, successResponse, unauthorizedResponse } from "@/lib/apiResponse";
 import { adminService } from "@/services/admin.service";
 import { getSession } from "@/lib/session";
 
@@ -13,7 +14,7 @@ export async function GET() {
     }
 
     const stats = await adminService.getDashboardStats();
-    return NextResponse.json({ success: true, stats });
+    return successResponse({ stats });
   } catch (error) {
     console.error("GET /api/admin/stats error:", error);
     return NextResponse.json(

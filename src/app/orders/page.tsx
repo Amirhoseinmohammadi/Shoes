@@ -75,7 +75,7 @@ const OrdersPage = () => {
 
   useEffect(() => {
     if (authLoading) {
-      console.log("⏳ Auth still loading...");
+      
       return;
     }
 
@@ -91,7 +91,7 @@ const OrdersPage = () => {
         setLoading(true);
         setError(null);
 
-        console.log("📤 Fetching orders for user:", user.id);
+        
 
         const res = await fetch("/api/orders", {
           method: "GET",
@@ -101,7 +101,7 @@ const OrdersPage = () => {
           },
         });
 
-        console.log("📥 Response status:", res.status);
+        
 
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({}));
@@ -113,7 +113,7 @@ const OrdersPage = () => {
         }
 
         const data = await res.json();
-        console.log("✅ Orders fetched:", data.orders?.length || 0);
+        
 
         setOrders(data.orders || []);
       } catch (err: any) {

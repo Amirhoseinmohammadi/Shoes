@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const validateAndSetUser = useCallback(async (initData: string) => {
     try {
-      console.log("📤 Validating Telegram user...");
+      
 
       const response = await fetch("/api/validate-init", {
         method: "POST",
@@ -66,7 +66,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (result.success && result.user && mountedRef.current) {
         setUser(result.user);
-        console.log("✅ User authenticated:", result.user.id);
+        
         return true;
       }
 
@@ -111,7 +111,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           return;
         }
 
-        console.log("👤 Telegram user:", tgUser.id);
+        
 
         await validateAndSetUser(initData);
       } catch (error) {
@@ -145,7 +145,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const logout = useCallback(async () => {
     try {
-      console.log("🚪 Logging out...");
+      
       await fetch("/api/auth/logout", {
         method: "POST",
         credentials: "include",

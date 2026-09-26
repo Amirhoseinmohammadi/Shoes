@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { errorResponse, successResponse, unauthorizedResponse } from "@/lib/apiResponse";
 import { userService } from "@/services/user.service";
 import { getSession } from "@/lib/session";
 
@@ -6,10 +7,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
     if (!session?.isAdmin) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 },
-      );
+    return unauthorizedResponse();
     }
 
     const { searchParams } = new URL(req.url);
@@ -24,11 +22,8 @@ export async function GET(req: NextRequest) {
     const users = await userService.getAllUsers({ search, limit, offset });
     const totalCount = await userService.getUserCount();
 
-    return NextResponse.json({
-      success: true,
-      users,
-      totalCount,
-    });
+    return successResponse({ users,
+      totalCount, });
   } catch (error) {
     console.error("GET /api/users error:", error);
     return NextResponse.json(

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { errorResponse, successResponse, unauthorizedResponse } from "@/lib/apiResponse";
 import { PrismaClient } from "@prisma/client";
 import { requireAuth } from "@/lib/auth-guard";
 
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest, context: any) {
       );
     }
 
-    console.log("دریافت محصول با ID:", id);
+    
 
     const product = await prisma.product.findUnique({
       where: { id: numericId },
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest, context: any) {
       },
     });
 
-    console.log("محصول یافت شد:", product ? "بله" : "خیر");
+    
 
     if (!product) {
       return NextResponse.json({ error: "محصول یافت نشد" }, { status: 404 });
@@ -71,7 +72,7 @@ export async function PUT(req: NextRequest, context: any) {
       );
     }
 
-    console.log(`✅ Admin ${authReq.userId} updating product ${id}`);
+    
 
     if (!data.name || !data.brand || !data.price || !data.variants) {
       return NextResponse.json(
@@ -142,13 +143,10 @@ export async function PUT(req: NextRequest, context: any) {
       return product;
     });
 
-    console.log(`✅ محصول ${id} با موفقیت بروزرسانی شد`);
+    
 
-    return NextResponse.json({
-      success: true,
-      message: "محصول با موفقیت بروزرسانی شد",
-      product: updatedProduct,
-    });
+    return successResponse({ message: "محصول با موفقیت بروزرسانی شد",
+      product: updatedProduct, });
   } catch (error: any) {
     console.error("❌ خطا در ویرایش محصول:", error);
     return NextResponse.json(
@@ -183,7 +181,7 @@ export async function DELETE(req: NextRequest, context: any) {
       );
     }
 
-    console.log(`✅ Admin ${authReq.userId} deleting product ${id}`);
+    
 
     const existingProduct = await prisma.product.findUnique({
       where: { id: numericId },
@@ -197,12 +195,9 @@ export async function DELETE(req: NextRequest, context: any) {
       where: { id: numericId },
     });
 
-    console.log(`✅ محصول ${id} با موفقیت حذف شد`);
+    
 
-    return NextResponse.json({
-      success: true,
-      message: "محصول با موفقیت حذف شد",
-    });
+    return successResponse({ message: "محصول با موفقیت حذف شد", });
   } catch (error: any) {
     console.error("❌ خطا در حذف محصول:", error);
     return NextResponse.json(

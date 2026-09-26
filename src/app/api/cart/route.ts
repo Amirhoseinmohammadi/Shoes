@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { successResponse, errorResponse, unauthorizedResponse } from "@/lib/apiResponse";
 
 async function requireSessionAuth(): Promise<number | null> {
   const session = await getSession();
@@ -11,10 +12,7 @@ export async function GET() {
   try {
     const userId = await requireSessionAuth();
     if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized", success: false },
-        { status: 401 },
-      );
+      return unauthorizedResponse();
     }
 
     const cartItems = await prisma.cartItem.findMany({
@@ -30,13 +28,10 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ success: true, cartItems });
+    return successResponse({ cartItems });
   } catch (err) {
     console.error("GET /api/cart error:", err);
-    return NextResponse.json(
-      { error: "خطا در دریافت سبد خرید", success: false },
-      { status: 500 },
-    );
+    return errorResponse("خطا در دریافت سبد خرید", 500);
   }
 }
 
@@ -44,33 +39,27 @@ export async function POST(req: NextRequest) {
   try {
     const userId = await requireSessionAuth();
     if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized", success: false },
-        { status: 401 },
-      );
+      return unauthorizedResponse();
     }
 
     const { productId, quantity, color, sizeId } = await req.json();
 
+    // Basic validation
     if (!productId || quantity <= 0 || quantity > 1000) {
-      return NextResponse.json(
-        { error: "داده نامعتبر", success: false },
-        { status: 400 },
-      );
+      return errorResponse("داده نامعتبر", 400);
     }
 
+    // Verify product exists and is active
     const product = await prisma.product.findUnique({
       where: { id: productId },
       select: { id: true, isActive: true },
     });
 
     if (!product || !product.isActive) {
-      return NextResponse.json(
-        { error: "محصول نامعتبر یا غیرفعال", success: false },
-        { status: 400 },
-      );
+      return errorResponse("محصول نامعتبر یا غیرفعال", 400);
     }
 
+    // Transaction with stock validation
     await prisma.$transaction(async (tx) => {
       const existing = await tx.cartItem.findFirst({
         where: {
@@ -81,10 +70,27 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      // Determine new total quantity
+      const newQuantity = existing ? existing.quantity + quantity : quantity;
+
+      // If sizeId specified, ensure stock is sufficient
+      if (sizeId) {
+        const sizeRecord = await tx.size.findUnique({
+          where: { id: sizeId },
+          select: { stock: true },
+        });
+        if (!sizeRecord) {
+          throw new Error("اندازه مشخص شده وجود ندارد");
+        }
+        if (newQuantity > sizeRecord.stock) {
+          throw new Error(`موجودی کافی برای سایز موردنظر نیست. حداکثر موجودی: ${sizeRecord.stock}`);
+        }
+      }
+
       if (existing) {
         await tx.cartItem.update({
           where: { id: existing.id },
-          data: { quantity: existing.quantity + quantity },
+          data: { quantity: newQuantity },
         });
       } else {
         await tx.cartItem.create({
@@ -93,13 +99,13 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    return GET();
+    // Return updated cart
+    return successResponse(await GET());
+
+
   } catch (err: any) {
     console.error("POST /api/cart error:", err);
-    return NextResponse.json(
-      { error: err.message || "خطا", success: false },
-      { status: 500 },
-    );
+    return errorResponse(err.message || "خطا", 500);
   }
 }
 
@@ -107,30 +113,43 @@ export async function PATCH(req: NextRequest) {
   try {
     const userId = await requireSessionAuth();
     if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized", success: false },
-        { status: 401 },
-      );
+      return unauthorizedResponse();
     }
 
     const { cartItemId, quantity } = await req.json();
 
+    // Verify ownership of the cart item
+    const existingItem = await prisma.cartItem.findUnique({ where: { id: cartItemId } });
+    if (!existingItem || existingItem.userId !== userId) {
+      return errorResponse("Forbidden - cart item does not belong to user", 403);
+    }
+
     if (quantity === 0) {
       await prisma.cartItem.delete({ where: { id: cartItemId } });
     } else {
+      // Verify stock if size is associated with this cart item
+      if (existingItem.sizeId) {
+        const sizeRecord = await prisma.size.findUnique({
+          where: { id: existingItem.sizeId },
+          select: { stock: true },
+        });
+        if (!sizeRecord) {
+          return errorResponse("اندازه مشخص شده وجود ندارد", 400);
+        }
+        if (quantity > sizeRecord.stock) {
+          return errorResponse(`موجودی کافی برای سایز موردنظر نیست. حداکثر موجودی: ${sizeRecord.stock}`, 400);
+        }
+      }
       await prisma.cartItem.update({
         where: { id: cartItemId },
         data: { quantity },
       });
     }
 
-    return GET();
+    return successResponse(await GET());
   } catch (err) {
     console.error("PATCH /api/cart error:", err);
-    return NextResponse.json(
-      { error: "خطا در بروزرسانی", success: false },
-      { status: 500 },
-    );
+    return errorResponse("خطا در بروزرسانی", 500);
   }
 }
 
@@ -138,10 +157,7 @@ export async function DELETE(req: NextRequest) {
   try {
     const userId = await requireSessionAuth();
     if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized", success: false },
-        { status: 401 },
-      );
+      return unauthorizedResponse();
     }
 
     const id = Number(new URL(req.url).searchParams.get("id"));
@@ -152,14 +168,16 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
+    // Verify ownership before deletion
+    const itemToDelete = await prisma.cartItem.findUnique({ where: { id } });
+    if (!itemToDelete || itemToDelete.userId !== userId) {
+      return errorResponse("Forbidden - cart item does not belong to user", 403);
+    }
     await prisma.cartItem.delete({ where: { id } });
 
-    return GET();
+    return successResponse(await GET());
   } catch (err) {
     console.error("DELETE /api/cart error:", err);
-    return NextResponse.json(
-      { error: "خطا در حذف", success: false },
-      { status: 500 },
-    );
+    return errorResponse("خطا در حذف", 500);
   }
 }

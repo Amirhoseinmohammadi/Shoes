@@ -7,7 +7,7 @@ export default function TelegramScript() {
       src="https://telegram.org/js/telegram-web-app.js"
       strategy="lazyOnload"
       onLoad={() => {
-        console.log("✅ Telegram WebApp loaded");
+        
       }}
     />
   );

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { errorResponse, successResponse, unauthorizedResponse } from "@/lib/apiResponse";
 import { validateInitData, isInitDataExpired } from "@/lib/telegram-validator";
 import { setSessionCookie, clearSessionCookie } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
@@ -77,17 +78,14 @@ export async function POST(req: NextRequest) {
       isAdmin: false,
     });
 
-    return NextResponse.json({
-      success: true,
-      user: {
+    return successResponse({ user: {
         id: dbUser.id,
         telegramId: dbUser.telegramId,
         first_name: dbUser.firstName,
         last_name: dbUser.lastName,
         username: dbUser.username,
         isAdmin: false,
-      },
-    });
+      }, });
   } catch (err) {
     console.error("❌ validate-init error:", err);
     return NextResponse.json(
