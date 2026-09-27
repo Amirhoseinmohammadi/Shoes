@@ -120,10 +120,17 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
     );
   }
 
-  const filteredShoes =
-    shoes?.filter((shoe) =>
-      shoe.name.toLowerCase().includes(searchQuery.toLowerCase()),
-    ) || [];
+  const productList: any[] = Array.isArray(shoes)
+    ? shoes
+    : Array.isArray((shoes as any)?.data)
+      ? (shoes as any).data
+      : Array.isArray((shoes as any)?.products)
+        ? (shoes as any).products
+        : [];
+
+  const filteredShoes = productList.filter((shoe: any) =>
+    shoe?.name?.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   return (
     <section className="min-h-screen bg-gray-100 py-12 dark:bg-gray-900">

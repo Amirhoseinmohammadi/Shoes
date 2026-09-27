@@ -84,9 +84,15 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
       const data = await res.json();
 
-      if (!Array.isArray(data.cartItems)) return;
+      const items = Array.isArray(data.cartItems)
+        ? data.cartItems
+        : Array.isArray(data.data?.cartItems)
+          ? data.data.cartItems
+          : null;
 
-      const normalized: CartItem[] = data.cartItems.map((item: {
+      if (!items) return;
+
+      const normalized: CartItem[] = items.map((item: {
         id: number;
         productId: number;
         color?: string | null;

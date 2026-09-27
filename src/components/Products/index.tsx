@@ -19,10 +19,17 @@ const Shoes = ({ telegramUser }: ShoesProps) => {
   const { data: shoes, error, isLoading } = useApi.useProducts();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredShoes =
-    shoes?.filter((shoe) =>
-      shoe.name.toLowerCase().includes(searchQuery.toLowerCase()),
-    ) || [];
+  const productList: any[] = Array.isArray(shoes)
+    ? shoes
+    : Array.isArray((shoes as any)?.data)
+      ? (shoes as any).data
+      : Array.isArray((shoes as any)?.products)
+        ? (shoes as any).products
+        : [];
+
+  const filteredShoes = productList.filter((shoe: any) =>
+    shoe?.name?.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   if (isLoading) {
     return (

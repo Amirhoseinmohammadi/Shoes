@@ -115,7 +115,13 @@ const OrdersPage = () => {
         const data = await res.json();
         
 
-        setOrders(data.orders || []);
+        const orderList = Array.isArray(data.orders)
+          ? data.orders
+          : Array.isArray(data.data?.orders)
+            ? data.data.orders
+            : [];
+
+        setOrders(orderList);
       } catch (err: any) {
         console.error("❌ Error fetching orders:", err);
         setError(err.message || "خطا در دریافت سفارشات");

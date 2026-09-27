@@ -17,6 +17,9 @@ export function errorResponse(message: string, status: number) {
  * @param status - HTTP status code (default 200).
  */
 export function successResponse<T>(data: T, status: number = 200) {
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    return NextResponse.json({ success: true, data, ...data }, { status });
+  }
   return NextResponse.json({ success: true, data }, { status });
 }
 

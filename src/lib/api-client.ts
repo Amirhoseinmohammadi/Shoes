@@ -114,11 +114,15 @@ class ApiClient {
   };
 
   products = {
-    getAll: (category?: string) => {
+    getAll: async (category?: string): Promise<any> => {
       const url = category
         ? `/api/products?category=${encodeURIComponent(category)}`
         : "/api/products";
-      return this.request<ApiResponse<Product[]>>(url);
+      const res: any = await this.request(url);
+      if (Array.isArray(res)) return res;
+      if (res && Array.isArray(res.data)) return res.data;
+      if (res && Array.isArray(res.products)) return res.products;
+      return [];
     },
 
     getById: (id: number) =>

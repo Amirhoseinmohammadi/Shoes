@@ -64,9 +64,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       const result = await response.json();
 
-      if (result.success && result.user && mountedRef.current) {
-        setUser(result.user);
-        
+      const user = result.user || result.data?.user;
+
+      if (result.success && user && mountedRef.current) {
+        setUser(user);
         return true;
       }
 

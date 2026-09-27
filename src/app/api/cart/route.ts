@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Return updated cart
-    return successResponse(await GET());
+    return GET();
 
 
   } catch (err: any) {
@@ -146,7 +146,7 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
-    return successResponse(await GET());
+    return GET();
   } catch (err) {
     console.error("PATCH /api/cart error:", err);
     return errorResponse("خطا در بروزرسانی", 500);
@@ -175,7 +175,7 @@ export async function DELETE(req: NextRequest) {
     }
     await prisma.cartItem.delete({ where: { id } });
 
-    return successResponse(await GET());
+    return GET();
   } catch (err) {
     console.error("DELETE /api/cart error:", err);
     return errorResponse("خطا در حذف", 500);

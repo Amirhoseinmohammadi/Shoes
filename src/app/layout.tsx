@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import RootLayoutClient from "./layout.client";
 import "@/styles/index.css";
-import TelegramScript from "@/components/TelegramScript";
 import FontLoader from "@/components/FontLoader.client";
 
 // ✅ SEO Metadata (بدون تغییر)
@@ -109,7 +109,10 @@ export default function RootLayout({
           رفتن به محتوای اصلی
         </a>
         <RootLayoutClient>{children}</RootLayoutClient>
-        <TelegramScript />
+        <Script
+          src="https://telegram.org/js/telegram-web-app.js"
+          strategy="beforeInteractive"
+        />
       </body>
     </html>
   );
